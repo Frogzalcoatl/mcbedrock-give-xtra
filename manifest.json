@@ -11,17 +11,17 @@
 	],
 	"format_version": 2,
 	"header": {
-		"description": "Made with moderate amounts of care.",
+		"description": "By Frogzalcoatl. With major help from SunnyTheFennec \"xskt\".",
 		"min_engine_version": [1, 26, 21],
-		"name": "Gametest Starter Addon",
-		"uuid": "f15047db-ad9d-4dc8-9b5e-88bcaa0666df",
-		"version": [2, 0, 0]
+		"name": "Give Xtra",
+		"uuid": "2abb69c6-99ed-40b9-b442-126c32b8a9b1",
+		"version": [1, 0, 0]
 	},
 	"modules": [
 		{
 			"description": "Addon Module",
 			"type": "data",
-			"uuid": "335a6ee7-c060-426b-bee1-28752ed2e6f8",
+			"uuid": "8d5cb72c-bac2-497f-a7ef-8dbe631b5151",
 			"version": [1, 0, 0]
 		},
 		{
@@ -29,7 +29,7 @@
 			"entry": "scripts/index.esm.js",
 			"language": "javascript",
 			"type": "script",
-			"uuid": "785762b9-6e55-46a3-bc2f-ec983a3927e2",
+			"uuid": "0c146aee-d927-4898-b7d6-5a11ad556df8",
 			"version": [1, 0, 0]
 		}
 	]
