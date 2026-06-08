@@ -41,7 +41,8 @@ function isEnchantDataArr(arr: any): arr is EnchantData[] {
 	return true;
 }
 
-const SLOT_DATA_KEY_COUNT: number = 3;
+const SLOT_DATA_MAX_KEY_COUNT: number = 3;
+const SLOT_DATA_MIN_KEY_COUNT: number = 1;
 interface SlotData {
 	name: EquipmentSlot;
 	id?: number;
@@ -56,16 +57,18 @@ function isSlotData(obj: any): obj is SlotData {
 	if (typeof obj !== "object" || obj === null) {
 		return false;
 	}
+	const keyCount: number = Object.keys(obj).length;
 	return (
 		Object.values(EquipmentSlot).includes(obj.name) &&
 		(obj.id === undefined || typeof obj.id === "number") &&
 		(obj.replaceItem === undefined || typeof obj.replaceItem === "boolean") &&
-		Object.keys(obj).length === SLOT_DATA_KEY_COUNT
+		keyCount <= SLOT_DATA_MAX_KEY_COUNT &&
+		keyCount >= SLOT_DATA_MIN_KEY_COUNT
 	);
 }
 
-const ITEM_DATA_KEY_COUNT: number = 8;
-// (10 once potionType is added)
+const ITEM_DATA_MAX_KEY_COUNT: number = 8; // 9 once potionType is added
+const ITEM_DATA_MIN_KEY_COUNT: number = 2;
 interface ItemData {
 	typeId: string;
 	amount: number;
@@ -103,6 +106,7 @@ function isItemData(obj: any): obj is ItemData {
 	if (typeof obj !== "object" || obj === null) {
 		return false;
 	}
+	const keyCount: number = Object.keys(obj).length;
 	return (
 		typeof obj.typeId === "string" &&
 		typeof obj.amount === "number" &&
@@ -112,7 +116,8 @@ function isItemData(obj: any): obj is ItemData {
 		(obj.dye === undefined || isRgb(obj.dye)) &&
 		(obj.enchants === undefined || isEnchantDataArr(obj.enchants)) &&
 		(obj.slot === undefined || isSlotData(obj.slot)) &&
-		Object.keys(obj).length === ITEM_DATA_KEY_COUNT
+		keyCount <= ITEM_DATA_MAX_KEY_COUNT &&
+		keyCount >= ITEM_DATA_MIN_KEY_COUNT
 	);
 }
 
@@ -214,7 +219,7 @@ export function isValidItemData(data: ItemData): BooleanWithMessage {
 				message: "Durability must be a positive integer or Infinity",
 			};
 		}
-		if (durabilityComponent.maxDurability < data.durability) {
+		if (durabilityComponent.maxDurability < data.durability && data.durability !== Infinity) {
 			return {
 				bool: false,
 				message: `Durability cannot exceed max for this item (${durabilityComponent.maxDurability})`,
@@ -270,7 +275,7 @@ export function isValidItemData(data: ItemData): BooleanWithMessage {
 		if (!canEquipInSlot(itemStack, data.slot.name)) {
 			return {
 				bool: false,
-				message: `${data.typeId} cannot be placed in ${data.slot}`,
+				message: `${data.typeId} cannot be placed in ${data.slot.name}`,
 			};
 		}
 		if (

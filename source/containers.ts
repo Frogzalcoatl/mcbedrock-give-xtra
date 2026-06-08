@@ -1,6 +1,7 @@
 import "@minecraft/server";
 import type { Container, ItemStack, ItemType, Player } from "@minecraft/server";
 import { prettyTypeId } from "./prettyTypeId";
+import type { BooleanWithMessage } from "./types";
 
 // Determines whether a container has at least x amount of item type. Returns array of slot ids containing item type.
 export function hasItemAmount(
@@ -52,7 +53,7 @@ export function clearItem(
 	container: Container,
 	item: ItemType,
 	amountToClear?: number,
-): { bool: boolean; message: string } {
+): BooleanWithMessage {
 	if (amountToClear === 0) {
 		return {
 			bool: true,
@@ -126,7 +127,7 @@ export function giveItem(
 	container: Container,
 	itemStack: ItemStack,
 	amountToGive: number = 1,
-): { bool: boolean; message: string } {
+): BooleanWithMessage {
 	let amountLeft: number = amountToGive;
 	while (amountLeft > 0) {
 		itemStack.amount = Math.min(itemStack.maxAmount, amountLeft);
