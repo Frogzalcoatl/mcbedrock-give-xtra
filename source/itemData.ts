@@ -96,9 +96,6 @@ function isItemData(obj: any): obj is ItemData {
 
 export function parseItemData(str: string): ItemData | undefined {
 	const parsedData = JSON.parse(str);
-	if (typeof parsedData !== "object" || parsedData === null) {
-		return undefined;
-	}
 	if (isItemData(parsedData)) {
 		return parsedData;
 	} else {
@@ -157,7 +154,7 @@ export const ITEM_DATA_VALIDATION = {
 		const result: boolean = ItemTypes.get(value) !== undefined;
 		return {
 			bool: result,
-			message: result ? "Valid" : "Invalid",
+			message: result ? "Valid" : "Invalid typeId",
 		};
 	},
 	amount(value: number): BooleanWithMessage {
@@ -174,7 +171,14 @@ export const ITEM_DATA_VALIDATION = {
 			message: result ? "Valid" : "Invalid lock mode",
 		};
 	},
-	// Skipping data.nametag. A string is a string nothing to check there.
+	nameTag(value: string): BooleanWithMessage {
+		// 255 is the max item nametag length as stated in index.d.ts
+		const result: boolean = value.length <= 255;
+		return {
+			bool: result,
+			message: result ? "Valid" : "Nametag length must be 255 characters or less"
+		}
+	},
 	durability(durability: number, itemStack: ItemStack): BooleanWithMessage {
 		const durabilityComponent = itemStack.getComponent(ItemComponentTypes.Durability);
 		if (durabilityComponent === undefined) {
@@ -282,6 +286,12 @@ export const ITEM_DATA_VALIDATION = {
 		}
 		if (data.lockMode) {
 			result = ITEM_DATA_VALIDATION.lockMode(data.lockMode);
+			if (!result.bool) {
+				return result;
+			}
+		}
+		if (data.nameTag) {
+			result = ITEM_DATA_VALIDATION.nameTag(data.nameTag);
 			if (!result.bool) {
 				return result;
 			}
