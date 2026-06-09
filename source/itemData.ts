@@ -49,9 +49,6 @@ interface SlotData {
 	replaceItem?: boolean;
 }
 
-// Players have 36 slots in their inventory, so max id would be 35 (including 0)
-const MAX_SLOT_ID: number = 35;
-
 // biome-ignore lint/suspicious/noExplicitAny: Type is validated through the function. Any is required here.
 function isSlotData(obj: any): obj is SlotData {
 	if (typeof obj !== "object" || obj === null) {
@@ -79,7 +76,7 @@ interface ItemData {
 	dye?: RGB;
 	// potionType: Figure out later;
 	enchants?: EnchantData[];
-	slot: SlotData;
+	slot?: SlotData;
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: Type is validated through the function. Any is required here.
@@ -133,10 +130,7 @@ export function parseItemData(str: string): ItemData | undefined {
 	}
 }
 
-function isValidItemType(typeId: string): boolean {
-	return ItemTypes.get(typeId) !== undefined;
-}
-
+/* Decided to not use this and just trust the user to know what can go in the offhand. No way to account for custom offhand items.
 const OFFHAND_ITEM_TYPES: string[] = [
 	"minecraft:shield",
 	"minecraft:totem_of_undying",
@@ -148,8 +142,9 @@ const OFFHAND_ITEM_TYPES: string[] = [
 	"minecraft:nautilus_shell",
 	"minecraft:sparkler",
 ];
+*/
 
-// Works with custom items given they've set up enchants properly. Custom offhand items will not work.
+// Works with custom items given they've set up enchants properly.
 function canEquipInSlot(itemStack: ItemStack, targetSlot: EquipmentSlot): boolean {
 	const enchantable = itemStack.getComponent(ItemComponentTypes.Enchantable);
 	if (!enchantable) {
@@ -173,35 +168,38 @@ function canEquipInSlot(itemStack: ItemStack, targetSlot: EquipmentSlot): boolea
 		case EquipmentSlot.Mainhand:
 			return true;
 		case EquipmentSlot.Offhand:
-			return OFFHAND_ITEM_TYPES.includes(itemStack.typeId);
+			// Just trusting the user here. No good way to check for this with custom items.
+			return true;
 		default:
 			return false;
 	}
 }
 
-export function isValidItemData(data: ItemData): BooleanWithMessage {
-	if (!isValidItemType(data.typeId)) {
+// biome-ignore assist/source/useSortedKeys: Want to keep it in the same order as the interface above.
+export const ITEM_DATA_VALIDATION = {
+	typeId(value: string): BooleanWithMessage {
+		const result: boolean = ItemTypes.get(value) !== undefined;
 		return {
-			bool: false,
-			message: "Invalid typeId",
+			bool: result,
+			message: result ? "Valid" : "Invalid",
 		};
-	}
-	// Not caring about max stack sizes since I'll be using a function that gives multiple stacks of items.
-	if (data.amount <= 0 || !Number.isInteger(data.amount)) {
+	},
+	amount(value: number): BooleanWithMessage {
+		const result: boolean = value > 0 || Number.isInteger(value);
 		return {
-			bool: false,
-			message: "Invalid amount, must be a positve integer",
+			bool: result,
+			message: result ? "Valid" : "Invalid amount, must be a positve integer",
 		};
-	}
-	if (data.lockMode && !Object.values(ItemLockMode).includes(data.lockMode)) {
+	},
+	lockMode(value: ItemLockMode): BooleanWithMessage {
+		const result: boolean = Object.values(ItemLockMode).includes(value);
 		return {
-			bool: false,
-			message: "Invalid lock mode",
+			bool: result,
+			message: result ? "Valid" : "Invalid lock mode",
 		};
-	}
+	},
 	// Skipping data.nametag. A string is a string nothing to check there.
-	const itemStack = new ItemStack(data.typeId);
-	if (data.durability) {
+	durability(durability: number, itemStack: ItemStack): BooleanWithMessage {
 		const durabilityComponent = itemStack.getComponent(ItemComponentTypes.Durability);
 		if (durabilityComponent === undefined) {
 			return {
@@ -209,39 +207,40 @@ export function isValidItemData(data: ItemData): BooleanWithMessage {
 				message: "Cannot apply durability to selected item",
 			};
 		}
-		// Infinity represents unbreakable items.
-		if (
-			(!Number.isInteger(data.durability) || data.durability <= 0) &&
-			data.durability !== Infinity
-		) {
+		if ((!Number.isInteger(durability) || durability <= 0) && durability !== Infinity) {
+			// Infinity represents unbreakable items.
 			return {
 				bool: false,
 				message: "Durability must be a positive integer or Infinity",
 			};
 		}
-		if (durabilityComponent.maxDurability < data.durability && data.durability !== Infinity) {
+		if (durabilityComponent.maxDurability < durability && durability !== Infinity) {
 			return {
 				bool: false,
 				message: `Durability cannot exceed max for this item (${durabilityComponent.maxDurability})`,
 			};
 		}
-	}
-	if (data.dye) {
-		if (
-			data.dye.red < 0 ||
-			data.dye.red > 1 ||
-			data.dye.green < 0 ||
-			data.dye.green > 1 ||
-			data.dye.blue < 0 ||
-			data.dye.blue > 1
-		) {
-			return {
-				bool: false,
-				message: `Dye must include three values between 0 and 1.\nEx: "dye":{"red":0,"blue":1,"green":0.5}`,
-			};
-		}
-	}
-	if (data.enchants) {
+		return {
+			bool: true,
+			message: "Valid",
+		};
+	},
+	dye(value: RGB): BooleanWithMessage {
+		const result: boolean =
+			value.red < 0 ||
+			value.red > 1 ||
+			value.green < 0 ||
+			value.green > 1 ||
+			value.blue < 0 ||
+			value.blue > 1;
+		return {
+			bool: result,
+			message: result
+				? "Valid"
+				: `Dye must include three values between 0 and 1.\nEx: "dye":{"red":0,"blue":1,"green":0.5}`,
+		};
+	},
+	enchants(value: EnchantData[], itemStack: ItemStack): BooleanWithMessage {
 		const enchantableComonent = itemStack.getComponent(ItemComponentTypes.Enchantable);
 		if (enchantableComonent === undefined) {
 			return {
@@ -249,7 +248,7 @@ export function isValidItemData(data: ItemData): BooleanWithMessage {
 				message: "Cannot apply enchants to selected item",
 			};
 		}
-		for (const enchant of data.enchants) {
+		for (const enchant of value) {
 			const type = EnchantmentTypes.get(enchant.id);
 			if (type === undefined) {
 				return {
@@ -266,31 +265,79 @@ export function isValidItemData(data: ItemData): BooleanWithMessage {
 			if (!enchantableComonent.canAddEnchantment({ level: enchant.level, type: type })) {
 				return {
 					bool: false,
-					message: `${enchant.id} cannot be applied to ${data.typeId}`,
+					message: `${enchant.id} cannot be applied to ${itemStack.typeId}`,
 				};
 			}
 		}
-	}
-	if (data.slot) {
-		if (!canEquipInSlot(itemStack, data.slot.name)) {
+		return {
+			bool: true,
+			message: "Valid",
+		};
+	},
+	slot(value: SlotData, itemStack: ItemStack): BooleanWithMessage {
+		if (!canEquipInSlot(itemStack, value.name)) {
 			return {
 				bool: false,
-				message: `${data.typeId} cannot be placed in ${data.slot.name}`,
+				message: `${itemStack.typeId} cannot be placed in ${value.name}`,
 			};
 		}
-		if (
-			data.slot.id &&
-			(!Number.isInteger(data.slot.id) || data.slot.id > MAX_SLOT_ID || data.slot.id < 0)
-		) {
+		// Not checking for a max slot id. Can use givex on non players, so max id varies.
+		if (value.id && (!Number.isInteger(value.id) || value.id < 0)) {
 			return {
 				bool: false,
 				message: `Slot id must be an integer between 0 and 35`,
 			};
 		}
 		// data.slot.replaceItem is a boolean. Nothing to check there.
-	}
-	return {
-		bool: true,
-		message: "ItemData is valid",
-	};
-}
+		return {
+			bool: true,
+			message: "Valid",
+		};
+	},
+	full(data: ItemData): BooleanWithMessage {
+		let result: BooleanWithMessage;
+		result = ITEM_DATA_VALIDATION.typeId(data.typeId);
+		if (!result.bool) {
+			return result;
+		}
+		result = ITEM_DATA_VALIDATION.amount(data.amount);
+		if (!result.bool) {
+			return result;
+		}
+		if (data.lockMode) {
+			result = ITEM_DATA_VALIDATION.lockMode(data.lockMode);
+			if (!result.bool) {
+				return result;
+			}
+		}
+		const itemStack = new ItemStack(data.typeId);
+		if (data.durability) {
+			result = ITEM_DATA_VALIDATION.durability(data.durability, itemStack);
+			if (!result.bool) {
+				return result;
+			}
+		}
+		if (data.dye) {
+			result = ITEM_DATA_VALIDATION.dye(data.dye);
+			if (!result.bool) {
+				return result;
+			}
+		}
+		if (data.enchants) {
+			result = ITEM_DATA_VALIDATION.enchants(data.enchants, itemStack);
+			if (!result.bool) {
+				return result;
+			}
+		}
+		if (data.slot) {
+			result = ITEM_DATA_VALIDATION.slot(data.slot, itemStack);
+			if (!result.bool) {
+				return result;
+			}
+		}
+		return {
+			bool: true,
+			message: "Valid",
+		};
+	},
+};
