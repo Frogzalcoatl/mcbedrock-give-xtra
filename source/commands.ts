@@ -1,0 +1,154 @@
+import {
+	CommandPermissionLevel,
+	type Container,
+	type CustomCommand,
+	type CustomCommandOrigin,
+	CustomCommandParamType,
+	type CustomCommandResult,
+	CustomCommandStatus,
+	type Entity,
+	EntityComponentTypes,
+	type ItemStack,
+	Player,
+	system,
+	world,
+} from "@minecraft/server";
+import { giveItem } from "./containers";
+import { ItemDataValidation, parseItemData } from "./itemData";
+import { dataToStack } from "./itemStack";
+import type { ItemData } from "./types";
+
+const NAMESPACE: string = "givex";
+
+const GIVEX_COMMAND: CustomCommand = {
+	description: "Give items with specific properties",
+	mandatoryParameters: [
+		{
+			name: "json",
+			type: CustomCommandParamType.String,
+		},
+	],
+	name: `${NAMESPACE}:givex`,
+	optionalParameters: [
+		{
+			name: "target",
+			type: CustomCommandParamType.EntitySelector,
+		},
+	],
+	permissionLevel: CommandPermissionLevel.GameDirectors,
+};
+
+function getContainers(entities: Entity[]): [Entity, Container][] {
+	const entityContainers: [Entity, Container][] = [];
+	for (const entity of entities) {
+		const inventory = entity.getComponent(EntityComponentTypes.Inventory);
+		if (inventory?.isValid) {
+			entityContainers.push([entity, inventory.container]);
+		}
+	}
+	return entityContainers;
+}
+
+function afterTickCommandResultHandler(
+	origin: CustomCommandOrigin,
+	result: CustomCommandResult,
+): void {
+	if (result.message === undefined) {
+		return;
+	}
+	if (origin.sourceBlock && world.gameRules.commandBlockOutput) {
+		// §7 makes text gray, §o italicizes, §r resets formatting
+		world.sendMessage(`§7§o[CommandBlock§r: ${result.message}]`);
+	} else if (
+		origin.sourceEntity &&
+		origin.sourceEntity instanceof Player &&
+		world.gameRules.sendCommandFeedback
+	) {
+		origin.sourceEntity.sendMessage(
+			`${result.status === CustomCommandStatus.Failure ? "§c" : ""}${result.message}`,
+		);
+	} else if (
+		origin.initiator &&
+		origin.initiator instanceof Player &&
+		world.gameRules.sendCommandFeedback
+	) {
+		origin.initiator.sendMessage(
+			`${result.status === CustomCommandStatus.Failure ? "§c" : ""}${result.message}`,
+		);
+	}
+}
+
+// Example givex command: /givex "{\"typeId\":\"minecraft:dirt\",\"amount\":1}"
+// Players must use escape characters for double quotes: \"
+function givexCommandCallback(
+	origin: CustomCommandOrigin,
+	json: string,
+	selectorResult?: Entity[],
+): CustomCommandResult {
+	const itemDataResult = parseItemData(json);
+	if (itemDataResult.itemData === undefined) {
+		return {
+			message: itemDataResult.syntaxError ?? "Unknown error in your json. (sorry)",
+			status: CustomCommandStatus.Failure,
+		};
+	}
+	const itemData: ItemData = itemDataResult.itemData;
+	const validationResult = ItemDataValidation.complete(itemDataResult.itemData);
+	if (!validationResult.bool) {
+		return {
+			message: validationResult.message,
+			status: CustomCommandStatus.Failure,
+		};
+	}
+	let entityContainers: [Entity, Container][];
+	if (selectorResult) {
+		entityContainers = getContainers(selectorResult);
+	} else if (origin.sourceEntity) {
+		entityContainers = getContainers([origin.sourceEntity]);
+	} else {
+		entityContainers = [];
+	}
+	if (entityContainers.length === 0) {
+		return {
+			message: "No valid selector",
+			status: CustomCommandStatus.Failure,
+		};
+	}
+	system.run(() => {
+		const itemStackResult = dataToStack(itemData);
+		if (itemStackResult.item === undefined) {
+			afterTickCommandResultHandler(origin, {
+				message: itemStackResult.warning ?? "Failed to create item stack.",
+				status: CustomCommandStatus.Failure,
+			});
+			return;
+		}
+		const itemStack: ItemStack = itemStackResult.item;
+		for (const [entity, container] of entityContainers) {
+			giveItem(entity, container, itemStack, itemData.amount);
+		}
+	});
+	return {
+		message: `Ran givex`,
+		status: CustomCommandStatus.Success,
+	};
+}
+
+// Use server ui to easily generate item data json
+const HELP_COMMAND: CustomCommand = {
+	description: "Easily generate a givex command",
+	name: `${NAMESPACE}:help`,
+	permissionLevel: CommandPermissionLevel.GameDirectors,
+};
+
+function helpCommandCallback(_origin: CustomCommandOrigin): CustomCommandResult {
+	return {
+		message: "In progress",
+		status: CustomCommandStatus.Success,
+	};
+}
+
+system.beforeEvents.startup.subscribe((e) => {
+	e.customCommandRegistry.registerCommand(GIVEX_COMMAND, givexCommandCallback);
+	e.customCommandRegistry.registerCommand(HELP_COMMAND, helpCommandCallback);
+});

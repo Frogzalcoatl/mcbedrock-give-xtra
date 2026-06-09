@@ -15,9 +15,12 @@ import {
 	ITEM_DATA_KEY_COUNT_MAX,
 	ITEM_DATA_KEY_COUNT_MIN,
 	type ItemData,
+	ItemDataKeysForErrorMessage,
+	type ItemDurability,
 	SLOT_DATA_KEY_COUNT_MAX,
 	SLOT_DATA_KEY_COUNT_MIN,
 	type SlotData,
+	SlotDataKeysForErrorMessage,
 } from "./types";
 
 // biome-ignore lint/suspicious/noExplicitAny: Type is validated through the function. Any is required here.
@@ -50,15 +53,35 @@ function isSlotData(obj: any): obj is SlotData {
 	if (typeof obj !== "object" || obj === null) {
 		return false;
 	}
+	if (!Object.values(EquipmentSlot).includes(obj.name)) {
+		throw new Error("Invalid slot.name value");
+	}
+	let validKeysFound = 1;
+	if (obj.id) {
+		validKeysFound++;
+		if (typeof obj.id !== "number") {
+			throw new Error("slot.id must be a number");
+		}
+	}
+	if (obj.replaceItem) {
+		validKeysFound++;
+		if (typeof obj.replaceItem !== "boolean") {
+			throw new Error("slot.replaceItem must be a boolean");
+		}
+	}
 	const keyCount: number = Object.keys(obj).length;
-	return (
-		Object.values(EquipmentSlot).includes(obj.name) &&
-		(obj.id === undefined || typeof obj.id === "number") &&
-		(obj.replaceItem === undefined || typeof obj.replaceItem === "boolean") &&
-		keyCount <= SLOT_DATA_KEY_COUNT_MAX &&
-		keyCount >= SLOT_DATA_KEY_COUNT_MIN
-	);
+	if (keyCount <= SLOT_DATA_KEY_COUNT_MAX && keyCount >= SLOT_DATA_KEY_COUNT_MIN) {
+		throw new Error("Invalid key count");
+	}
+	if (validKeysFound !== keyCount) {
+		throw new Error(
+			`Invalid key${keyCount - validKeysFound !== 1 ? "s" : ""} found. Valid keys include:\n${Object.values(SlotDataKeysForErrorMessage).join(", ")}`,
+		);
+	}
+	return true;
 }
+
+/* Will add back once mojang fixes dyeable component (Bug tracker MCPE-237577 and MCPE-232617)
 
 // biome-ignore lint/suspicious/noExplicitAny: Type is validated through the function. Any is required here.
 function isRgb(obj: any): obj is RGB {
@@ -73,34 +96,122 @@ function isRgb(obj: any): obj is RGB {
 		Object.keys(obj).length === 3
 	);
 }
+*/
 
+// Throwing errors since theres no way to return obj is ItemData with a string as far as i can tell.
 // biome-ignore lint/suspicious/noExplicitAny: Type is validated through the function. Any is required here.
 function isItemData(obj: any): obj is ItemData {
 	if (typeof obj !== "object" || obj === null) {
-		return false;
+		throw new Error("itemData should be an Object");
+	}
+	// Required keys
+	if (typeof obj.typeId !== "string") {
+		throw new Error("typeId must be a string");
+	}
+	if (typeof obj.amount !== "number") {
+		throw new Error("amount must be a number");
+	}
+	let validKeysFound: number = 2;
+	// Optional keys
+	if (obj.lockMode !== undefined) {
+		validKeysFound++;
+		if (!Object.values(ItemLockMode).includes(obj.lockMode)) {
+			throw new Error(
+				`lockMode must be one of the following: ${Object.values(ItemLockMode)}`,
+			);
+		}
+	}
+	if (obj.nameTag !== undefined) {
+		validKeysFound++;
+		if (typeof obj.nameTag !== "string") {
+			throw new Error("nameTag must be a string");
+		}
+	}
+	if (obj.durability !== undefined) {
+		validKeysFound++;
+		if (
+			typeof obj.durability !== "number" &&
+			(typeof obj.durability !== "string" || obj.durability !== "unbreakable")
+		) {
+			throw new Error('Durability must be a number or the string "unbreakable"');
+		}
+	}
+	/* Will add back once mojang fixes dyeable component (Bug tracker MCPE-237577 and MCPE-232617)
+	if (obj.dye !== undefined) {
+		validKeysFound++;
+		if (!isRgb(obj.dye)) {
+			throw new Error(
+				"dye must be an object with the properties red, green, and blue containing numbers",
+			);
+		}
+	}
+	*/
+	if (obj.enchants !== undefined) {
+		validKeysFound++;
+		if (!isEnchantDataArr(obj.enchants)) {
+			throw new Error("enchants must be an array of EnchantData");
+		}
+	}
+	if (obj.slot !== undefined) {
+		validKeysFound++;
+		if (!isSlotData(obj.slot)) {
+			throw new Error(
+				"slot must be an object containing name, and optionally id and replaceItem",
+			);
+		}
 	}
 	const keyCount: number = Object.keys(obj).length;
-	return (
-		typeof obj.typeId === "string" &&
-		typeof obj.amount === "number" &&
-		(obj.lockMode === undefined || Object.values(ItemLockMode).includes(obj.lockMode)) &&
-		(obj.nameTag === undefined || typeof obj.nameTag === "string") &&
-		(obj.durability === undefined || typeof obj.nameTag === "number") &&
-		(obj.dye === undefined || isRgb(obj.dye)) &&
-		(obj.enchants === undefined || isEnchantDataArr(obj.enchants)) &&
-		(obj.slot === undefined || isSlotData(obj.slot)) &&
-		keyCount <= ITEM_DATA_KEY_COUNT_MAX &&
-		keyCount >= ITEM_DATA_KEY_COUNT_MIN
-	);
+	if (keyCount >= ITEM_DATA_KEY_COUNT_MAX && keyCount <= ITEM_DATA_KEY_COUNT_MIN) {
+		throw new Error("Invalid key count");
+	}
+	if (keyCount !== validKeysFound) {
+		throw new Error(
+			`Invalid key${keyCount - validKeysFound !== 1 ? "s" : ""} found. Valid keys include:\n${Object.values(ItemDataKeysForErrorMessage).join(", ")}`,
+		);
+	}
+	return true;
 }
 
-export function parseItemData(str: string): ItemData | undefined {
-	const parsedData = JSON.parse(str);
-	if (isItemData(parsedData)) {
-		return parsedData;
-	} else {
-		return undefined;
+export function parseItemData(str: string): {
+	itemData: ItemData | undefined;
+	syntaxError: string | undefined;
+} {
+	// biome-ignore lint/suspicious/noExplicitAny: any is required here for JSON.parse. Type will be assigned later.
+	let parsedData: any;
+	try {
+		parsedData = JSON.parse(str);
+	} catch (e) {
+		if (e instanceof SyntaxError) {
+			return {
+				itemData: undefined,
+				syntaxError: e.message,
+			};
+		} else {
+			return {
+				itemData: undefined,
+				syntaxError: `Unknown error occurred`,
+			};
+		}
 	}
+	try {
+		if (isItemData(parsedData)) {
+			return {
+				itemData: parsedData,
+				syntaxError: undefined,
+			};
+		}
+	} catch (e) {
+		if (e instanceof Error) {
+			return {
+				itemData: undefined,
+				syntaxError: e.message,
+			};
+		}
+	}
+	return {
+		itemData: undefined,
+		syntaxError: "Object is not ItemData",
+	};
 }
 
 /* Decided to not use this and just trust the user to know what can go in the offhand. No way to account for custom offhand items.
@@ -149,7 +260,7 @@ function canEquipInSlot(itemStack: ItemStack, targetSlot: EquipmentSlot): boolea
 }
 
 // biome-ignore assist/source/useSortedKeys: Want to keep it in the same order as declared in the ItemData interface.
-export const ITEM_DATA_VALIDATION = {
+export const ItemDataValidation = {
 	typeId(value: string): BooleanWithMessage {
 		const result: boolean = ItemTypes.get(value) !== undefined;
 		return {
@@ -172,14 +283,14 @@ export const ITEM_DATA_VALIDATION = {
 		};
 	},
 	nameTag(value: string): BooleanWithMessage {
-		// 255 is the max item nametag length as stated in index.d.ts
-		const result: boolean = value.length <= 255;
+		// 255 is the max item nametag length as stated in index.d.ts. Going by 253 since §r is automatically added to the start of nametag to avoid italicization.
+		const result: boolean = value.length <= 253;
 		return {
 			bool: result,
-			message: result ? "Valid" : "Nametag length must be 255 characters or less"
-		}
+			message: result ? "Valid" : "Nametag length must be 253 characters or less",
+		};
 	},
-	durability(durability: number, itemStack: ItemStack): BooleanWithMessage {
+	durability(durability: ItemDurability, itemStack: ItemStack): BooleanWithMessage {
 		const durabilityComponent = itemStack.getComponent(ItemComponentTypes.Durability);
 		if (durabilityComponent === undefined) {
 			return {
@@ -187,17 +298,22 @@ export const ITEM_DATA_VALIDATION = {
 				message: "Cannot apply durability to selected item",
 			};
 		}
-		if ((!Number.isInteger(durability) || durability <= 0) && durability !== Infinity) {
-			// Infinity represents unbreakable items.
+		if (durability === "unbreakable") {
 			return {
-				bool: false,
-				message: "Durability must be a positive integer or Infinity",
+				bool: true,
+				message: "Valid",
 			};
 		}
-		if (durabilityComponent.maxDurability < durability && durability !== Infinity) {
+		if (!Number.isInteger(durability) || durability <= 0) {
 			return {
 				bool: false,
-				message: `Durability cannot exceed max for this item (${durabilityComponent.maxDurability})`,
+				message: 'Durability must be a positive integer or "unbreakable"',
+			};
+		}
+		if (durabilityComponent.maxDurability < durability) {
+			return {
+				bool: false,
+				message: `Durability number value cannot exceed max for this item (${durabilityComponent.maxDurability})`,
 			};
 		}
 		return {
@@ -207,12 +323,12 @@ export const ITEM_DATA_VALIDATION = {
 	},
 	dye(value: RGB): BooleanWithMessage {
 		const result: boolean =
-			value.red < 0 ||
-			value.red > 1 ||
-			value.green < 0 ||
-			value.green > 1 ||
-			value.blue < 0 ||
-			value.blue > 1;
+			value.red <= 0 ||
+			value.red >= 1 ||
+			value.green <= 0 ||
+			value.green >= 1 ||
+			value.blue <= 0 ||
+			value.blue >= 1;
 		return {
 			bool: result,
 			message: result
@@ -274,56 +390,58 @@ export const ITEM_DATA_VALIDATION = {
 			message: "Valid",
 		};
 	},
-	full(data: ItemData): BooleanWithMessage {
+	complete(data: ItemData): BooleanWithMessage {
 		let result: BooleanWithMessage;
-		result = ITEM_DATA_VALIDATION.typeId(data.typeId);
+		result = ItemDataValidation.typeId(data.typeId);
 		if (!result.bool) {
 			return result;
 		}
-		result = ITEM_DATA_VALIDATION.amount(data.amount);
+		result = ItemDataValidation.amount(data.amount);
 		if (!result.bool) {
 			return result;
 		}
 		if (data.lockMode) {
-			result = ITEM_DATA_VALIDATION.lockMode(data.lockMode);
+			result = ItemDataValidation.lockMode(data.lockMode);
 			if (!result.bool) {
 				return result;
 			}
 		}
 		if (data.nameTag) {
-			result = ITEM_DATA_VALIDATION.nameTag(data.nameTag);
+			result = ItemDataValidation.nameTag(data.nameTag);
 			if (!result.bool) {
 				return result;
 			}
 		}
 		const itemStack = new ItemStack(data.typeId);
 		if (data.durability) {
-			result = ITEM_DATA_VALIDATION.durability(data.durability, itemStack);
+			result = ItemDataValidation.durability(data.durability, itemStack);
 			if (!result.bool) {
 				return result;
 			}
 		}
+		/* Will add back once mojang fixes dyeable component (Bug tracker MCPE-237577 and MCPE-232617)
 		if (data.dye) {
-			result = ITEM_DATA_VALIDATION.dye(data.dye);
+			result = ItemDataValidation.dye(data.dye);
 			if (!result.bool) {
 				return result;
 			}
 		}
+		*/
 		if (data.enchants) {
-			result = ITEM_DATA_VALIDATION.enchants(data.enchants, itemStack);
+			result = ItemDataValidation.enchants(data.enchants, itemStack);
 			if (!result.bool) {
 				return result;
 			}
 		}
 		if (data.slot) {
-			result = ITEM_DATA_VALIDATION.slot(data.slot, itemStack);
+			result = ItemDataValidation.slot(data.slot, itemStack);
 			if (!result.bool) {
 				return result;
 			}
 		}
 		return {
 			bool: true,
-			message: "Valid",
+			message: "ItemData is valid",
 		};
 	},
 };

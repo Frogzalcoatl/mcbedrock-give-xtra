@@ -1,6 +1,3 @@
-Make sure entity selector comes after JSON argument in command. Will make it easier for user.
+Replaceitem function (ItemData.slot implementation)
 
-Replaceitem function
-
-Fix interface type checker functions with range of key counts.
-	Technically an object within required amount keys containing random ones that are not a part of the interface would be accepted.
+Help command (server-ui)

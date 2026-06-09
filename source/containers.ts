@@ -1,5 +1,11 @@
 import "@minecraft/server";
-import type { Container, ItemStack, ItemType, Player } from "@minecraft/server";
+import {
+	type Container,
+	type Entity,
+	type ItemStack,
+	type ItemType,
+	Player,
+} from "@minecraft/server";
 import { prettyTypeId } from "./prettyTypeId";
 import type { BooleanWithMessage } from "./types";
 
@@ -49,6 +55,7 @@ export function hasItemAmount(
 
 // Works similarly to the /clear command. Only difference is that it will not clear if container does not have enough of requested item.
 // If amountToClear is undefined, clears all instances of item.
+// Cannot be used in restricted execution
 export function clearItem(
 	container: Container,
 	item: ItemType,
@@ -122,8 +129,9 @@ export function clearItem(
 	};
 }
 
+// Cannot be used in restricted execution
 export function giveItem(
-	player: Player,
+	entity: Entity,
 	container: Container,
 	itemStack: ItemStack,
 	amountToGive: number = 1,
@@ -141,25 +149,27 @@ export function giveItem(
 		amountLeft -= itemStack.amount;
 	}
 
+	const entityName = entity instanceof Player ? entity.name : prettyTypeId(entity.typeId);
+
 	// Spawn items as entities
 	while (amountLeft > 0) {
-		if (!player.isValid) {
+		if (!entity.isValid) {
 			return {
 				bool: false,
-				message: `Only able to give ${player.name} ${amountToGive - amountLeft}/${amountToGive} ${prettyTypeId(itemStack.type.id)}. Unable to spawn items on invalid player.`,
+				message: `Only able to give ${entityName}§r ${amountToGive - amountLeft}/${amountToGive} ${prettyTypeId(itemStack.type.id)}. Unable to spawn items on invalid player.`,
 			};
 		}
 		itemStack.amount = Math.min(itemStack.maxAmount, amountLeft);
-		player.dimension.spawnItem(itemStack, {
-			x: player.location.x,
-			y: player.location.y + 1,
-			z: player.location.z,
+		entity.dimension.spawnItem(itemStack, {
+			x: entity.location.x,
+			y: entity.location.y + 1,
+			z: entity.location.z,
 		});
 		amountLeft -= itemStack.amount;
 	}
 
 	return {
 		bool: true,
-		message: `Gave ${player.name} ${amountToGive} ${prettyTypeId(itemStack.type.id)}`,
+		message: `Gave ${entityName}§r ${amountToGive} ${prettyTypeId(itemStack.type.id)}`,
 	};
 }

@@ -1,107 +1,126 @@
-import { Enchantment, EnchantmentLevelOutOfBoundsError, EnchantmentTypeNotCompatibleError, EnchantmentTypes, EnchantmentTypeUnknownIdError, InvalidItemStackError, ItemComponentTypes, ItemEnchantableComponent, ItemStack, RGB } from "@minecraft/server";
-import { BooleanWithMessage, EnchantData, ItemData } from "./types";
-import { ITEM_DATA_VALIDATION } from "./itemData";
+import {
+	type Enchantment,
+	EnchantmentLevelOutOfBoundsError,
+	EnchantmentTypeNotCompatibleError,
+	EnchantmentTypes,
+	EnchantmentTypeUnknownIdError,
+	InvalidItemStackError,
+	ItemComponentTypes,
+	type ItemEnchantableComponent,
+	ItemStack,
+} from "@minecraft/server";
+import { ItemDataValidation } from "./itemData";
+import type { BooleanWithMessage, EnchantData, ItemData, ItemDurability } from "./types";
 
-function setDurability(item: ItemStack, value: number): BooleanWithMessage {
+function setDurability(item: ItemStack, value: ItemDurability): BooleanWithMessage {
 	const durabilityComponent = item.getComponent(ItemComponentTypes.Durability);
 	if (durabilityComponent === undefined || !durabilityComponent.isValid) {
 		return {
 			bool: false,
-			message: "Unable to apply durability to item"
+			message: "Unable to apply durability to item",
 		};
 	}
-	if (value > durabilityComponent.maxDurability && value !== Infinity) {
-		return {
-			bool: false,
-			message: "Durability cannot exceed max for item"
-		};
-	}
-	if (value === Infinity) {
+	if (value === "unbreakable") {
 		durabilityComponent.unbreakable = true;
 		return {
 			bool: true,
-			message: "Durability set to Infinity (unbreakable)"
+			message: "Durability set to unbreakable",
+		};
+	}
+	if (value > durabilityComponent.maxDurability) {
+		return {
+			bool: false,
+			message: "Durability cannot exceed max for item",
 		};
 	}
 	durabilityComponent.damage = durabilityComponent.maxDurability - value;
 	return {
 		bool: true,
-		message: `Durability set to ${value}`
+		message: `Durability set to ${value}`,
 	};
 }
+
+/* Will add back once mojang fixes dyeable component (Bug tracker MCPE-237577 and MCPE-232617)
 
 function setDye(item: ItemStack, color: RGB): BooleanWithMessage {
 	const dyeableComponent = item.getComponent(ItemComponentTypes.Dyeable);
 	if (dyeableComponent === undefined || !dyeableComponent.isValid) {
 		return {
 			bool: false,
-			message: "Unable to apply dye to this item"
+			message: "Unable to apply dye to this item",
 		};
 	}
 	dyeableComponent.color = color;
 	return {
 		bool: true,
-		message: "Set dye on item"
+		message: "Set dye on item",
 	};
 }
+*/
 
-function applyEnchantData(enchantableComponent: ItemEnchantableComponent, data: EnchantData): BooleanWithMessage {
+function applyEnchantData(
+	enchantableComponent: ItemEnchantableComponent,
+	data: EnchantData,
+): BooleanWithMessage {
 	const enchantType = EnchantmentTypes.get(data.id);
 	if (enchantType === undefined) {
 		return {
 			bool: false,
-			message: "Invalid enchantId"
+			message: "Invalid enchantId",
 		};
 	}
 	const enchant: Enchantment = {
+		level: data.level,
 		type: enchantType,
-		level: data.level
-	}
+	};
 	try {
 		enchantableComponent.addEnchantment(enchant);
 	} catch (e) {
 		if (e instanceof EnchantmentLevelOutOfBoundsError) {
 			return {
 				bool: false,
-				message: `Invalid enchantment level ${enchant.level} for ${enchant.type}`
+				message: `Invalid enchantment level ${enchant.level} for ${enchant.type}`,
 			};
 		} else if (e instanceof EnchantmentTypeUnknownIdError) {
 			return {
 				bool: false,
-				message: "Invalid enchantId"
+				message: "Invalid enchantId",
 			};
 		} else if (e instanceof EnchantmentTypeNotCompatibleError) {
 			return {
 				bool: false,
-				message: `${enchant.type} not compatible with item`
+				message: `${enchant.type} not compatible with item`,
 			};
 		} else {
 			return {
 				bool: false,
-				message: `Unknown error occurred while applying enchant ${enchant.type}`
+				message: `Unknown error occurred while applying enchant ${enchant.type}`,
 			};
 		}
 	}
 	return {
 		bool: true,
-		message: `Applied ${enchant.type} to item`
+		message: `Applied ${enchant.type} to item`,
 	};
 }
 
-export function dataToStack(data: ItemData): { item: ItemStack | undefined; warning: string | undefined } {
+export function dataToStack(data: ItemData): {
+	item: ItemStack | undefined;
+	warning: string | undefined;
+} {
 	let itemStack: ItemStack;
 	try {
-		itemStack = new ItemStack(data.typeId)
+		itemStack = new ItemStack(data.typeId);
 	} catch (error) {
 		if (error instanceof InvalidItemStackError) {
 			return {
 				item: undefined,
-				warning: `Invalid typeId: ${data.typeId}`
+				warning: `Invalid typeId: ${data.typeId}`,
 			};
 		} else {
 			return {
 				item: undefined,
-				warning: `Unknown error occurred due to typeId`
+				warning: `Unknown error occurred due to typeId`,
 			};
 		}
 	}
@@ -109,16 +128,17 @@ export function dataToStack(data: ItemData): { item: ItemStack | undefined; warn
 	let warning: string = "";
 	// Skipping ItemData.amount, that would be passed into the give function.
 	if (data.lockMode) {
-		if (ITEM_DATA_VALIDATION.lockMode(data.lockMode)) {
+		if (ItemDataValidation.lockMode(data.lockMode)) {
 			itemStack.lockMode = data.lockMode;
 		} else {
 			warning += "Invalid lockMode. Skipped.\n";
 		}
 	}
 	if (data.nameTag) {
-		const nameTagResult = ITEM_DATA_VALIDATION.nameTag(data.nameTag);
+		const nameTagResult = ItemDataValidation.nameTag(data.nameTag);
 		if (nameTagResult.bool) {
-			itemStack.nameTag = data.nameTag;
+			// Add §r to reset auto italicization
+			itemStack.nameTag = `§r${data.nameTag}`;
 		} else {
 			warning += `${nameTagResult.message}. Skipped.\n`;
 		}
@@ -129,12 +149,14 @@ export function dataToStack(data: ItemData): { item: ItemStack | undefined; warn
 			warning += `${result.message}.\n`;
 		}
 	}
+	/* Will add back once mojang fixes dyeable component (Bug tracker MCPE-237577 and MCPE-232617)
 	if (data.dye) {
 		const result = setDye(itemStack, data.dye);
 		if (!result.bool) {
 			warning += `${result.message}.\n`;
 		}
 	}
+	*/
 	if (data.enchants) {
 		const enchantableComponent = itemStack.getComponent(ItemComponentTypes.Enchantable);
 		if (enchantableComponent === undefined || !enchantableComponent.isValid) {
@@ -152,6 +174,6 @@ export function dataToStack(data: ItemData): { item: ItemStack | undefined; warn
 	return {
 		item: itemStack,
 		// Trim final \n if any warnings were added
-		warning: warning.length > 0 ? warning.slice(0, warning.length - 1) : undefined
+		warning: warning.length > 0 ? warning.slice(0, warning.length - 1) : undefined,
 	};
 }
