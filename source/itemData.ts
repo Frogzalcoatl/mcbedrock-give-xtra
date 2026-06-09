@@ -8,13 +8,17 @@ import {
 	ItemTypes,
 	type RGB,
 } from "@minecraft/server";
-import type { BooleanWithMessage } from "./types";
-
-const ENCHANT_DATA_KEY_COUNT: number = 2;
-interface EnchantData {
-	id: string;
-	level: number;
-}
+import {
+	type BooleanWithMessage,
+	ENCHANT_DATA_KEY_COUNT,
+	type EnchantData,
+	ITEM_DATA_MAX_KEY_COUNT,
+	ITEM_DATA_MIN_KEY_COUNT,
+	type ItemData,
+	SLOT_DATA_MAX_KEY_COUNT,
+	SLOT_DATA_MIN_KEY_COUNT,
+	type SlotData,
+} from "./types";
 
 // biome-ignore lint/suspicious/noExplicitAny: Type is validated through the function. Any is required here.
 function isEnchantData(obj: any): obj is EnchantData {
@@ -41,14 +45,6 @@ function isEnchantDataArr(arr: any): arr is EnchantData[] {
 	return true;
 }
 
-const SLOT_DATA_MAX_KEY_COUNT: number = 3;
-const SLOT_DATA_MIN_KEY_COUNT: number = 1;
-interface SlotData {
-	name: EquipmentSlot;
-	id?: number;
-	replaceItem?: boolean;
-}
-
 // biome-ignore lint/suspicious/noExplicitAny: Type is validated through the function. Any is required here.
 function isSlotData(obj: any): obj is SlotData {
 	if (typeof obj !== "object" || obj === null) {
@@ -62,21 +58,6 @@ function isSlotData(obj: any): obj is SlotData {
 		keyCount <= SLOT_DATA_MAX_KEY_COUNT &&
 		keyCount >= SLOT_DATA_MIN_KEY_COUNT
 	);
-}
-
-const ITEM_DATA_MAX_KEY_COUNT: number = 8; // 9 once potionType is added
-const ITEM_DATA_MIN_KEY_COUNT: number = 2;
-interface ItemData {
-	typeId: string;
-	amount: number;
-	lockMode?: ItemLockMode;
-	nameTag?: string;
-	// Must be less than the items max durability. Infinity results in infinite durability.
-	durability?: number;
-	dye?: RGB;
-	// potionType: Figure out later;
-	enchants?: EnchantData[];
-	slot?: SlotData;
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: Type is validated through the function. Any is required here.
@@ -175,7 +156,7 @@ function canEquipInSlot(itemStack: ItemStack, targetSlot: EquipmentSlot): boolea
 	}
 }
 
-// biome-ignore assist/source/useSortedKeys: Want to keep it in the same order as the interface above.
+// biome-ignore assist/source/useSortedKeys: Want to keep it in the same order as declared in the ItemData interface.
 export const ITEM_DATA_VALIDATION = {
 	typeId(value: string): BooleanWithMessage {
 		const result: boolean = ItemTypes.get(value) !== undefined;
