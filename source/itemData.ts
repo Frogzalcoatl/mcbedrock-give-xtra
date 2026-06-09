@@ -75,7 +75,7 @@ function isSlotData(obj: any): obj is SlotData {
 	}
 	if (validKeysFound !== keyCount) {
 		throw new Error(
-			`Invalid key${keyCount - validKeysFound !== 1 ? "s" : ""} found. Valid keys include:\n${Object.values(SlotDataKeysForErrorMessage).join(", ")}`,
+			`Invalid slot key${keyCount - validKeysFound !== 1 ? "s" : ""} found. Valid keys include:\n${Object.values(SlotDataKeysForErrorMessage).join(", ")}`,
 		);
 	}
 	return true;
