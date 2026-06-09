@@ -12,11 +12,11 @@ import {
 	type BooleanWithMessage,
 	ENCHANT_DATA_KEY_COUNT,
 	type EnchantData,
-	ITEM_DATA_MAX_KEY_COUNT,
-	ITEM_DATA_MIN_KEY_COUNT,
+	ITEM_DATA_KEY_COUNT_MAX,
+	ITEM_DATA_KEY_COUNT_MIN,
 	type ItemData,
-	SLOT_DATA_MAX_KEY_COUNT,
-	SLOT_DATA_MIN_KEY_COUNT,
+	SLOT_DATA_KEY_COUNT_MAX,
+	SLOT_DATA_KEY_COUNT_MIN,
 	type SlotData,
 } from "./types";
 
@@ -55,8 +55,8 @@ function isSlotData(obj: any): obj is SlotData {
 		Object.values(EquipmentSlot).includes(obj.name) &&
 		(obj.id === undefined || typeof obj.id === "number") &&
 		(obj.replaceItem === undefined || typeof obj.replaceItem === "boolean") &&
-		keyCount <= SLOT_DATA_MAX_KEY_COUNT &&
-		keyCount >= SLOT_DATA_MIN_KEY_COUNT
+		keyCount <= SLOT_DATA_KEY_COUNT_MAX &&
+		keyCount >= SLOT_DATA_KEY_COUNT_MIN
 	);
 }
 
@@ -65,16 +65,11 @@ function isRgb(obj: any): obj is RGB {
 	if (typeof obj !== "object" || obj === null) {
 		return false;
 	}
+	// Stopped checking whether values fall between expected range 0-1 since that is checked in the validateItemData functions.
 	return (
 		typeof obj.red === "number" &&
-		obj.red >= 0 &&
-		obj.red <= 1 &&
 		typeof obj.green === "number" &&
-		obj.green >= 0 &&
-		obj.green <= 1 &&
 		typeof obj.blue === "number" &&
-		obj.blue >= 0 &&
-		obj.blue <= 1 &&
 		Object.keys(obj).length === 3
 	);
 }
@@ -94,8 +89,8 @@ function isItemData(obj: any): obj is ItemData {
 		(obj.dye === undefined || isRgb(obj.dye)) &&
 		(obj.enchants === undefined || isEnchantDataArr(obj.enchants)) &&
 		(obj.slot === undefined || isSlotData(obj.slot)) &&
-		keyCount <= ITEM_DATA_MAX_KEY_COUNT &&
-		keyCount >= ITEM_DATA_MIN_KEY_COUNT
+		keyCount <= ITEM_DATA_KEY_COUNT_MAX &&
+		keyCount >= ITEM_DATA_KEY_COUNT_MIN
 	);
 }
 

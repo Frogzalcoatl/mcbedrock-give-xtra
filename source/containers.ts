@@ -141,7 +141,7 @@ export function giveItem(
 		amountLeft -= itemStack.amount;
 	}
 
-	// Items should be spawned as entities
+	// Spawn items as entities
 	while (amountLeft > 0) {
 		if (!player.isValid) {
 			return {
