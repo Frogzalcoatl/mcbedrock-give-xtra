@@ -1,0 +1,2 @@
+Make sure entity selector comes after JSON argument in command. Will make it easier for user.
+Replaceitem function
