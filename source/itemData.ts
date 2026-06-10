@@ -7,6 +7,7 @@ import {
 	ItemTypes,
 	type RGB,
 } from "@minecraft/server";
+import { getMcNamespace } from "./prettyTypeId";
 import {
 	type BooleanWithMessage,
 	ENCHANT_DATA_KEY_COUNT,
@@ -22,7 +23,6 @@ import {
 	SlotDataKeysForErrorMessage,
 	SlotName,
 } from "./types";
-import { getMCNamespace } from "./prettyTypeId";
 
 // biome-ignore lint/suspicious/noExplicitAny: Type is validated through the function. Any is required here.
 function isEnchantData(obj: any): obj is EnchantData {
@@ -245,14 +245,15 @@ const VANILLA_OFFHAND_ITEM_TYPES: string[] = [
 // If custom item, returns true since this function relies on enchantment slot data instead of actual equippability.
 // What if a custom item did not set up the enchantable component?
 function canEquipInSlot(itemStack: ItemStack, targetSlot: SlotName): boolean {
-	const itemNamespace = getMCNamespace(itemStack.typeId);
+	const itemNamespace = getMcNamespace(itemStack.typeId);
 	// Assuming namespace is "minecraft:" if there is no namespace.
 	if (itemNamespace !== "minecraft" && itemNamespace !== undefined) {
 		return true;
 	}
 	const enchantable = itemStack.getComponent(ItemComponentTypes.Enchantable);
 	if (!enchantable) {
-		return false;
+		// No way to really validate if there's no enchantable component
+		return true;
 	}
 	const itemEnchantSlots = enchantable.slots;
 	switch (targetSlot) {
@@ -263,27 +264,17 @@ function canEquipInSlot(itemStack: ItemStack, targetSlot: SlotName): boolean {
 			);
 		case SlotName.Chest:
 			return (
-				itemEnchantSlots.includes(EnchantmentSlot.ArmorTorso) || itemEnchantSlots.includes(EnchantmentSlot.Elytra)
+				itemEnchantSlots.includes(EnchantmentSlot.ArmorTorso) ||
+				itemEnchantSlots.includes(EnchantmentSlot.Elytra)
 			);
 		case SlotName.Legs:
 			return itemEnchantSlots.includes(EnchantmentSlot.ArmorLegs);
 		case SlotName.Feet:
 			return itemEnchantSlots.includes(EnchantmentSlot.ArmorFeet);
-		case SlotName.Mainhand:
-			return true;
 		case SlotName.Offhand:
 			return VANILLA_OFFHAND_ITEM_TYPES.includes(itemStack.typeId);
-		case SlotName.Hotbar:
-			return true;
-		case SlotName.Inventory:
-			return true;
-		case SlotName.MobChest:
-			// There shouldnt be any items that cant go inside a chest (specifically donkey chests etc)
-			return true;
-		case SlotName.Saddle:
-			return itemStack.typeId === "minecraft:saddle";
 		default:
-			return false;
+			return true;
 	}
 }
 
@@ -398,7 +389,7 @@ export const ItemDataValidation = {
 			message: "Valid",
 		};
 	},
-	slot(value: SlotData, itemStack: ItemStack): BooleanWithMessage {
+	slot(value: SlotData, itemStack: ItemStack, amount: number): BooleanWithMessage {
 		if (!canEquipInSlot(itemStack, value.name)) {
 			return {
 				bool: false,
@@ -410,6 +401,12 @@ export const ItemDataValidation = {
 			return {
 				bool: false,
 				message: `Slot id must be an integer between 0 and 35`,
+			};
+		}
+		if (amount > itemStack.maxAmount) {
+			return {
+				bool: false,
+				message: `Amount ${amount} exceeds the maximum for ${itemStack.typeId} (${itemStack.maxAmount})\nIf you would like to give an amount exceeding the max stack size, you cannot select a slot.`,
 			};
 		}
 		// data.slot.replaceItem is a boolean. Nothing to check there.
@@ -462,7 +459,7 @@ export const ItemDataValidation = {
 			}
 		}
 		if (data.slot) {
-			result = ItemDataValidation.slot(data.slot, itemStack);
+			result = ItemDataValidation.slot(data.slot, itemStack, data.amount);
 			if (!result.bool) {
 				return result;
 			}

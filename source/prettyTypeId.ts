@@ -9,16 +9,20 @@ export function prettyTypeId(typeId: string): string {
 		if (!word) {
 			continue;
 		}
-		words[i] = `${word.toUpperCase()}${word.slice(1)}`;
+		const firstLetter = word[0];
+		if (!firstLetter) {
+			continue;
+		}
+		words[i] = `${firstLetter.toUpperCase()}${word.slice(1)}`;
 	}
 	return words.join(" ");
 }
 
-export function getMCNamespace(typeId: string): string | undefined {
+export function getMcNamespace(typeId: string): string | undefined {
 	const namespaceColonIndex: number = typeId.indexOf(":");
 	if (namespaceColonIndex === -1) {
 		return undefined;
 	} else {
-		return typeId.slice(0, namespaceColonIndex - 1);
+		return typeId.slice(0, namespaceColonIndex);
 	}
 }

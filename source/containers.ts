@@ -2,132 +2,13 @@ import "@minecraft/server";
 import {
 	type Container,
 	type Entity,
+	EntityComponentTypes,
+	EquipmentSlot,
 	type ItemStack,
-	type ItemType,
 	Player,
 } from "@minecraft/server";
 import { prettyTypeId } from "./prettyTypeId";
-import type { BooleanWithMessage } from "./types";
-
-// Determines whether a container has at least x amount of item type. Returns array of slot ids containing item type.
-export function hasItemAmount(
-	container: Container,
-	item: ItemType,
-	amountToFind: number,
-): { bool: boolean; inSlots: number[] } {
-	if (amountToFind === 0) {
-		return {
-			bool: true,
-			inSlots: [],
-		};
-	}
-	if (amountToFind < 0) {
-		return {
-			bool: false,
-			inSlots: [],
-		};
-	}
-	let amountFound: number = 0;
-	const inSlots: number[] = [];
-	for (let i = 0; i < container.size; i++) {
-		const slotItem = container.getItem(i);
-		if (!slotItem) {
-			continue;
-		}
-
-		if (slotItem.type.id === item.id) {
-			amountFound += slotItem.amount;
-			inSlots.push(i);
-		}
-
-		if (amountFound >= amountToFind) {
-			return {
-				bool: true,
-				inSlots: inSlots,
-			};
-		}
-	}
-	return {
-		bool: false,
-		inSlots: inSlots,
-	};
-}
-
-// Works similarly to the /clear command. Only difference is that it will not clear if container does not have enough of requested item.
-// If amountToClear is undefined, clears all instances of item.
-// Cannot be used in restricted execution
-export function clearItem(
-	container: Container,
-	item: ItemType,
-	amountToClear?: number,
-): BooleanWithMessage {
-	if (amountToClear === 0) {
-		return {
-			bool: true,
-			message: `Cleared 0 ${prettyTypeId(item.id)} (as requested)`,
-		};
-	}
-	if (amountToClear !== undefined && amountToClear < 0) {
-		return {
-			bool: false,
-			message: "Unable to clear negative amount of item. (Use give instead?)",
-		};
-	}
-	const hasItemAmountResult = hasItemAmount(container, item, amountToClear ?? 1);
-	if (!hasItemAmountResult.bool) {
-		return {
-			bool: false,
-			message: `Not enough ${prettyTypeId(item.id)}`,
-		};
-	}
-	const inSlots: number[] = hasItemAmountResult.inSlots;
-
-	// Clears all instances of item when amountToClear is undefined
-	if (amountToClear === undefined) {
-		for (const slot of inSlots) {
-			const slotItem = container.getItem(slot);
-			if (!slotItem) {
-				continue;
-			}
-			if (slotItem.type.id === item.id) {
-				container.setItem(slot);
-			}
-		}
-		return {
-			bool: true,
-			message: `Cleared all instances of ${prettyTypeId(item.id)}`,
-		};
-	}
-
-	// Clears a specific amount of an item
-	let amountLeft: number = amountToClear;
-	for (const slot of inSlots) {
-		const slotItem = container.getItem(slot);
-		if (!slotItem) {
-			continue;
-		}
-		if (slotItem.amount <= amountLeft) {
-			amountLeft -= slotItem.amount;
-			container.setItem(slot);
-		} else {
-			slotItem.amount -= amountLeft;
-			container.setItem(slot, slotItem);
-			break;
-		}
-	}
-
-	if (amountLeft !== 0) {
-		return {
-			bool: false,
-			message: `Did not clear intended amount of ${prettyTypeId(item.id)}. (amountLeftToClear = ${amountLeft})`,
-		};
-	}
-
-	return {
-		bool: true,
-		message: `Cleared ${amountToClear}x ${prettyTypeId(item.id)}`,
-	};
-}
+import { type BooleanWithMessage, type SlotData, SlotName } from "./types";
 
 // Cannot be used in restricted execution
 export function giveItem(
@@ -171,5 +52,172 @@ export function giveItem(
 	return {
 		bool: true,
 		message: `Gave ${entityName}§r ${amountToGive} ${prettyTypeId(itemStack.type.id)}`,
+	};
+}
+
+function setItemInContainer(
+	entity: Entity,
+	container: Container,
+	item: ItemStack,
+	slotId: number | undefined,
+	replace: boolean,
+	isHotbar: boolean,
+): BooleanWithMessage {
+	if (!container.isValid) {
+		return {
+			bool: false,
+			message: `${entity.typeId} container is invalid`,
+		};
+	}
+	const minSlotId = 0;
+	const maxSlotId = isHotbar ? 8 : container.size - 1;
+	if (slotId === undefined) {
+		const firstEmptySlot: number | undefined = container.firstEmptySlot();
+		if (
+			firstEmptySlot !== undefined &&
+			firstEmptySlot >= minSlotId &&
+			firstEmptySlot <= maxSlotId
+		) {
+			slotId = firstEmptySlot;
+		} else {
+			return {
+				bool: false,
+				message: "Unable to find valid slot id",
+			};
+		}
+	}
+	if (slotId < minSlotId || slotId > maxSlotId) {
+		return {
+			bool: false,
+			message: `Invalid slot id. Should be between ${minSlotId} and ${maxSlotId}`,
+		};
+	}
+	let oldItem: ItemStack | undefined;
+	if (!replace) {
+		oldItem = container.getItem(slotId);
+	}
+	container.setItem(slotId, item);
+	let giveResult: BooleanWithMessage | undefined;
+	if (oldItem) {
+		giveResult = giveItem(entity, container, oldItem, oldItem.amount);
+	}
+	let message: string = `Replaced item in slot ${slotId}`;
+	if (giveResult && !giveResult.bool) {
+		message += `\nHowever, ${giveResult.message}`;
+	}
+	return {
+		bool: true,
+		message: message,
+	};
+}
+
+function slotNameToEquipmentSlot(name: SlotName): EquipmentSlot | undefined {
+	switch (name) {
+		case SlotName.Mainhand:
+			return EquipmentSlot.Mainhand;
+		case SlotName.Offhand:
+			return EquipmentSlot.Offhand;
+		case SlotName.Head:
+			return EquipmentSlot.Head;
+		case SlotName.Chest:
+			return EquipmentSlot.Chest;
+		case SlotName.Legs:
+			return EquipmentSlot.Legs;
+		case SlotName.Feet:
+			return EquipmentSlot.Feet;
+		default:
+			return undefined;
+	}
+}
+
+export function replaceItem(entity: Entity, item: ItemStack, slot: SlotData): BooleanWithMessage {
+	if (slot.name === SlotName.Inventory || slot.name === SlotName.MobChest) {
+		const inventory = entity.getComponent(EntityComponentTypes.Inventory);
+		if (inventory === undefined) {
+			return {
+				bool: false,
+				message: "Unable to get inventory",
+			};
+		}
+		return setItemInContainer(
+			entity,
+			inventory.container,
+			item,
+			slot.id,
+			slot.replaceItem ?? true,
+			false,
+		);
+	}
+	if (slot.name === SlotName.Hotbar) {
+		if (!(entity instanceof Player)) {
+			return {
+				bool: false,
+				message: "Only players have a hotbar",
+			};
+		}
+		const inventory = entity.getComponent(EntityComponentTypes.Inventory);
+		if (inventory === undefined) {
+			return {
+				bool: false,
+				message: "Unable to get inventory",
+			};
+		}
+		return setItemInContainer(
+			entity,
+			inventory.container,
+			item,
+			slot.id,
+			slot.replaceItem ?? true,
+			true,
+		);
+	}
+	// The rest of the SlotNames require equippable
+	const equippable = entity.getComponent(EntityComponentTypes.Equippable);
+	if (equippable === undefined) {
+		return {
+			bool: false,
+			message: `Unable to get equippable component on ${entity.typeId}`,
+		};
+	}
+	const equipmentSlot: EquipmentSlot | undefined = slotNameToEquipmentSlot(slot.name);
+	if (equipmentSlot === undefined) {
+		return {
+			bool: false,
+			message: `Unable to convert ${slot.name} to EquipmentSlot`,
+		};
+	}
+	let oldItem: ItemStack | undefined;
+	if (slot.replaceItem === false) {
+		oldItem = equippable.getEquipment(equipmentSlot);
+	}
+	const equippableResult: boolean = equippable.setEquipment(equipmentSlot, item);
+	if (!equippableResult) {
+		return {
+			bool: false,
+			message: `Unable to equip ${item.typeId} in ${slot.name}`,
+		};
+	}
+	let giveResult: BooleanWithMessage | undefined;
+	if (oldItem) {
+		const inventory = entity.getComponent(EntityComponentTypes.Inventory);
+		if (inventory === undefined) {
+			const itemEntity = entity.dimension.spawnItem(item, entity.location);
+			giveResult = {
+				bool: itemEntity.isValid,
+				message: itemEntity.isValid
+					? "Spawned old item as entity"
+					: "Unable to spawn old item as entity",
+			};
+		} else {
+			giveResult = giveItem(entity, inventory.container, item, item.amount);
+		}
+	}
+	let message: string = `Equipped ${item.typeId} in slot ${slot.name}`;
+	if (giveResult && !giveResult.bool) {
+		message += `\nHowever, ${giveResult.message}`;
+	}
+	return {
+		bool: true,
+		message: message,
 	};
 }

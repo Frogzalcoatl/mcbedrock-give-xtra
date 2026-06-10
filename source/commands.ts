@@ -1,6 +1,5 @@
 import {
 	CommandPermissionLevel,
-	type Container,
 	type CustomCommand,
 	type CustomCommandOrigin,
 	CustomCommandParamType,
@@ -13,9 +12,10 @@ import {
 	system,
 	world,
 } from "@minecraft/server";
-import { giveItem } from "./containers";
+import { giveItem, replaceItem } from "./containers";
 import { ItemDataValidation, parseItemData } from "./itemData";
 import { dataToStack } from "./itemStack";
+import { prettyTypeId } from "./prettyTypeId";
 import type { ItemData } from "./types";
 
 const NAMESPACE: string = "givex";
@@ -37,17 +37,6 @@ const GIVEX_COMMAND: CustomCommand = {
 	],
 	permissionLevel: CommandPermissionLevel.GameDirectors,
 };
-
-function getContainers(entities: Entity[]): [Entity, Container][] {
-	const entityContainers: [Entity, Container][] = [];
-	for (const entity of entities) {
-		const inventory = entity.getComponent(EntityComponentTypes.Inventory);
-		if (inventory?.isValid) {
-			entityContainers.push([entity, inventory.container]);
-		}
-	}
-	return entityContainers;
-}
 
 function afterTickCommandResultHandler(
 	origin: CustomCommandOrigin,
@@ -101,15 +90,14 @@ function givexCommandCallback(
 			status: CustomCommandStatus.Failure,
 		};
 	}
-	let entityContainers: [Entity, Container][];
+	let entities: Entity[];
 	if (selectorResult) {
-		entityContainers = getContainers(selectorResult);
+		entities = selectorResult;
 	} else if (origin.sourceEntity) {
-		entityContainers = getContainers([origin.sourceEntity]);
+		entities = [origin.sourceEntity];
+	} else if (origin.initiator) {
+		entities = [origin.initiator];
 	} else {
-		entityContainers = [];
-	}
-	if (entityContainers.length === 0) {
 		return {
 			message: "No valid selector",
 			status: CustomCommandStatus.Failure,
@@ -125,9 +113,64 @@ function givexCommandCallback(
 			return;
 		}
 		const itemStack: ItemStack = itemStackResult.item;
-		for (const [entity, container] of entityContainers) {
-			giveItem(entity, container, itemStack, itemData.amount);
+		let successCount: number = 0;
+		let errors: string = "";
+		if (itemData.slot) {
+			for (const entity of entities) {
+				const result = replaceItem(entity, itemStack, itemData.slot);
+				if (result.bool) {
+					successCount++;
+				} else {
+					errors += `-${result.message}\n`;
+				}
+			}
+		} else {
+			for (const entity of entities) {
+				const inventory = entity.getComponent(EntityComponentTypes.Inventory);
+				if (!inventory) {
+					errors += `-Unable to get inventory of ${entity.nameTag ?? entity.typeId}`;
+				}
+				if (inventory) {
+					const result = giveItem(
+						entity,
+						inventory.container,
+						itemStack,
+						itemData.amount,
+					);
+					if (result.bool) {
+						successCount++;
+					} else {
+						errors += `-${result.message}\n`;
+					}
+				}
+			}
 		}
+		let selectorName: string;
+		if (entities.length === 1) {
+			const entity: Entity | undefined = entities[0];
+			if (entity) {
+				selectorName = entity.nameTag ? entity.nameTag : entity.typeId;
+			} else {
+				selectorName = "selector";
+			}
+		} else {
+			selectorName = "selectors";
+		}
+		let message: string = "";
+		if (successCount === entities.length) {
+			message = `Gave ${prettyTypeId(itemData.typeId)}§r * ${itemData.amount} to ${selectorName}§r`;
+		} else if (successCount > 0) {
+			message = `Gave ${prettyTypeId(itemData.typeId)}§r * ${itemData.amount} to ${selectorName}§r\n§6However, failed to give to ${entities.length - successCount} entit${entities.length - successCount !== 1 ? "ies" : "y"}`;
+		} else {
+			message = `§cUnable to give ${itemData.typeId}§r§c to ${selectorName}§r§c`;
+		}
+		if (errors) {
+			message += `\n§cError(s):\n${errors.slice(0, 1024)}${errors.length > 1024 ? "..." : ""}`;
+		}
+		afterTickCommandResultHandler(origin, {
+			message: message,
+			status: successCount > 0 ? CustomCommandStatus.Success : CustomCommandStatus.Failure,
+		});
 	});
 	return {
 		message: `Ran givex`,

@@ -16,12 +16,11 @@ export enum SlotName {
 	Mainhand = "slot.weapon.mainhand",
 	Offhand = "slot.weapon.offhand",
 	Head = "slot.armor.head",
-	Chest = "slot.armor.chest", // Wolves also use slot.armor.chest for their armor
+	Chest = "slot.armor.chest",
 	Legs = "slot.armor.legs",
 	Feet = "slot.armor.feet",
-	Hotbar = "slot.armor.hotbar",
+	Hotbar = "slot.hotbar",
 	Inventory = "slot.inventory",
-	Saddle = "slot.saddle", // Determine whether this is accessible
 	MobChest = "slot.chest", // Donkeys, Mules, Llamas
 }
 
