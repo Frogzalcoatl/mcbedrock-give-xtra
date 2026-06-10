@@ -76,7 +76,7 @@ function isSlotData(obj: any): obj is SlotData {
 		}
 	}
 	const keyCount: number = Object.keys(obj).length;
-	if (keyCount >= SLOT_DATA_KEY_COUNT_MAX || keyCount <= SLOT_DATA_KEY_COUNT_MIN) {
+	if (keyCount > SLOT_DATA_KEY_COUNT_MAX || keyCount < SLOT_DATA_KEY_COUNT_MIN) {
 		throw new Error("Invalid key count");
 	}
 	if (validKeysFound !== keyCount) {
