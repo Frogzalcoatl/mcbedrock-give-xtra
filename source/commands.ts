@@ -58,6 +58,7 @@ function afterTickCommandResultHandler(
 	}
 	if (origin.sourceBlock && world.gameRules.commandBlockOutput) {
 		// §7 makes text gray, §o italicizes, §r resets formatting
+		// Using same format as commandblockoutput in game
 		world.sendMessage(`§7§o[CommandBlock§r: ${result.message}]`);
 	} else if (
 		origin.sourceEntity &&

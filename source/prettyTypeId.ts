@@ -11,8 +11,7 @@ export function prettyTypeId(typeId: string): string {
 		}
 		words[i] = `${word.toUpperCase()}${word.slice(1)}`;
 	}
-	typeId = words.join(" ");
-	return typeId;
+	return words.join(" ");
 }
 
 export function getMCNamespace(typeId: string): string | undefined {
