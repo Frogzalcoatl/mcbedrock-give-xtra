@@ -14,3 +14,12 @@ export function prettyTypeId(typeId: string): string {
 	typeId = words.join(" ");
 	return typeId;
 }
+
+export function getMCNamespace(typeId: string): string | undefined {
+	const namespaceColonIndex: number = typeId.indexOf(":");
+	if (namespaceColonIndex === -1) {
+		return undefined;
+	} else {
+		return typeId.slice(0, namespaceColonIndex - 1);
+	}
+}
