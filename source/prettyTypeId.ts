@@ -18,10 +18,11 @@ export function prettyTypeId(typeId: string): string {
 	return words.join(" ");
 }
 
-export function getMcNamespace(typeId: string): string | undefined {
+// Returns "minecraft:" if no namespace is present. Matches behavior of game.
+export function getMcNamespace(typeId: string): string {
 	const namespaceColonIndex: number = typeId.indexOf(":");
 	if (namespaceColonIndex === -1) {
-		return undefined;
+		return "minecraft";
 	} else {
 		return typeId.slice(0, namespaceColonIndex);
 	}

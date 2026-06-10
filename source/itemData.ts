@@ -77,11 +77,13 @@ function isSlotData(obj: any): obj is SlotData {
 	}
 	const keyCount: number = Object.keys(obj).length;
 	if (keyCount > SLOT_DATA_KEY_COUNT_MAX || keyCount < SLOT_DATA_KEY_COUNT_MIN) {
-		throw new Error("Invalid key count");
+		throw new Error(
+			`Invalid SlotData key count. Valid SlotData keys include:\n${SlotDataKeysForErrorMessage.join(", ")}`,
+		);
 	}
 	if (validKeysFound !== keyCount) {
 		throw new Error(
-			`Invalid slot key${keyCount - validKeysFound !== 1 ? "s" : ""} found. Valid keys include:\n${Object.values(SlotDataKeysForErrorMessage).join(", ")}`,
+			`Invalid SlotData key${keyCount - validKeysFound !== 1 ? "s" : ""} found. Valid keys include:\n${SlotDataKeysForErrorMessage.join(", ")}`,
 		);
 	}
 	return true;
@@ -117,6 +119,15 @@ function isRgb(obj: any): obj is RGB {
 function isItemData(obj: any): obj is ItemData {
 	if (typeof obj !== "object" || obj === null) {
 		throw new Error("itemData must be an Object");
+	}
+	const keyCount: number = Object.keys(obj).length;
+	if (keyCount < ITEM_DATA_KEY_COUNT_MIN) {
+		throw new Error(`Invalid key count. ItemData requires "typeId" and "amount"`);
+	}
+	if (keyCount > ITEM_DATA_KEY_COUNT_MAX) {
+		throw new Error(
+			`Invalid key count. Valid ItemData keys include:\n${ItemDataKeysForErrorMessage.join(", ")}`,
+		);
 	}
 	// Mandatory keys
 	if (typeof obj.typeId !== "string") {
@@ -174,10 +185,6 @@ function isItemData(obj: any): obj is ItemData {
 			);
 		}
 	}
-	const keyCount: number = Object.keys(obj).length;
-	if (keyCount >= ITEM_DATA_KEY_COUNT_MAX && keyCount <= ITEM_DATA_KEY_COUNT_MIN) {
-		throw new Error("Invalid key count");
-	}
 	if (keyCount !== validKeysFound) {
 		throw new Error(
 			`Invalid key${keyCount - validKeysFound !== 1 ? "s" : ""} found. Valid keys include:\n${Object.values(ItemDataKeysForErrorMessage).join(", ")}`,
@@ -195,7 +202,7 @@ export function parseItemData(str: string): {
 	try {
 		parsedData = JSON.parse(str);
 	} catch (e) {
-		if (e instanceof SyntaxError) {
+		if (e instanceof Error) {
 			return {
 				itemData: undefined,
 				syntaxError: e.message,
@@ -243,16 +250,28 @@ const VANILLA_OFFHAND_ITEM_TYPES: string[] = [
 
 // Only works with vanilla items.
 // If custom item, returns true since this function relies on enchantment slot data instead of actual equippability.
-// What if a custom item did not set up the enchantable component?
+// Just in case a equippable custom item does not have the enchantable component set up.
 function canEquipInSlot(itemStack: ItemStack, targetSlot: SlotName): boolean {
-	const itemNamespace = getMcNamespace(itemStack.typeId);
-	// Assuming namespace is "minecraft:" if there is no namespace.
-	if (itemNamespace !== "minecraft" && itemNamespace !== undefined) {
+	if (
+		targetSlot === SlotName.Inventory ||
+		targetSlot === SlotName.MobChest ||
+		targetSlot === SlotName.Mainhand ||
+		targetSlot === SlotName.Hotbar
+	) {
+		// There shouldnt be any items that cant go in these.
 		return true;
+	}
+	const itemNamespace = getMcNamespace(itemStack.typeId);
+	if (itemNamespace !== "minecraft") {
+		// Return true if custom item.
+		return true;
+	}
+	if (targetSlot === SlotName.Offhand) {
+		return VANILLA_OFFHAND_ITEM_TYPES.includes(itemStack.typeId);
 	}
 	const enchantable = itemStack.getComponent(ItemComponentTypes.Enchantable);
 	if (!enchantable) {
-		// No way to really validate if there's no enchantable component
+		// No way to really validate if item has no enchantable component
 		return true;
 	}
 	const itemEnchantSlots = enchantable.slots;
@@ -271,9 +290,8 @@ function canEquipInSlot(itemStack: ItemStack, targetSlot: SlotName): boolean {
 			return itemEnchantSlots.includes(EnchantmentSlot.ArmorLegs);
 		case SlotName.Feet:
 			return itemEnchantSlots.includes(EnchantmentSlot.ArmorFeet);
-		case SlotName.Offhand:
-			return VANILLA_OFFHAND_ITEM_TYPES.includes(itemStack.typeId);
 		default:
+			// theoretically would never get here, but just in case
 			return true;
 	}
 }

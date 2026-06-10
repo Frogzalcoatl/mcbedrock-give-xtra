@@ -68,6 +68,57 @@ function afterTickCommandResultHandler(
 	}
 }
 
+function getCommandEntities(
+	origin: CustomCommandOrigin,
+	selectorResult?: Entity[],
+): Entity[] | undefined {
+	if (selectorResult) {
+		return selectorResult;
+	} else if (origin.sourceEntity) {
+		return [origin.sourceEntity];
+	} else if (origin.initiator) {
+		return [origin.initiator];
+	} else {
+		return undefined;
+	}
+}
+
+function getSelectorName(entities: Entity[]): string {
+	if (entities.length > 1) {
+		return "selectors";
+	} else if (entities.length === 1) {
+		const entity: Entity | undefined = entities[0];
+		if (entity) {
+			return entity.nameTag ? entity.nameTag : entity.typeId;
+		} else {
+			return "selector";
+		}
+	} else {
+		return "unknown selector";
+	}
+}
+
+function getGivexMessage(
+	entities: Entity[],
+	itemData: ItemData,
+	selectorName: string,
+	successCount: number,
+	errors: string,
+): string {
+	let message: string = "";
+	if (successCount === entities.length) {
+		message = `Gave ${prettyTypeId(itemData.typeId)}§r * ${itemData.amount} to ${selectorName}§r`;
+	} else if (successCount > 0) {
+		message = `Gave ${prettyTypeId(itemData.typeId)}§r * ${itemData.amount} to ${selectorName}§r\n§6However, failed to give to ${entities.length - successCount} entit${entities.length - successCount !== 1 ? "ies" : "y"}`;
+	} else {
+		message = `§cUnable to give ${itemData.typeId}§r§c to ${selectorName}§r§c`;
+	}
+	if (errors) {
+		message += `\n§cError(s):\n${errors.slice(0, 1024)}${errors.length > 1024 ? "..." : ""}`;
+	}
+	return message;
+}
+
 // Example givex command: /givex "{\"typeId\":\"minecraft:dirt\",\"amount\":1}"
 // Players must use escape characters for double quotes: \"
 function givexCommandCallback(
@@ -76,9 +127,17 @@ function givexCommandCallback(
 	selectorResult?: Entity[],
 ): CustomCommandResult {
 	const itemDataResult = parseItemData(json);
+	const entities: Entity[] | undefined = getCommandEntities(origin, selectorResult);
+	if (entities === undefined) {
+		return {
+			message: "Unable to give item to selector\nError(s):\nNo valid selector",
+			status: CustomCommandStatus.Failure,
+		};
+	}
+	const selectorName: string = getSelectorName(entities);
 	if (itemDataResult.itemData === undefined) {
 		return {
-			message: itemDataResult.syntaxError ?? "Unknown error in your json. (sorry)",
+			message: `Unable to give item to ${selectorName}§r§c\nError(s):\n-${itemDataResult.syntaxError ?? "Unknown error in your json. (sorry)"}`,
 			status: CustomCommandStatus.Failure,
 		};
 	}
@@ -86,20 +145,7 @@ function givexCommandCallback(
 	const validationResult = ItemDataValidation.complete(itemDataResult.itemData);
 	if (!validationResult.bool) {
 		return {
-			message: validationResult.message,
-			status: CustomCommandStatus.Failure,
-		};
-	}
-	let entities: Entity[];
-	if (selectorResult) {
-		entities = selectorResult;
-	} else if (origin.sourceEntity) {
-		entities = [origin.sourceEntity];
-	} else if (origin.initiator) {
-		entities = [origin.initiator];
-	} else {
-		return {
-			message: "No valid selector",
+			message: `Unable to give item to ${selectorName}§r§c\nError(s)\n${validationResult.message}`,
 			status: CustomCommandStatus.Failure,
 		};
 	}
@@ -107,7 +153,7 @@ function givexCommandCallback(
 		const itemStackResult = dataToStack(itemData);
 		if (itemStackResult.item === undefined) {
 			afterTickCommandResultHandler(origin, {
-				message: itemStackResult.warning ?? "Failed to create item stack.",
+				message: `Unable to give item to ${selectorName}§r§c\nError(s)\n${itemStackResult.warning ?? "Failed to create item stack."}`,
 				status: CustomCommandStatus.Failure,
 			});
 			return;
@@ -145,30 +191,8 @@ function givexCommandCallback(
 				}
 			}
 		}
-		let selectorName: string;
-		if (entities.length === 1) {
-			const entity: Entity | undefined = entities[0];
-			if (entity) {
-				selectorName = entity.nameTag ? entity.nameTag : entity.typeId;
-			} else {
-				selectorName = "selector";
-			}
-		} else {
-			selectorName = "selectors";
-		}
-		let message: string = "";
-		if (successCount === entities.length) {
-			message = `Gave ${prettyTypeId(itemData.typeId)}§r * ${itemData.amount} to ${selectorName}§r`;
-		} else if (successCount > 0) {
-			message = `Gave ${prettyTypeId(itemData.typeId)}§r * ${itemData.amount} to ${selectorName}§r\n§6However, failed to give to ${entities.length - successCount} entit${entities.length - successCount !== 1 ? "ies" : "y"}`;
-		} else {
-			message = `§cUnable to give ${itemData.typeId}§r§c to ${selectorName}§r§c`;
-		}
-		if (errors) {
-			message += `\n§cError(s):\n${errors.slice(0, 1024)}${errors.length > 1024 ? "..." : ""}`;
-		}
 		afterTickCommandResultHandler(origin, {
-			message: message,
+			message: getGivexMessage(entities, itemData, selectorName, successCount, errors),
 			status: successCount > 0 ? CustomCommandStatus.Success : CustomCommandStatus.Failure,
 		});
 	});

@@ -55,6 +55,7 @@ export function giveItem(
 	};
 }
 
+// Cannot be used in restricted execution
 function setItemInContainer(
 	entity: Entity,
 	container: Container,
@@ -130,48 +131,57 @@ function slotNameToEquipmentSlot(name: SlotName): EquipmentSlot | undefined {
 	}
 }
 
-export function replaceItem(entity: Entity, item: ItemStack, slot: SlotData): BooleanWithMessage {
-	if (slot.name === SlotName.Inventory || slot.name === SlotName.MobChest) {
-		const inventory = entity.getComponent(EntityComponentTypes.Inventory);
-		if (inventory === undefined) {
-			return {
-				bool: false,
-				message: "Unable to get inventory",
-			};
-		}
-		return setItemInContainer(
-			entity,
-			inventory.container,
-			item,
-			slot.id,
-			slot.replaceItem ?? true,
-			false,
-		);
+function replaceItemInventoryOrMobChest(
+	entity: Entity,
+	item: ItemStack,
+	slot: SlotData,
+): BooleanWithMessage {
+	const inventory = entity.getComponent(EntityComponentTypes.Inventory);
+	if (inventory === undefined) {
+		return {
+			bool: false,
+			message: "Unable to get inventory",
+		};
 	}
-	if (slot.name === SlotName.Hotbar) {
-		if (!(entity instanceof Player)) {
-			return {
-				bool: false,
-				message: "Only players have a hotbar",
-			};
-		}
-		const inventory = entity.getComponent(EntityComponentTypes.Inventory);
-		if (inventory === undefined) {
-			return {
-				bool: false,
-				message: "Unable to get inventory",
-			};
-		}
-		return setItemInContainer(
-			entity,
-			inventory.container,
-			item,
-			slot.id,
-			slot.replaceItem ?? true,
-			true,
-		);
+	return setItemInContainer(
+		entity,
+		inventory.container,
+		item,
+		slot.id,
+		slot.replaceItem ?? true,
+		false,
+	);
+}
+
+function replaceItemHotbar(entity: Entity, item: ItemStack, slot: SlotData): BooleanWithMessage {
+	if (!(entity instanceof Player)) {
+		return {
+			bool: false,
+			message: "Only players have a hotbar",
+		};
 	}
-	// The rest of the SlotNames require equippable
+	const inventory = entity.getComponent(EntityComponentTypes.Inventory);
+	if (inventory === undefined) {
+		return {
+			bool: false,
+			message: "Unable to get inventory",
+		};
+	}
+	return setItemInContainer(
+		entity,
+		inventory.container,
+		item,
+		slot.id,
+		slot.replaceItem ?? true,
+		true,
+	);
+}
+
+function replaceItemEquippable(
+	entity: Entity,
+	item: ItemStack,
+	slot: SlotData,
+): BooleanWithMessage {
 	const equippable = entity.getComponent(EntityComponentTypes.Equippable);
 	if (equippable === undefined) {
 		return {
@@ -220,4 +230,16 @@ export function replaceItem(entity: Entity, item: ItemStack, slot: SlotData): Bo
 		bool: true,
 		message: message,
 	};
+}
+
+// Cannot be used in restricted execution
+export function replaceItem(entity: Entity, item: ItemStack, slot: SlotData): BooleanWithMessage {
+	if (slot.name === SlotName.Inventory || slot.name === SlotName.MobChest) {
+		return replaceItemInventoryOrMobChest(entity, item, slot);
+	} else if (slot.name === SlotName.Hotbar) {
+		return replaceItemHotbar(entity, item, slot);
+	} else {
+		// The rest of the SlotNames are equippable
+		return replaceItemEquippable(entity, item, slot);
+	}
 }

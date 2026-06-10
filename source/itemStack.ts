@@ -12,7 +12,7 @@ import {
 import { ItemDataValidation } from "./itemData";
 import type { BooleanWithMessage, EnchantData, ItemData, ItemDurability } from "./types";
 
-function setDurability(item: ItemStack, value: ItemDurability): BooleanWithMessage {
+function applyDurability(item: ItemStack, value: ItemDurability): BooleanWithMessage {
 	const durabilityComponent = item.getComponent(ItemComponentTypes.Durability);
 	if (durabilityComponent === undefined || !durabilityComponent.isValid) {
 		return {
@@ -42,7 +42,7 @@ function setDurability(item: ItemStack, value: ItemDurability): BooleanWithMessa
 
 /* Will add back once mojang fixes dyeable component (Bug tracker MCPE-237577 and MCPE-232617)
 
-function setDye(item: ItemStack, color: RGB): BooleanWithMessage {
+function applyDye(item: ItemStack, color: RGB): BooleanWithMessage {
 	const dyeableComponent = item.getComponent(ItemComponentTypes.Dyeable);
 	if (dyeableComponent === undefined || !dyeableComponent.isValid) {
 		return {
@@ -124,9 +124,14 @@ export function dataToStack(data: ItemData): {
 			};
 		}
 	}
+	if (data.slot && data.amount > itemStack.maxAmount) {
+		return {
+			item: undefined,
+			warning: `Amount ${data.amount} exceeds maximum for ${data.typeId} (${itemStack.maxAmount})\nIf you would like to give an amount exceeding the max stack size, you cannot select a slot.`,
+		};
+	}
 	// Issues beyond this point are not fatal. Will just return a \n seperated list of warnings in a single string.
 	let warning: string = "";
-	// Skipping ItemData.amount, that would be passed into the give function.
 	if (data.lockMode) {
 		if (ItemDataValidation.lockMode(data.lockMode)) {
 			itemStack.lockMode = data.lockMode;
@@ -144,14 +149,14 @@ export function dataToStack(data: ItemData): {
 		}
 	}
 	if (data.durability) {
-		const result = setDurability(itemStack, data.durability);
+		const result = applyDurability(itemStack, data.durability);
 		if (!result.bool) {
 			warning += `${result.message}.\n`;
 		}
 	}
 	/* Will add back once mojang fixes dyeable component (Bug tracker MCPE-237577 and MCPE-232617)
 	if (data.dye) {
-		const result = setDye(itemStack, data.dye);
+		const result = applyDye(itemStack, data.dye);
 		if (!result.bool) {
 			warning += `${result.message}.\n`;
 		}
@@ -170,7 +175,6 @@ export function dataToStack(data: ItemData): {
 			}
 		}
 	}
-	// Skipping ItemData.slot. Only relevant when giving the item.
 	return {
 		item: itemStack,
 		// Trim final \n if any warnings were added
