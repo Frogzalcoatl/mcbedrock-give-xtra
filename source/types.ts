@@ -1,4 +1,4 @@
-import type { EquipmentSlot, ItemLockMode } from "@minecraft/server";
+import type { ItemLockMode } from "@minecraft/server";
 
 export interface BooleanWithMessage {
 	bool: boolean;
@@ -11,18 +11,33 @@ export interface EnchantData {
 	level: number;
 }
 
+// Based on /replaceitem command slots. Excluding endchest slots since those cannot be accessed with scripting yet.
+export enum SlotName {
+	Mainhand = "slot.weapon.mainhand",
+	Offhand = "slot.weapon.offhand",
+	Head = "slot.armor.head",
+	Chest = "slot.armor.chest", // Wolves also use slot.armor.chest for their armor
+	Legs = "slot.armor.legs",
+	Feet = "slot.armor.feet",
+	Hotbar = "slot.armor.hotbar",
+	Inventory = "slot.inventory",
+	Saddle = "slot.saddle", // Determine whether this is accessible
+	MobChest = "slot.chest", // Donkeys, Mules, Llamas
+}
+
 export const SLOT_DATA_KEY_COUNT_MAX: number = 3;
 export const SLOT_DATA_KEY_COUNT_MIN: number = 1;
 export interface SlotData {
-	name: EquipmentSlot;
+	name: SlotName;
 	id?: number;
 	replaceItem?: boolean;
 }
 export const SlotDataKeysForErrorMessage = ["name", "id", "replaceItem"];
 
+export type ItemDurability = number | "unbreakable";
+
 export const ITEM_DATA_KEY_COUNT_MAX: number = 7; // +1 once potionType is added, +1 once mojang fixes dyeable component. (Bug tracker MCPE-237577 and MCPE-232617)
 export const ITEM_DATA_KEY_COUNT_MIN: number = 2;
-export type ItemDurability = number | "unbreakable";
 export interface ItemData {
 	typeId: string;
 	amount: number;

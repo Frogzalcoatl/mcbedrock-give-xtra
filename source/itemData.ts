@@ -1,7 +1,6 @@
 import {
 	EnchantmentSlot,
 	EnchantmentTypes,
-	EquipmentSlot,
 	ItemComponentTypes,
 	ItemLockMode,
 	ItemStack,
@@ -21,28 +20,35 @@ import {
 	SLOT_DATA_KEY_COUNT_MIN,
 	type SlotData,
 	SlotDataKeysForErrorMessage,
+	SlotName,
 } from "./types";
+import { getMCNamespace } from "./prettyTypeId";
 
 // biome-ignore lint/suspicious/noExplicitAny: Type is validated through the function. Any is required here.
 function isEnchantData(obj: any): obj is EnchantData {
 	if (typeof obj !== "object" || obj === null) {
-		return false;
+		throw new Error("enchant must be an object");
 	}
-	return (
-		typeof obj.id === "string" &&
-		typeof obj.level === "number" &&
-		Object.keys(obj).length === ENCHANT_DATA_KEY_COUNT
-	);
+	if (typeof obj.id !== "string") {
+		throw new Error("enchant.id must be a string");
+	}
+	if (typeof obj.level !== "number") {
+		throw new Error(`${obj.id} enchant.level must be a number`);
+	}
+	if (Object.keys(obj).length !== ENCHANT_DATA_KEY_COUNT) {
+		throw new Error(`Invalid key count on enchant ${obj.id}`);
+	}
+	return true;
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: Type is validated through the function. Any is required here.
 function isEnchantDataArr(arr: any): arr is EnchantData[] {
 	if (typeof arr !== "object" || arr === null || !Array.isArray(arr)) {
-		return false;
+		throw new Error("enchants must be an array");
 	}
 	for (const value of arr) {
 		if (!isEnchantData(value)) {
-			return false;
+			throw new Error("enchant data is invalid");
 		}
 	}
 	return true;
@@ -51,9 +57,9 @@ function isEnchantDataArr(arr: any): arr is EnchantData[] {
 // biome-ignore lint/suspicious/noExplicitAny: Type is validated through the function. Any is required here.
 function isSlotData(obj: any): obj is SlotData {
 	if (typeof obj !== "object" || obj === null) {
-		return false;
+		throw new Error("slot must be an object");
 	}
-	if (!Object.values(EquipmentSlot).includes(obj.name)) {
+	if (!Object.values(SlotName).includes(obj.name)) {
 		throw new Error("Invalid slot.name value");
 	}
 	let validKeysFound = 1;
@@ -70,7 +76,7 @@ function isSlotData(obj: any): obj is SlotData {
 		}
 	}
 	const keyCount: number = Object.keys(obj).length;
-	if (keyCount <= SLOT_DATA_KEY_COUNT_MAX && keyCount >= SLOT_DATA_KEY_COUNT_MIN) {
+	if (keyCount >= SLOT_DATA_KEY_COUNT_MAX || keyCount <= SLOT_DATA_KEY_COUNT_MIN) {
 		throw new Error("Invalid key count");
 	}
 	if (validKeysFound !== keyCount) {
@@ -86,25 +92,33 @@ function isSlotData(obj: any): obj is SlotData {
 // biome-ignore lint/suspicious/noExplicitAny: Type is validated through the function. Any is required here.
 function isRgb(obj: any): obj is RGB {
 	if (typeof obj !== "object" || obj === null) {
-		return false;
+		throw new Error("dye must be an object");
 	}
 	// Stopped checking whether values fall between expected range 0-1 since that is checked in the validateItemData functions.
-	return (
-		typeof obj.red === "number" &&
-		typeof obj.green === "number" &&
-		typeof obj.blue === "number" &&
-		Object.keys(obj).length === 3
-	);
+	if (typeof obj.red !== "number") {
+		throw new Error("dye.red must be a numer");
+	}
+	if (typeof obj.green !== "number") {
+		throw new Error("dye.green must be a numer");
+	}
+	if (typeof obj.blue !== "number") {
+		throw new Error("dye.blue must be a numer");
+	}
+	if (Object.keys(obj).length !== 3) {
+		throw new Error(`Dye must have exactly 3 keys (red, blue, green)`);
+	}
+	return true;
 }
 */
 
-// Throwing errors since theres no way to return obj is ItemData with a string as far as i can tell.
+// Throwing errors since theres no way to return "obj is ItemData" with a string when its false as far as i can tell.
+// Want the user to know whats wrong with their item data.
 // biome-ignore lint/suspicious/noExplicitAny: Type is validated through the function. Any is required here.
 function isItemData(obj: any): obj is ItemData {
 	if (typeof obj !== "object" || obj === null) {
-		throw new Error("itemData should be an Object");
+		throw new Error("itemData must be an Object");
 	}
-	// Required keys
+	// Mandatory keys
 	if (typeof obj.typeId !== "string") {
 		throw new Error("typeId must be a string");
 	}
@@ -214,8 +228,8 @@ export function parseItemData(str: string): {
 	};
 }
 
-/* Decided to not use this and just trust the user to know what can go in the offhand. No way to account for custom offhand items.
-const OFFHAND_ITEM_TYPES: string[] = [
+// Last updated: MC version 26.21
+const VANILLA_OFFHAND_ITEM_TYPES: string[] = [
 	"minecraft:shield",
 	"minecraft:totem_of_undying",
 	"minecraft:arrow",
@@ -226,34 +240,48 @@ const OFFHAND_ITEM_TYPES: string[] = [
 	"minecraft:nautilus_shell",
 	"minecraft:sparkler",
 ];
-*/
 
-// Works with custom items given they've set up enchants properly.
-function canEquipInSlot(itemStack: ItemStack, targetSlot: EquipmentSlot): boolean {
+// Only works with vanilla items.
+// If custom item, returns true since this function relies on enchantment slot data instead of actual equippability.
+// What if a custom item did not set up the enchantable component?
+function canEquipInSlot(itemStack: ItemStack, targetSlot: SlotName): boolean {
+	const itemNamespace = getMCNamespace(itemStack.typeId);
+	// Assuming namespace is "minecraft:" if there is no namespace.
+	if (itemNamespace !== "minecraft" && itemNamespace !== undefined) {
+		return true;
+	}
 	const enchantable = itemStack.getComponent(ItemComponentTypes.Enchantable);
 	if (!enchantable) {
 		return false;
 	}
-	const slots = enchantable.slots;
+	const itemEnchantSlots = enchantable.slots;
 	switch (targetSlot) {
-		case EquipmentSlot.Head:
+		case SlotName.Head:
 			return (
-				slots.includes(EnchantmentSlot.ArmorHead) ||
-				slots.includes(EnchantmentSlot.CosmeticHead)
+				itemEnchantSlots.includes(EnchantmentSlot.ArmorHead) ||
+				itemEnchantSlots.includes(EnchantmentSlot.CosmeticHead)
 			);
-		case EquipmentSlot.Chest:
+		case SlotName.Chest:
 			return (
-				slots.includes(EnchantmentSlot.ArmorTorso) || slots.includes(EnchantmentSlot.Elytra)
+				itemEnchantSlots.includes(EnchantmentSlot.ArmorTorso) || itemEnchantSlots.includes(EnchantmentSlot.Elytra)
 			);
-		case EquipmentSlot.Legs:
-			return slots.includes(EnchantmentSlot.ArmorLegs);
-		case EquipmentSlot.Feet:
-			return slots.includes(EnchantmentSlot.ArmorFeet);
-		case EquipmentSlot.Mainhand:
+		case SlotName.Legs:
+			return itemEnchantSlots.includes(EnchantmentSlot.ArmorLegs);
+		case SlotName.Feet:
+			return itemEnchantSlots.includes(EnchantmentSlot.ArmorFeet);
+		case SlotName.Mainhand:
 			return true;
-		case EquipmentSlot.Offhand:
-			// Just trusting the user here. No good way to check for this with custom items.
+		case SlotName.Offhand:
+			return VANILLA_OFFHAND_ITEM_TYPES.includes(itemStack.typeId);
+		case SlotName.Hotbar:
 			return true;
+		case SlotName.Inventory:
+			return true;
+		case SlotName.MobChest:
+			// There shouldnt be any items that cant go inside a chest (specifically donkey chests etc)
+			return true;
+		case SlotName.Saddle:
+			return itemStack.typeId === "minecraft:saddle";
 		default:
 			return false;
 	}
@@ -283,7 +311,7 @@ export const ItemDataValidation = {
 		};
 	},
 	nameTag(value: string): BooleanWithMessage {
-		// 255 is the max item nametag length as stated in index.d.ts. Going by 253 since §r is automatically added to the start of nametag to avoid italicization.
+		// 255 is the max item nametag length as stated in index.d.ts. Going by 253 since I automatically add §r to the start of nametag to avoid italicization.
 		const result: boolean = value.length <= 253;
 		return {
 			bool: result,

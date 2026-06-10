@@ -1,3 +1,5 @@
 Replaceitem function (ItemData.slot implementation)
 
 Help command (server-ui)
+
+Add can place on, can destroy, and keep on death
