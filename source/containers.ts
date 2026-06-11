@@ -250,6 +250,40 @@ function replaceItemTameable(entity: Entity, item: ItemStack, slot: SlotData): B
 	};
 }
 
+// Returns formatted minecraft:can_destroy, minecraft:item_lock, and/or minecraft:keep_on_death
+function getCommandJson(item: ItemStack): string {
+	const canPlaceOn = item.getCanPlaceOn();
+	const canDestroy = item.getCanDestroy();
+	if (!item.keepOnDeath && canPlaceOn.length === 0 && canDestroy.length === 0) {
+		return "";
+	}
+	let str: string = "{";
+	if (item.keepOnDeath) {
+		// For some reason its an empty object instead of a boolean.
+		str += '"keep_on_death":{},';
+	}
+	if (canPlaceOn.length > 0) {
+		str += '"can_place_on":{"blocks":[';
+		for (const block of canPlaceOn) {
+			str += `"${block}",`;
+		}
+		// Remove final comma and add closing brackets
+		str = `${str.slice(0, str.length - 1)}]},`;
+	}
+	if (canDestroy.length > 0) {
+		str += '"can_destroy":{"blocks":[';
+		for (const block of canDestroy) {
+			str += `"${block}",`;
+		}
+		// Remove final comma and add closing brackets
+		str = `${str.slice(0, str.length - 1)}]},`;
+	}
+	// Remove final comma and add closing bracket
+	str = `${str.slice(0, str.length - 1)}}`;
+	// Final bracket is valid syntax despite the color being off on vscode
+	return str;
+}
+
 function replaceItemEquippable(
 	entity: Entity,
 	item: ItemStack,
@@ -258,11 +292,11 @@ function replaceItemEquippable(
 	const equippable = entity.getComponent(EntityComponentTypes.Equippable);
 	if (equippable === undefined) {
 		entity.runCommand(
-			`/replaceitem entity @s ${slot.name} ${slot.id ?? 0} ${item.typeId} ${item.amount}`,
+			`/replaceitem entity @s ${slot.name} ${slot.id ?? 0} ${item.typeId} ${item.amount} 0 ${getCommandJson(item)}`,
 		);
 		return {
 			bool: false,
-			message: `Gave ${prettyTypeId(item.typeId)} to ${entity.typeId}\nAny special properties were omitted.\n(Equippable doesn't work on mobs. Blame Mojang)`,
+			message: `Ran replaceitem command on ${entity.typeId} for ${item.typeId}. Any special properties were omitted.\n(Equippable doesn't work on mobs. Blame Mojang)`,
 		};
 	}
 	const equipmentSlot: EquipmentSlot | undefined = slotNameToEquipmentSlot(slot.name);

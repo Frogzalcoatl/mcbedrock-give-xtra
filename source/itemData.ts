@@ -1,4 +1,5 @@
 import {
+	BlockTypes,
 	EnchantmentSlot,
 	EnchantmentTypes,
 	ItemComponentTypes,
@@ -132,6 +133,18 @@ function isRgb(obj: any): obj is RGB {
 	return true;
 }
 */
+// biome-ignore lint/suspicious/noExplicitAny: Type is validated through the function. Any is required here.
+function isStringArray(arr: any, propertyName: string): arr is string[] {
+	if (typeof arr !== "object" || arr === null || !Array.isArray(arr)) {
+		throw new Error(`${propertyName} must be an array`);
+	}
+	for (const value of arr) {
+		if (typeof value !== "string") {
+			throw new Error(`Invalid ${propertyName} value "${value}"`);
+		}
+	}
+	return true;
+}
 
 // Throwing errors since theres no way to return "obj is ItemData" with a string when its false as far as i can tell.
 // Want the user to know whats wrong with their item data.
@@ -208,6 +221,24 @@ function isItemData(obj: any): obj is ItemData {
 			throw new Error(
 				"slot must be an object containing name, and optionally id and replaceItem",
 			);
+		}
+		validKeysFound++;
+	}
+	if (obj.keepOnDeath !== undefined) {
+		if (typeof obj.keepOnDeath !== "boolean") {
+			throw new Error("keepOnDeath must be a boolean");
+		}
+		validKeysFound++;
+	}
+	if (obj.canPlaceOn !== undefined) {
+		if (!isStringArray(obj.canPlaceOn, "canPlaceOn")) {
+			throw new Error("canPlaceOn must be an array of strings");
+		}
+		validKeysFound++;
+	}
+	if (obj.canDestroy !== undefined) {
+		if (!isStringArray(obj.canDestroy, "canDestroy")) {
+			throw new Error("canDestroy must be an array of strings");
 		}
 		validKeysFound++;
 	}
@@ -462,6 +493,26 @@ export const ItemDataValidation = {
 			message: "Valid",
 		};
 	},
+	canPlaceOnAndCanDestroy(value: string[], propertyName: string): BooleanWithMessage {
+		if (value.length === 0) {
+			return {
+				bool: false,
+				message: `Must list at least one block type in ${propertyName}`,
+			};
+		}
+		for (const blockType of value) {
+			if (!BlockTypes.get(blockType)) {
+				return {
+					bool: false,
+					message: `Invalid block type ${blockType} in ${propertyName}`,
+				};
+			}
+		}
+		return {
+			bool: true,
+			message: "Valid",
+		};
+	},
 	complete(data: ItemData): BooleanWithMessage {
 		let result: BooleanWithMessage;
 		result = ItemDataValidation.typeId(data.typeId);
@@ -511,6 +562,19 @@ export const ItemDataValidation = {
 				return result;
 			}
 		}
+		if (data.canPlaceOn) {
+			result = ItemDataValidation.canPlaceOnAndCanDestroy(data.canPlaceOn, "canPlaceOn");
+			if (!result.bool) {
+				return result;
+			}
+		}
+		if (data.canDestroy) {
+			result = ItemDataValidation.canPlaceOnAndCanDestroy(data.canDestroy, "canDestroy");
+			if (!result.bool) {
+				return result;
+			}
+		}
+		// ItemData.keepOnDeath is a boolean. Nothing to validate there.
 		return {
 			bool: true,
 			message: "ItemData is valid",

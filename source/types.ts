@@ -55,9 +55,9 @@ export interface ItemData {
 	// potionType?: Figure out later;
 	enchants?: EnchantData[];
 	slot?: SlotData;
-	// canPlaceOn?: string[];
-	// canDestroy?: string[];
-	// keepOnDeath?: boolean;
+	keepOnDeath?: boolean;
+	canPlaceOn?: string[];
+	canDestroy?: string[];
 }
 export const ItemDataKeys = [
 	"typeId",
@@ -67,6 +67,9 @@ export const ItemDataKeys = [
 	"durability",
 	"enchants",
 	"slot",
+	"keepOnDeath",
+	"canPlaceOn",
+	"canDestroy",
 ];
 export const ItemDataDefaultAmount: number = 1;
 // Matches max amount in vanilla /give

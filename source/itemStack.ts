@@ -129,7 +129,7 @@ export function dataToStack(data: ItemData): {
 			};
 		}
 	}
-	if (data.slot) {
+	if (data.slot !== undefined) {
 		if (data.amount > itemStack.maxAmount) {
 			return {
 				item: undefined,
@@ -140,14 +140,14 @@ export function dataToStack(data: ItemData): {
 	}
 	// Issues beyond this point are not fatal. Will just return a \n seperated list of warnings in a single string.
 	let warning: string = "";
-	if (data.lockMode) {
+	if (data.lockMode !== undefined) {
 		if (ItemDataValidation.lockMode(data.lockMode)) {
 			itemStack.lockMode = data.lockMode;
 		} else {
 			warning += "Invalid lockMode. Skipped.\n";
 		}
 	}
-	if (data.nameTag) {
+	if (data.nameTag !== undefined) {
 		const nameTagResult = ItemDataValidation.nameTag(data.nameTag);
 		if (nameTagResult.bool) {
 			// Add §r to reset auto italicization
@@ -156,7 +156,7 @@ export function dataToStack(data: ItemData): {
 			warning += `${nameTagResult.message}. Skipped.\n`;
 		}
 	}
-	if (data.durability) {
+	if (data.durability !== undefined) {
 		const result = applyDurability(itemStack, data.durability);
 		if (!result.bool) {
 			warning += `${result.message}.\n`;
@@ -170,7 +170,7 @@ export function dataToStack(data: ItemData): {
 		}
 	}
 	*/
-	if (data.enchants) {
+	if (data.enchants !== undefined) {
 		const enchantableComponent = itemStack.getComponent(ItemComponentTypes.Enchantable);
 		if (enchantableComponent === undefined || !enchantableComponent.isValid) {
 			warning += `Unable to apply enchantments to ${itemStack.typeId}. Skipping\n`;
@@ -180,6 +180,31 @@ export function dataToStack(data: ItemData): {
 				if (!result.bool) {
 					warning += `${result.message}.\n`;
 				}
+			}
+		}
+	}
+	if (data.keepOnDeath !== undefined) {
+		itemStack.keepOnDeath = data.keepOnDeath;
+	}
+	if (data.canPlaceOn !== undefined) {
+		try {
+			itemStack.setCanPlaceOn(data.canPlaceOn);
+		} catch (error) {
+			if (error instanceof Error) {
+				warning += `Unable to set canPlaceOn: ${error.message}\n`;
+			} else {
+				warning += "Unable to set canPlaceOn\n";
+			}
+		}
+	}
+	if (data.canDestroy !== undefined) {
+		try {
+			itemStack.setCanDestroy(data.canPlaceOn);
+		} catch (error) {
+			if (error instanceof Error) {
+				warning += `Unable to set canDestroy: ${error.message}\n`;
+			} else {
+				warning += "Unable to set canDestroy\n";
 			}
 		}
 	}

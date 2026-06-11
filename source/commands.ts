@@ -114,7 +114,7 @@ function getGivexMessage(
 	if (successCount === entities.length) {
 		message = `Gave ${prettyTypeId(itemData.typeId)}§r * ${itemData.amount} to ${selectorName}§r`;
 	} else if (successCount > 0) {
-		message = `Gave ${prettyTypeId(itemData.typeId)}§r * ${itemData.amount} to ${selectorName}§r\n§6However, failed to give to ${entities.length - successCount} entit${entities.length - successCount !== 1 ? "ies" : "y"}`;
+		message = `Gave ${prettyTypeId(itemData.typeId)}§r * ${itemData.amount} to ${selectorName}§r\n§6However, failed to give to ${entities.length - successCount}/${entities.length} entit${entities.length - successCount !== 1 ? "ies" : "y"}`;
 	} else {
 		message = `§cUnable to give ${itemData.typeId}§r§c to ${selectorName}§r§c`;
 	}
