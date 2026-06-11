@@ -248,14 +248,17 @@ function isItemData(obj: any): obj is ItemData {
 	return true;
 }
 
-export function parseItemData(str: string): {
+export function parseItemData(
+	strToParse: string,
+	itemTypeId: string,
+): {
 	itemData: ItemData | undefined;
 	syntaxError: string | undefined;
 } {
 	// biome-ignore lint/suspicious/noExplicitAny: any is required here for JSON.parse. Type will be assigned later.
 	let parsedData: any;
 	try {
-		parsedData = JSON.parse(str);
+		parsedData = JSON.parse(strToParse);
 	} catch (e) {
 		if (e instanceof Error) {
 			return {
@@ -270,6 +273,15 @@ export function parseItemData(str: string): {
 		}
 	}
 	try {
+		if (typeof parsedData === "object" && parsedData !== null) {
+			if (parsedData.typeId !== undefined) {
+				return {
+					itemData: undefined,
+					syntaxError: `Remove json key "typeId", as you have already defined it in the command`,
+				};
+			}
+			parsedData.typeId = itemTypeId;
+		}
 		if (isItemData(parsedData)) {
 			return {
 				itemData: parsedData,

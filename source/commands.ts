@@ -8,7 +8,8 @@ import {
 	CustomCommandStatus,
 	type Entity,
 	EntityComponentTypes,
-	type ItemStack,
+	ItemStack,
+	type ItemType,
 	Player,
 	system,
 	world,
@@ -17,27 +18,9 @@ import { giveItem, replaceItem } from "./containers";
 import { ItemDataValidation, parseItemData } from "./itemData";
 import { dataToStack } from "./itemStack";
 import { prettyTypeId } from "./prettyTypeId";
-import type { ItemData } from "./types";
+import type { ItemData, SlotData } from "./types";
 
 const NAMESPACE: string = "givex";
-
-const GIVEX_COMMAND: CustomCommand = {
-	description: "Give items with specific properties",
-	mandatoryParameters: [
-		{
-			name: "json",
-			type: CustomCommandParamType.String,
-		},
-	],
-	name: `${NAMESPACE}:givex`,
-	optionalParameters: [
-		{
-			name: "target",
-			type: CustomCommandParamType.EntitySelector,
-		},
-	],
-	permissionLevel: CommandPermissionLevel.GameDirectors,
-};
 
 function afterTickCommandResultHandler(
 	origin: CustomCommandOrigin,
@@ -105,18 +88,19 @@ function getSelectorName(entities: Entity[]): string {
 
 function getGivexMessage(
 	entities: Entity[],
-	itemData: ItemData,
+	itemTypeId: string,
+	itemAmount: number,
 	selectorName: string,
 	successCount: number,
 	errors: string,
 ): string {
 	let message: string = "";
 	if (successCount === entities.length) {
-		message = `Gave ${prettyTypeId(itemData.typeId)}§r * ${itemData.amount} to ${selectorName}§r`;
+		message = `Gave ${prettyTypeId(itemTypeId)}§r * ${itemAmount} to ${selectorName}§r`;
 	} else if (successCount > 0) {
-		message = `Gave ${prettyTypeId(itemData.typeId)}§r * ${itemData.amount} to ${selectorName}§r\n§6However, failed to give to ${entities.length - successCount}/${entities.length} entit${entities.length - successCount !== 1 ? "ies" : "y"}`;
+		message = `Gave ${prettyTypeId(itemTypeId)}§r * ${itemAmount} to ${selectorName}§r\n§6However, failed to give to ${entities.length - successCount}/${entities.length} entit${entities.length - successCount !== 1 ? "ies" : "y"}`;
 	} else {
-		message = `§cUnable to give ${itemData.typeId}§r§c to ${selectorName}§r§c`;
+		message = `§cUnable to give ${itemTypeId}§r§c to ${selectorName}§r§c`;
 	}
 	if (errors) {
 		message += `\n§cError(s):\n${errors.slice(0, 1024)}${errors.length > 1024 ? "...\n" : ""}`;
@@ -130,11 +114,98 @@ function commandBlockFailureMessage(origin: CustomCommandOrigin, message: string
 	}
 }
 
-// Example givex command: /givex "{\"typeId\":\"minecraft:dirt\",\"amount\":1}"
+function givexGiveItems(
+	entities: Entity[],
+	itemStack: ItemStack,
+	amountToGive: number,
+	origin: CustomCommandOrigin,
+	selectorName: string,
+): void {
+	let errors: string = "";
+	let successCount: number = 0;
+	for (const entity of entities) {
+		const inventory = entity.getComponent(EntityComponentTypes.Inventory);
+		if (inventory === undefined || !inventory.isValid) {
+			errors += `-Unable to get inventory of ${entity.nameTag.length !== 0 ? entity.nameTag : entity.typeId}\n`;
+			continue;
+		}
+		const result = giveItem(entity, inventory.container, itemStack, amountToGive);
+		if (result.bool) {
+			successCount++;
+		} else {
+			errors += `-${result.message}\n`;
+		}
+	}
+	afterTickCommandResultHandler(origin, {
+		message: getGivexMessage(
+			entities,
+			itemStack.typeId,
+			amountToGive,
+			selectorName,
+			successCount,
+			errors,
+		),
+		status: successCount > 0 ? CustomCommandStatus.Success : CustomCommandStatus.Failure,
+	});
+}
+
+function givexReplaceItems(
+	entities: Entity[],
+	itemStack: ItemStack,
+	slot: SlotData,
+	origin: CustomCommandOrigin,
+	selectorName: string,
+): void {
+	let successCount: number = 0;
+	let errors: string = "";
+	for (const entity of entities) {
+		const result = replaceItem(entity, itemStack, slot);
+		if (result.bool) {
+			successCount++;
+		} else {
+			errors += `-${result.message}\n`;
+		}
+	}
+	afterTickCommandResultHandler(origin, {
+		message: getGivexMessage(
+			entities,
+			itemStack.typeId,
+			itemStack.amount,
+			selectorName,
+			successCount,
+			errors,
+		),
+		status: successCount > 0 ? CustomCommandStatus.Success : CustomCommandStatus.Failure,
+	});
+}
+
+const GIVEX_COMMAND: CustomCommand = {
+	description: "Give items with specific properties",
+	mandatoryParameters: [
+		{
+			name: "itemName",
+			type: CustomCommandParamType.ItemType,
+		},
+	],
+	name: `${NAMESPACE}:givex`,
+	optionalParameters: [
+		{
+			name: "json",
+			type: CustomCommandParamType.String,
+		},
+		{
+			name: "target",
+			type: CustomCommandParamType.EntitySelector,
+		},
+	],
+	permissionLevel: CommandPermissionLevel.GameDirectors,
+};
+
 // Players must use escape characters for double quotes: \"
 function givexCommandCallback(
 	origin: CustomCommandOrigin,
-	json: string,
+	itemType: ItemType,
+	json?: string,
 	selectorResult?: Entity[],
 ): CustomCommandResult {
 	const entities: Entity[] | undefined = getCommandEntities(origin, selectorResult);
@@ -147,7 +218,16 @@ function givexCommandCallback(
 		};
 	}
 	const selectorName: string = getSelectorName(entities);
-	const itemDataResult = parseItemData(json);
+	if (json === undefined) {
+		system.run(() =>
+			givexGiveItems(entities, new ItemStack(itemType), 1, origin, selectorName),
+		);
+		return {
+			message: "Ran givex",
+			status: CustomCommandStatus.Success,
+		};
+	}
+	const itemDataResult = parseItemData(json, itemType.id);
 	if (itemDataResult.itemData === undefined) {
 		const message = `Unable to give item to ${selectorName}§r§c\nError(s):\n-${itemDataResult.syntaxError ?? "Unknown error in your json. (sorry)"}`;
 		commandBlockFailureMessage(origin, message);
@@ -176,36 +256,11 @@ function givexCommandCallback(
 			return;
 		}
 		const itemStack: ItemStack = itemStackResult.item;
-		let successCount: number = 0;
-		let errors: string = "";
 		if (itemData.slot) {
-			for (const entity of entities) {
-				const result = replaceItem(entity, itemStack, itemData.slot);
-				if (result.bool) {
-					successCount++;
-				} else {
-					errors += `-${result.message}\n`;
-				}
-			}
+			givexReplaceItems(entities, itemStack, itemData.slot, origin, selectorName);
 		} else {
-			for (const entity of entities) {
-				const inventory = entity.getComponent(EntityComponentTypes.Inventory);
-				if (inventory === undefined || !inventory.isValid) {
-					errors += `-Unable to get inventory of ${entity.nameTag.length !== 0 ? entity.nameTag : entity.typeId}\n`;
-					continue;
-				}
-				const result = giveItem(entity, inventory.container, itemStack, itemData.amount);
-				if (result.bool) {
-					successCount++;
-				} else {
-					errors += `-${result.message}\n`;
-				}
-			}
+			givexGiveItems(entities, itemStack, itemData.amount, origin, selectorName);
 		}
-		afterTickCommandResultHandler(origin, {
-			message: getGivexMessage(entities, itemData, selectorName, successCount, errors),
-			status: successCount > 0 ? CustomCommandStatus.Success : CustomCommandStatus.Failure,
-		});
 	});
 	return {
 		message: `Ran givex`,

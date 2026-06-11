@@ -307,7 +307,8 @@ function replaceItemEquippable(
 		};
 	}
 	let oldItem: ItemStack | undefined;
-	if (!slot.replaceItem) {
+	// use === false to avoid running on undefined
+	if (slot.replaceItem === false) {
 		oldItem = equippable.getEquipment(equipmentSlot);
 	}
 	const equippableResult: boolean = equippable.setEquipment(equipmentSlot, item);

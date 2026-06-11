@@ -1,6 +1,3 @@
 potionType
 
-Switch to command arg input instead of json for autocompletion (autocompletion when applicable).
-	But also maybe not. Would pointlessly take up enum limit with all those params. Could just not use enums. Idk im sleepy. Gonna leave it json for now.
-
 Help command (server-ui)
