@@ -4,6 +4,7 @@ import {
 	type CustomCommandOrigin,
 	CustomCommandParamType,
 	type CustomCommandResult,
+	CustomCommandSource,
 	CustomCommandStatus,
 	type Entity,
 	EntityComponentTypes,
@@ -73,7 +74,11 @@ function getCommandEntities(
 	selectorResult?: Entity[],
 ): Entity[] | undefined {
 	if (selectorResult) {
-		return selectorResult;
+		if (selectorResult.length > 0) {
+			return selectorResult;
+		} else {
+			return undefined;
+		}
 	} else if (origin.sourceEntity) {
 		return [origin.sourceEntity];
 	} else if (origin.initiator) {
@@ -119,6 +124,12 @@ function getGivexMessage(
 	return message;
 }
 
+function commandBlockFailureMessage(origin: CustomCommandOrigin, message: string): void {
+	if (origin.sourceType === CustomCommandSource.Block && world.gameRules.commandBlockOutput) {
+		world.sendMessage(`§7§o[CommandBlock§r:\n§c${message}§r]`);
+	}
+}
+
 // Example givex command: /givex "{\"typeId\":\"minecraft:dirt\",\"amount\":1}"
 // Players must use escape characters for double quotes: \"
 function givexCommandCallback(
@@ -129,23 +140,29 @@ function givexCommandCallback(
 	const itemDataResult = parseItemData(json);
 	const entities: Entity[] | undefined = getCommandEntities(origin, selectorResult);
 	if (entities === undefined) {
+		const message = "Unable to give item to selector\nError(s):\nNo valid selector";
+		commandBlockFailureMessage(origin, message);
 		return {
-			message: "Unable to give item to selector\nError(s):\nNo valid selector",
+			message: message,
 			status: CustomCommandStatus.Failure,
 		};
 	}
 	const selectorName: string = getSelectorName(entities);
 	if (itemDataResult.itemData === undefined) {
+		const message = `Unable to give item to ${selectorName}§r§c\nError(s):\n-${itemDataResult.syntaxError ?? "Unknown error in your json. (sorry)"}`;
+		commandBlockFailureMessage(origin, message);
 		return {
-			message: `Unable to give item to ${selectorName}§r§c\nError(s):\n-${itemDataResult.syntaxError ?? "Unknown error in your json. (sorry)"}`,
+			message: message,
 			status: CustomCommandStatus.Failure,
 		};
 	}
 	const itemData: ItemData = itemDataResult.itemData;
 	const validationResult = ItemDataValidation.complete(itemDataResult.itemData);
 	if (!validationResult.bool) {
+		const message = `Unable to give item to ${selectorName}§r§c\nError(s)\n${validationResult.message}`;
+		commandBlockFailureMessage(origin, message);
 		return {
-			message: `Unable to give item to ${selectorName}§r§c\nError(s)\n${validationResult.message}`,
+			message: message,
 			status: CustomCommandStatus.Failure,
 		};
 	}

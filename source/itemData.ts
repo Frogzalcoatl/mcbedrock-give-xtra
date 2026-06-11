@@ -12,31 +12,46 @@ import {
 	type BooleanWithMessage,
 	ENCHANT_DATA_KEY_COUNT,
 	type EnchantData,
+	EnchantDataKeys,
 	ITEM_DATA_KEY_COUNT_MAX,
-	ITEM_DATA_KEY_COUNT_MIN,
 	type ItemData,
-	ItemDataKeysForErrorMessage,
+	ItemDataDefaultAmount,
+	ItemDataKeys,
 	type ItemDurability,
 	SLOT_DATA_KEY_COUNT_MAX,
-	SLOT_DATA_KEY_COUNT_MIN,
 	type SlotData,
-	SlotDataKeysForErrorMessage,
+	SlotDataKeys,
 	SlotName,
 } from "./types";
+
+function getInvalidKeyMessage(objKeys: string[], validKeys: string[]): string {
+	for (const key of objKeys) {
+		if (!validKeys.includes(key)) {
+			return `Invalid key "${key}". Valid options include:\n${validKeys.join(", ")}`;
+		}
+	}
+	return `Invalid key found. Valid options include:\n${validKeys.join(", ")}`;
+}
 
 // biome-ignore lint/suspicious/noExplicitAny: Type is validated through the function. Any is required here.
 function isEnchantData(obj: any): obj is EnchantData {
 	if (typeof obj !== "object" || obj === null) {
 		throw new Error("enchant must be an object");
 	}
+	if (Object.keys(obj).length !== ENCHANT_DATA_KEY_COUNT) {
+		throw new Error(getInvalidKeyMessage(Object.keys(obj), EnchantDataKeys));
+	}
+	if (obj.id === undefined) {
+		throw new Error("enchant requires id");
+	}
 	if (typeof obj.id !== "string") {
 		throw new Error("enchant.id must be a string");
 	}
+	if (obj.level === undefined) {
+		throw new Error(`enchant ${obj.id} requires a level`);
+	}
 	if (typeof obj.level !== "number") {
 		throw new Error(`${obj.id} enchant.level must be a number`);
-	}
-	if (Object.keys(obj).length !== ENCHANT_DATA_KEY_COUNT) {
-		throw new Error(`Invalid key count on enchant ${obj.id}`);
 	}
 	return true;
 }
@@ -59,32 +74,34 @@ function isSlotData(obj: any): obj is SlotData {
 	if (typeof obj !== "object" || obj === null) {
 		throw new Error("slot must be an object");
 	}
+	const objKeys = Object.keys(obj);
+	if (objKeys.length > SLOT_DATA_KEY_COUNT_MAX) {
+		throw new Error(getInvalidKeyMessage(objKeys, SlotDataKeys));
+	}
+	let validKeysFound = 0;
+	// Mandatory keys
+	if (obj.name === undefined) {
+		throw new Error("SlotData requires name");
+	}
 	if (!Object.values(SlotName).includes(obj.name)) {
 		throw new Error("Invalid slot.name value");
 	}
-	let validKeysFound = 1;
-	if (obj.id) {
+	validKeysFound++;
+	// Optional keys
+	if (obj.id !== undefined) {
 		validKeysFound++;
 		if (typeof obj.id !== "number") {
 			throw new Error("slot.id must be a number");
 		}
 	}
-	if (obj.replaceItem) {
+	if (obj.replaceItem !== undefined) {
 		validKeysFound++;
 		if (typeof obj.replaceItem !== "boolean") {
 			throw new Error("slot.replaceItem must be a boolean");
 		}
 	}
-	const keyCount: number = Object.keys(obj).length;
-	if (keyCount > SLOT_DATA_KEY_COUNT_MAX || keyCount < SLOT_DATA_KEY_COUNT_MIN) {
-		throw new Error(
-			`Invalid SlotData key count. Valid SlotData keys include:\n${SlotDataKeysForErrorMessage.join(", ")}`,
-		);
-	}
-	if (validKeysFound !== keyCount) {
-		throw new Error(
-			`Invalid SlotData key${keyCount - validKeysFound !== 1 ? "s" : ""} found. Valid keys include:\n${SlotDataKeysForErrorMessage.join(", ")}`,
-		);
+	if (validKeysFound !== objKeys.length) {
+		throw new Error(getInvalidKeyMessage(objKeys, SlotDataKeys));
 	}
 	return true;
 }
@@ -98,13 +115,13 @@ function isRgb(obj: any): obj is RGB {
 	}
 	// Stopped checking whether values fall between expected range 0-1 since that is checked in the validateItemData functions.
 	if (typeof obj.red !== "number") {
-		throw new Error("dye.red must be a numer");
+		throw new Error("dye.red must be a number");
 	}
 	if (typeof obj.green !== "number") {
-		throw new Error("dye.green must be a numer");
+		throw new Error("dye.green must be a number");
 	}
 	if (typeof obj.blue !== "number") {
-		throw new Error("dye.blue must be a numer");
+		throw new Error("dye.blue must be a number");
 	}
 	if (Object.keys(obj).length !== 3) {
 		throw new Error(`Dye must have exactly 3 keys (red, blue, green)`);
@@ -120,23 +137,25 @@ function isItemData(obj: any): obj is ItemData {
 	if (typeof obj !== "object" || obj === null) {
 		throw new Error("itemData must be an Object");
 	}
-	const keyCount: number = Object.keys(obj).length;
-	if (keyCount < ITEM_DATA_KEY_COUNT_MIN) {
-		throw new Error(`Invalid key count. ItemData requires "typeId" and "amount"`);
+	const objKeys = Object.keys(obj);
+	if (objKeys.length > ITEM_DATA_KEY_COUNT_MAX) {
+		throw new Error(getInvalidKeyMessage(objKeys, ItemDataKeys));
 	}
-	if (keyCount > ITEM_DATA_KEY_COUNT_MAX) {
-		throw new Error(
-			`Invalid key count. Valid ItemData keys include:\n${ItemDataKeysForErrorMessage.join(", ")}`,
-		);
+	let validKeysFound: number = 0;
+	// Keys with default values
+	if (typeof obj.amount !== "number") {
+		obj.amount = ItemDataDefaultAmount;
+		objKeys.push("amount");
 	}
+	validKeysFound++;
 	// Mandatory keys
+	if (obj.typeId === undefined) {
+		throw new Error(`ItemData requires "typeId"`);
+	}
 	if (typeof obj.typeId !== "string") {
 		throw new Error("typeId must be a string");
 	}
-	if (typeof obj.amount !== "number") {
-		throw new Error("amount must be a number");
-	}
-	let validKeysFound: number = 2;
+	validKeysFound++;
 	// Optional keys
 	if (obj.lockMode !== undefined) {
 		validKeysFound++;
@@ -185,10 +204,8 @@ function isItemData(obj: any): obj is ItemData {
 			);
 		}
 	}
-	if (keyCount !== validKeysFound) {
-		throw new Error(
-			`Invalid key${keyCount - validKeysFound !== 1 ? "s" : ""} found. Valid keys include:\n${Object.values(ItemDataKeysForErrorMessage).join(", ")}`,
-		);
+	if (objKeys.length !== validKeysFound) {
+		throw new Error(getInvalidKeyMessage(objKeys, ItemDataKeys));
 	}
 	return true;
 }

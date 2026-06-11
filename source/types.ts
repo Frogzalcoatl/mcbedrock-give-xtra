@@ -10,6 +10,7 @@ export interface EnchantData {
 	id: string;
 	level: number;
 }
+export const EnchantDataKeys: string[] = ["id", "level"];
 
 // Based on /replaceitem command slots. Excluding endchest slots since those cannot be accessed with scripting yet.
 export enum SlotName {
@@ -31,7 +32,7 @@ export interface SlotData {
 	id?: number;
 	replaceItem?: boolean;
 }
-export const SlotDataKeysForErrorMessage = ["name", "id", "replaceItem"];
+export const SlotDataKeys = ["name", "id", "replaceItem"];
 
 export type ItemDurability = number | "unbreakable";
 
@@ -50,7 +51,7 @@ export interface ItemData {
 	enchants?: EnchantData[];
 	slot?: SlotData;
 }
-export const ItemDataKeysForErrorMessage = [
+export const ItemDataKeys = [
 	"typeId",
 	"amount",
 	"lockMode",
@@ -59,3 +60,4 @@ export const ItemDataKeysForErrorMessage = [
 	"enchants",
 	"slot",
 ];
+export const ItemDataDefaultAmount: number = 1;
