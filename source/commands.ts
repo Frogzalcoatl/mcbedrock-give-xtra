@@ -47,7 +47,7 @@ function afterTickCommandResultHandler(
 		return;
 	}
 	if (origin.sourceBlock && world.gameRules.commandBlockOutput) {
-		// §7 makes text gray, §o italicizes, §r resets formatting
+		// §7 makes text gray, §o italicizes
 		// Using same format as commandblockoutput in game
 		world.sendMessage(`§7§o[CommandBlock§r: ${result.message}]`);
 	} else if (
@@ -110,9 +110,6 @@ function getGivexMessage(
 	successCount: number,
 	errors: string,
 ): string {
-	if (successCount === 1 && entities.length > 1) {
-		selectorName = "selector";
-	}
 	let message: string = "";
 	if (successCount === entities.length) {
 		message = `Gave ${prettyTypeId(itemData.typeId)}§r * ${itemData.amount} to ${selectorName}§r`;
@@ -140,7 +137,6 @@ function givexCommandCallback(
 	json: string,
 	selectorResult?: Entity[],
 ): CustomCommandResult {
-	const itemDataResult = parseItemData(json);
 	const entities: Entity[] | undefined = getCommandEntities(origin, selectorResult);
 	if (entities === undefined) {
 		const message = "Unable to give item to selector\nError(s):\nNo valid selector";
@@ -151,6 +147,7 @@ function givexCommandCallback(
 		};
 	}
 	const selectorName: string = getSelectorName(entities);
+	const itemDataResult = parseItemData(json);
 	if (itemDataResult.itemData === undefined) {
 		const message = `Unable to give item to ${selectorName}§r§c\nError(s):\n-${itemDataResult.syntaxError ?? "Unknown error in your json. (sorry)"}`;
 		commandBlockFailureMessage(origin, message);
@@ -192,26 +189,16 @@ function givexCommandCallback(
 			}
 		} else {
 			for (const entity of entities) {
-				if (!entity.isValid) {
-					errors += `-Entity ${entity.typeId} is invalid. (May be unloaded etc)\n`;
+				const inventory = entity.getComponent(EntityComponentTypes.Inventory);
+				if (inventory === undefined || !inventory.isValid) {
+					errors += `-Unable to get inventory of ${entity.nameTag.length !== 0 ? entity.nameTag : entity.typeId}\n`;
 					continue;
 				}
-				const inventory = entity.getComponent(EntityComponentTypes.Inventory);
-				if (!inventory) {
-					errors += `-Unable to get inventory of ${entity.nameTag.length !== 0 ? entity.nameTag : entity.typeId}\n`;
-				}
-				if (inventory) {
-					const result = giveItem(
-						entity,
-						inventory.container,
-						itemStack,
-						itemData.amount,
-					);
-					if (result.bool) {
-						successCount++;
-					} else {
-						errors += `-${result.message}\n`;
-					}
+				const result = giveItem(entity, inventory.container, itemStack, itemData.amount);
+				if (result.bool) {
+					successCount++;
+				} else {
+					errors += `-${result.message}\n`;
 				}
 			}
 		}

@@ -66,7 +66,7 @@ function applyEnchantData(
 	if (enchantType === undefined) {
 		return {
 			bool: false,
-			message: "Invalid enchantId",
+			message: `Invalid enchantId "${data.id}"`,
 		};
 	}
 	const enchant: Enchantment = {
@@ -79,12 +79,12 @@ function applyEnchantData(
 		if (e instanceof EnchantmentLevelOutOfBoundsError) {
 			return {
 				bool: false,
-				message: `Invalid enchantment level ${enchant.level} for ${enchant.type}`,
+				message: `Invalid enchantment level ${enchant.level} for ${enchant.type.id}. Max is ${enchant.type.maxLevel}`,
 			};
 		} else if (e instanceof EnchantmentTypeUnknownIdError) {
 			return {
 				bool: false,
-				message: "Invalid enchantId",
+				message: `Invalid enchantId "${enchant.type.id}"`,
 			};
 		} else if (e instanceof EnchantmentTypeNotCompatibleError) {
 			return {
@@ -94,7 +94,7 @@ function applyEnchantData(
 		} else {
 			return {
 				bool: false,
-				message: `Unknown error occurred while applying enchant ${enchant.type}`,
+				message: `Unknown error occurred while applying ${enchant.type} to item`,
 			};
 		}
 	}
@@ -117,6 +117,11 @@ export function dataToStack(data: ItemData): {
 				item: undefined,
 				warning: `Invalid typeId: ${data.typeId}`,
 			};
+		} else if (error instanceof Error) {
+			return {
+				item: undefined,
+				warning: error.message,
+			};
 		} else {
 			return {
 				item: undefined,
@@ -124,11 +129,14 @@ export function dataToStack(data: ItemData): {
 			};
 		}
 	}
-	if (data.slot && data.amount > itemStack.maxAmount) {
-		return {
-			item: undefined,
-			warning: `Amount ${data.amount} exceeds maximum for ${data.typeId} (${itemStack.maxAmount})\nIf you would like to give an amount exceeding the max stack size, you cannot select a slot.`,
-		};
+	if (data.slot) {
+		if (data.amount > itemStack.maxAmount) {
+			return {
+				item: undefined,
+				warning: `Amount ${data.amount} exceeds maximum for ${data.typeId} (${itemStack.maxAmount})\nIf you would like to give an amount exceeding the max stack size, you cannot select a slot.`,
+			};
+		}
+		itemStack.amount = data.amount;
 	}
 	// Issues beyond this point are not fatal. Will just return a \n seperated list of warnings in a single string.
 	let warning: string = "";
@@ -165,7 +173,7 @@ export function dataToStack(data: ItemData): {
 	if (data.enchants) {
 		const enchantableComponent = itemStack.getComponent(ItemComponentTypes.Enchantable);
 		if (enchantableComponent === undefined || !enchantableComponent.isValid) {
-			warning += `Unable to apply enchantments to ${data.typeId}. Skipping\n`;
+			warning += `Unable to apply enchantments to ${itemStack.typeId}. Skipping\n`;
 		} else {
 			for (const enchant of data.enchants) {
 				const result = applyEnchantData(enchantableComponent, enchant);

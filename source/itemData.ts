@@ -140,15 +140,10 @@ function isItemData(obj: any): obj is ItemData {
 	if (typeof obj !== "object" || obj === null) {
 		throw new Error("itemData must be an Object");
 	}
-	const objKeys = Object.keys(obj);
-	if (objKeys.length > ITEM_DATA_KEY_COUNT_MAX) {
-		throw new Error(getInvalidKeyMessage(objKeys, ItemDataKeys));
-	}
-	let validKeysFound: number = 0;
 	// Keys with default values
+	let validKeysFound: number = 0;
 	if (typeof obj.amount !== "number") {
 		obj.amount = ItemDataDefaultAmount;
-		objKeys.push("amount");
 	}
 	if (obj.amount > ItemDataMaxAmount) {
 		throw new Error(
@@ -156,6 +151,10 @@ function isItemData(obj: any): obj is ItemData {
 		);
 	}
 	validKeysFound++;
+	const objKeys = Object.keys(obj);
+	if (objKeys.length > ITEM_DATA_KEY_COUNT_MAX) {
+		throw new Error(getInvalidKeyMessage(objKeys, ItemDataKeys));
+	}
 	// Mandatory keys
 	if (obj.typeId === undefined) {
 		throw new Error(`ItemData requires "typeId"`);
@@ -166,51 +165,51 @@ function isItemData(obj: any): obj is ItemData {
 	validKeysFound++;
 	// Optional keys
 	if (obj.lockMode !== undefined) {
-		validKeysFound++;
 		if (!Object.values(ItemLockMode).includes(obj.lockMode)) {
 			throw new Error(
 				`lockMode must be one of the following: ${Object.values(ItemLockMode)}`,
 			);
 		}
+		validKeysFound++;
 	}
 	if (obj.nameTag !== undefined) {
-		validKeysFound++;
 		if (typeof obj.nameTag !== "string") {
 			throw new Error("nameTag must be a string");
 		}
+		validKeysFound++;
 	}
 	if (obj.durability !== undefined) {
-		validKeysFound++;
 		if (
 			typeof obj.durability !== "number" &&
 			(typeof obj.durability !== "string" || obj.durability !== "unbreakable")
 		) {
 			throw new Error('Durability must be a number or the string "unbreakable"');
 		}
+		validKeysFound++;
 	}
 	/* Will add back once mojang fixes dyeable component (Bug tracker MCPE-237577 and MCPE-232617)
 	if (obj.dye !== undefined) {
-		validKeysFound++;
 		if (!isRgb(obj.dye)) {
 			throw new Error(
 				"dye must be an object with the properties red, green, and blue containing numbers",
 			);
 		}
+		validKeysFound++;
 	}
 	*/
 	if (obj.enchants !== undefined) {
-		validKeysFound++;
 		if (!isEnchantDataArr(obj.enchants)) {
 			throw new Error("enchants must be an array of EnchantData");
 		}
+		validKeysFound++;
 	}
 	if (obj.slot !== undefined) {
-		validKeysFound++;
 		if (!isSlotData(obj.slot)) {
 			throw new Error(
 				"slot must be an object containing name, and optionally id and replaceItem",
 			);
 		}
+		validKeysFound++;
 	}
 	if (objKeys.length !== validKeysFound) {
 		throw new Error(getInvalidKeyMessage(objKeys, ItemDataKeys));
@@ -273,38 +272,11 @@ const VANILLA_OFFHAND_ITEM_TYPES: string[] = [
 	"minecraft:sparkler",
 ];
 
-// Only works with vanilla items.
-// If custom item, returns true since this function relies on enchantment slot data instead of actual equippability.
-// Just in case a equippable custom item does not have the enchantable component set up.
-function canEquipInSlot(itemStack: ItemStack, targetSlot: SlotName): boolean {
-	if (
-		targetSlot === SlotName.Inventory ||
-		targetSlot === SlotName.MobChest ||
-		targetSlot === SlotName.Mainhand ||
-		targetSlot === SlotName.Hotbar
-	) {
-		// There shouldnt be any items that cant go in these.
-		return true;
-	}
-	// Seems like anything can be placed here for whatever reason.
-	if (targetSlot === SlotName.Saddle || targetSlot === SlotName.Armor) {
-		return true;
-	}
-	const itemNamespace = getMcNamespace(itemStack.typeId);
-	if (itemNamespace !== "minecraft") {
-		// Return true if custom item.
-		return true;
-	}
-	if (targetSlot === SlotName.Offhand) {
-		return VANILLA_OFFHAND_ITEM_TYPES.includes(itemStack.typeId);
-	}
-	const enchantable = itemStack.getComponent(ItemComponentTypes.Enchantable);
-	if (!enchantable) {
-		// No way to really validate if item has no enchantable component
-		return true;
-	}
-	const itemEnchantSlots = enchantable.slots;
-	switch (targetSlot) {
+function slotNameMatchesEnchantableslots(
+	itemEnchantSlots: EnchantmentSlot[],
+	slotName: SlotName,
+): boolean {
+	switch (slotName) {
 		case SlotName.Head:
 			return (
 				itemEnchantSlots.includes(EnchantmentSlot.ArmorHead) ||
@@ -320,9 +292,37 @@ function canEquipInSlot(itemStack: ItemStack, targetSlot: SlotName): boolean {
 		case SlotName.Feet:
 			return itemEnchantSlots.includes(EnchantmentSlot.ArmorFeet);
 		default:
-			// theoretically would never get here, but just in case
 			return true;
 	}
+}
+
+function canEquipInSlot(itemStack: ItemStack, targetSlot: SlotName): boolean {
+	if (
+		targetSlot === SlotName.Inventory ||
+		targetSlot === SlotName.MobChest ||
+		targetSlot === SlotName.Mainhand ||
+		targetSlot === SlotName.Hotbar ||
+		targetSlot === SlotName.Saddle ||
+		targetSlot === SlotName.Armor
+	) {
+		// All items can go inside the above SlotNames
+		return true;
+	}
+	const itemNamespace = getMcNamespace(itemStack.typeId);
+	if (itemNamespace !== "minecraft") {
+		// Don't trust custom items to have enchantable slots set up in the same way as vanilla items.
+		return true;
+	}
+	if (targetSlot === SlotName.Offhand) {
+		return VANILLA_OFFHAND_ITEM_TYPES.includes(itemStack.typeId);
+	}
+	// Only armor slots remain.
+	const enchantable = itemStack.getComponent(ItemComponentTypes.Enchantable);
+	if (!enchantable || enchantable.slots.length === 0) {
+		// All vanilla items in armor slots seem to have enchantable slots set up, even if theyre not enchantable.
+		return false;
+	}
+	return slotNameMatchesEnchantableslots(enchantable.slots, targetSlot);
 }
 
 // biome-ignore assist/source/useSortedKeys: Want to keep it in the same order as declared in the ItemData interface.
@@ -443,7 +443,7 @@ export const ItemDataValidation = {
 				message: `${itemStack.typeId} cannot be placed in ${value.name}`,
 			};
 		}
-		// Not checking for a max slot id. Can use givex on non players, so max id varies.
+		// Skipping max slot.id. Can use givex on non players, so max id varies.
 		if (value.id && (!Number.isInteger(value.id) || value.id < 0)) {
 			return {
 				bool: false,

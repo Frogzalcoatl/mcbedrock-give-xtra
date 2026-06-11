@@ -1,4 +1,5 @@
 Can place on, can destroy, and keep on death
+	Make sure to update mob replaceitem command in replaceItemEquipppable().
 
 potionType
 

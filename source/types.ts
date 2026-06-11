@@ -12,7 +12,10 @@ export interface EnchantData {
 }
 export const EnchantDataKeys: string[] = ["id", "level"];
 
-// Based on /replaceitem command slots. Excluding endchest slots since those cannot be accessed with scripting yet.
+// Based on /replaceitem command slots.
+// Excluding slot.endchest. Cannot be accessed with scripting yet.
+// Excluding slot.armor.body. Used for wolf armor but cannot be accessed.
+// Excluding slot.equippable. I think its for custom items but I'm not sure how it works. May come back to this.
 export enum SlotName {
 	Mainhand = "slot.weapon.mainhand",
 	Offhand = "slot.weapon.offhand",
@@ -22,7 +25,7 @@ export enum SlotName {
 	Feet = "slot.armor.feet",
 	Hotbar = "slot.hotbar",
 	Inventory = "slot.inventory",
-	MobChest = "slot.chest", // Donkeys, Mules, Llamas (add +1 to id to account for saddle / carpet [on llamas])
+	MobChest = "slot.chest", // Donkeys, Mules, Llamas
 	Armor = "slot.armor", // Used for horse armor
 	Saddle = "slot.saddle", // Used for horses, llamas (carpet), donkeys, etc.
 }
