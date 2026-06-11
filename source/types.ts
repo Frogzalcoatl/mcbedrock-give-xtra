@@ -1,4 +1,4 @@
-import type { ItemLockMode } from "@minecraft/server";
+import type { ItemLockMode, Player } from "@minecraft/server";
 
 export interface BooleanWithMessage {
 	bool: boolean;
@@ -41,6 +41,13 @@ export interface SlotData {
 }
 export const SlotDataKeys = ["name", "id", "replaceItem"];
 
+/* The following item components are not supported due to scripting limitations:
+	Tipped arrow effects
+	npc spawn eggs (The only egg that still uses a data value for some reason)
+	Filled map ids
+	Firework rocket types
+*/
+
 export const ItemDataKeyCountMax: number = 7; // +1 once potionType is added, +1 once mojang fixes dyeable component. (Bug tracker MCPE-237577 and MCPE-232617)
 export const ItemDataKeyCountMin: number = 2;
 export interface ItemData {
@@ -75,3 +82,28 @@ export const ItemDataKeys = [
 export const ItemDataDefaultAmount: number = 1;
 // Matches max amount in vanilla /give
 export const ItemDataMaxAmount: number = 32767;
+
+export interface FormButton {
+	addStyling: boolean;
+	callback: (viewer: Player, itemData?: ItemData) => Promise<void>;
+	iconPath?: string;
+	itemData?: ItemData;
+	text: string;
+	type: "button";
+}
+
+export interface FormTextComponent {
+	type: "body" | "header" | "label" | "title";
+	text: string;
+}
+
+export interface FormDividerComponent {
+	type: "divider";
+}
+
+export type FormComponent = FormButton | FormTextComponent | FormDividerComponent;
+
+export interface Form {
+	title: string;
+	components: FormComponent[];
+}

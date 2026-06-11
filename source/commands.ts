@@ -15,6 +15,7 @@ import {
 	world,
 } from "@minecraft/server";
 import { giveItem, replaceItem } from "./containers";
+import { HelpForm, showForm } from "./forms";
 import { ItemDataValidation, parseItemData } from "./itemData";
 import { dataToStack } from "./itemStack";
 import { prettyTypeId } from "./prettyTypeId";
@@ -281,9 +282,23 @@ const HELP_COMMAND: CustomCommand = {
 	permissionLevel: CommandPermissionLevel.GameDirectors,
 };
 
-function helpCommandCallback(_origin: CustomCommandOrigin): CustomCommandResult {
+function helpCommandCallback(origin: CustomCommandOrigin): CustomCommandResult {
+	let viewer: Player;
+	if (origin.sourceEntity instanceof Player) {
+		viewer = origin.sourceEntity;
+	} else if (origin.initiator instanceof Player) {
+		viewer = origin.initiator;
+	} else {
+		return {
+			message: `No valid player for form`,
+			status: CustomCommandStatus.Failure,
+		};
+	}
+	system.run(async () => {
+		viewer.playSound("random.pop", { pitch: 0.5, volume: 0.3 });
+		showForm(HelpForm, viewer);
+	});
 	return {
-		message: "In progress",
 		status: CustomCommandStatus.Success,
 	};
 }
