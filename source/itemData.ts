@@ -86,7 +86,7 @@ function isSlotData(obj: any): obj is SlotData {
 	}
 	if (!Object.values(SlotName).includes(obj.name)) {
 		throw new Error(
-			`Invalid slot.name. Valid values include:\n${Object.values(SlotName).join(", ")}`,
+			`Invalid slot.name "${obj.name}". Valid values include:\n${Object.values(SlotName).join(", ")}`,
 		);
 	}
 	validKeysFound++;
@@ -284,6 +284,10 @@ function canEquipInSlot(itemStack: ItemStack, targetSlot: SlotName): boolean {
 		targetSlot === SlotName.Hotbar
 	) {
 		// There shouldnt be any items that cant go in these.
+		return true;
+	}
+	// Seems like anything can be placed here for whatever reason.
+	if (targetSlot === SlotName.Saddle || targetSlot === SlotName.Armor) {
 		return true;
 	}
 	const itemNamespace = getMcNamespace(itemStack.typeId);

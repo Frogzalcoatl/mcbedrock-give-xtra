@@ -22,7 +22,9 @@ export enum SlotName {
 	Feet = "slot.armor.feet",
 	Hotbar = "slot.hotbar",
 	Inventory = "slot.inventory",
-	MobChest = "slot.chest", // Donkeys, Mules, Llamas
+	MobChest = "slot.chest", // Donkeys, Mules, Llamas (add +1 to id to account for saddle / carpet [on llamas])
+	Armor = "slot.armor", // Used for horse armor
+	Saddle = "slot.saddle", // Used for horses, llamas (carpet), donkeys, etc.
 }
 
 export const SLOT_DATA_KEY_COUNT_MAX: number = 3;
