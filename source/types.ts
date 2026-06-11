@@ -47,9 +47,12 @@ export interface ItemData {
 	durability?: ItemDurability;
 	// Dyeable component simply doesn't exist on vanilla items.
 	// dye?: RGB;
-	// potionType: Figure out later;
+	// potionType?: Figure out later;
 	enchants?: EnchantData[];
 	slot?: SlotData;
+	// canPlaceOn?: string[];
+	// canDestroy?: string[];
+	// keepOnDeath?: boolean;
 }
 export const ItemDataKeys = [
 	"typeId",
@@ -61,3 +64,5 @@ export const ItemDataKeys = [
 	"slot",
 ];
 export const ItemDataDefaultAmount: number = 1;
+// Matches max amount in vanilla /give
+export const ItemDataMaxAmount: number = 32767;

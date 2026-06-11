@@ -110,6 +110,9 @@ function getGivexMessage(
 	successCount: number,
 	errors: string,
 ): string {
+	if (successCount === 1 && entities.length > 1) {
+		selectorName = "selector";
+	}
 	let message: string = "";
 	if (successCount === entities.length) {
 		message = `Gave ${prettyTypeId(itemData.typeId)}§r * ${itemData.amount} to ${selectorName}§r`;
@@ -119,7 +122,7 @@ function getGivexMessage(
 		message = `§cUnable to give ${itemData.typeId}§r§c to ${selectorName}§r§c`;
 	}
 	if (errors) {
-		message += `\n§cError(s):\n${errors.slice(0, 1024)}${errors.length > 1024 ? "..." : ""}`;
+		message += `\n§cError(s):\n${errors.slice(0, 1024)}${errors.length > 1024 ? "...\n" : ""}`;
 	}
 	return message;
 }
@@ -189,9 +192,13 @@ function givexCommandCallback(
 			}
 		} else {
 			for (const entity of entities) {
+				if (!entity.isValid) {
+					errors += `-Entity ${entity.typeId} is invalid. (May be unloaded etc)\n`;
+					continue;
+				}
 				const inventory = entity.getComponent(EntityComponentTypes.Inventory);
 				if (!inventory) {
-					errors += `-Unable to get inventory of ${entity.nameTag ?? entity.typeId}`;
+					errors += `-Unable to get inventory of ${entity.nameTag.length !== 0 ? entity.nameTag : entity.typeId}\n`;
 				}
 				if (inventory) {
 					const result = giveItem(

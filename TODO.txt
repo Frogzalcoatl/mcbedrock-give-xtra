@@ -1,3 +1,7 @@
-Help command (server-ui)
+Can place on, can destroy, and keep on death
 
-Add can place on, can destroy, and keep on death
+potionType
+
+Switch to command arg input instead of json for autocompletion (autocompletion when applicable).
+
+Help command (server-ui)

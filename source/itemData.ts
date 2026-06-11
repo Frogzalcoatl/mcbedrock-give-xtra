@@ -17,6 +17,7 @@ import {
 	type ItemData,
 	ItemDataDefaultAmount,
 	ItemDataKeys,
+	ItemDataMaxAmount,
 	type ItemDurability,
 	SLOT_DATA_KEY_COUNT_MAX,
 	type SlotData,
@@ -84,7 +85,9 @@ function isSlotData(obj: any): obj is SlotData {
 		throw new Error("SlotData requires name");
 	}
 	if (!Object.values(SlotName).includes(obj.name)) {
-		throw new Error("Invalid slot.name value");
+		throw new Error(
+			`Invalid slot.name. Valid values include:\n${Object.values(SlotName).join(", ")}`,
+		);
 	}
 	validKeysFound++;
 	// Optional keys
@@ -146,6 +149,11 @@ function isItemData(obj: any): obj is ItemData {
 	if (typeof obj.amount !== "number") {
 		obj.amount = ItemDataDefaultAmount;
 		objKeys.push("amount");
+	}
+	if (obj.amount > ItemDataMaxAmount) {
+		throw new Error(
+			`The number you have entered (${obj.amount}) is too big, it must be at most ${ItemDataMaxAmount}`,
+		);
 	}
 	validKeysFound++;
 	// Mandatory keys

@@ -41,11 +41,7 @@ export function giveItem(
 			};
 		}
 		itemStack.amount = Math.min(itemStack.maxAmount, amountLeft);
-		entity.dimension.spawnItem(itemStack, {
-			x: entity.location.x,
-			y: entity.location.y + 1,
-			z: entity.location.z,
-		});
+		entity.dimension.spawnItem(itemStack, entity.location);
 		amountLeft -= itemStack.amount;
 	}
 
