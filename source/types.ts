@@ -5,7 +5,9 @@ export interface BooleanWithMessage {
 	message: string;
 }
 
-export const ENCHANT_DATA_KEY_COUNT: number = 2;
+export type ItemDurability = number | "unbreakable";
+
+export const EnchantDataKeyCount: number = 2;
 export interface EnchantData {
 	id: string;
 	level: number;
@@ -30,8 +32,8 @@ export enum SlotName {
 	Saddle = "slot.saddle", // Used for horses, llamas (carpet), donkeys, etc.
 }
 
-export const SLOT_DATA_KEY_COUNT_MAX: number = 3;
-export const SLOT_DATA_KEY_COUNT_MIN: number = 1;
+export const SlotDataKeyCountMax: number = 3;
+export const SlotDataKeyCountMin: number = 1;
 export interface SlotData {
 	name: SlotName;
 	id?: number;
@@ -39,10 +41,8 @@ export interface SlotData {
 }
 export const SlotDataKeys = ["name", "id", "replaceItem"];
 
-export type ItemDurability = number | "unbreakable";
-
-export const ITEM_DATA_KEY_COUNT_MAX: number = 7; // +1 once potionType is added, +1 once mojang fixes dyeable component. (Bug tracker MCPE-237577 and MCPE-232617)
-export const ITEM_DATA_KEY_COUNT_MIN: number = 2;
+export const ItemDataKeyCountMax: number = 7; // +1 once potionType is added, +1 once mojang fixes dyeable component. (Bug tracker MCPE-237577 and MCPE-232617)
+export const ItemDataKeyCountMin: number = 2;
 export interface ItemData {
 	typeId: string;
 	amount: number;
@@ -52,9 +52,9 @@ export interface ItemData {
 	durability?: ItemDurability;
 	// Dyeable component simply doesn't exist on vanilla items.
 	// dye?: RGB;
-	// potionType?: Figure out later;
 	enchants?: EnchantData[];
 	slot?: SlotData;
+	potionType?: string;
 	keepOnDeath?: boolean;
 	canPlaceOn?: string[];
 	canDestroy?: string[];
@@ -67,6 +67,7 @@ export const ItemDataKeys = [
 	"durability",
 	"enchants",
 	"slot",
+	"potionType",
 	"keepOnDeath",
 	"canPlaceOn",
 	"canDestroy",

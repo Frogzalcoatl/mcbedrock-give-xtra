@@ -6,22 +6,24 @@ import {
 	ItemLockMode,
 	ItemStack,
 	ItemTypes,
+	type PotionEffectType,
+	Potions,
 	type RGB,
 } from "@minecraft/server";
 import { getMcNamespace } from "./prettyTypeId";
 import {
 	type BooleanWithMessage,
-	ENCHANT_DATA_KEY_COUNT,
 	type EnchantData,
+	EnchantDataKeyCount,
 	EnchantDataKeys,
-	ITEM_DATA_KEY_COUNT_MAX,
 	type ItemData,
 	ItemDataDefaultAmount,
+	ItemDataKeyCountMax,
 	ItemDataKeys,
 	ItemDataMaxAmount,
 	type ItemDurability,
-	SLOT_DATA_KEY_COUNT_MAX,
 	type SlotData,
+	SlotDataKeyCountMax,
 	SlotDataKeys,
 	SlotName,
 } from "./types";
@@ -40,7 +42,7 @@ function isEnchantData(obj: any): obj is EnchantData {
 	if (typeof obj !== "object" || obj === null) {
 		throw new Error("enchant must be an object");
 	}
-	if (Object.keys(obj).length !== ENCHANT_DATA_KEY_COUNT) {
+	if (Object.keys(obj).length !== EnchantDataKeyCount) {
 		throw new Error(getInvalidKeyMessage(Object.keys(obj), EnchantDataKeys));
 	}
 	if (obj.id === undefined) {
@@ -77,7 +79,7 @@ function isSlotData(obj: any): obj is SlotData {
 		throw new Error("slot must be an object");
 	}
 	const objKeys = Object.keys(obj);
-	if (objKeys.length > SLOT_DATA_KEY_COUNT_MAX) {
+	if (objKeys.length > SlotDataKeyCountMax) {
 		throw new Error(getInvalidKeyMessage(objKeys, SlotDataKeys));
 	}
 	let validKeysFound = 0;
@@ -165,7 +167,7 @@ function isItemData(obj: any): obj is ItemData {
 	}
 	validKeysFound++;
 	const objKeys = Object.keys(obj);
-	if (objKeys.length > ITEM_DATA_KEY_COUNT_MAX) {
+	if (objKeys.length > ItemDataKeyCountMax) {
 		throw new Error(getInvalidKeyMessage(objKeys, ItemDataKeys));
 	}
 	// Mandatory keys
@@ -221,6 +223,12 @@ function isItemData(obj: any): obj is ItemData {
 			throw new Error(
 				"slot must be an object containing name, and optionally id and replaceItem",
 			);
+		}
+		validKeysFound++;
+	}
+	if (obj.potionType !== undefined) {
+		if (typeof obj.potionType !== "string") {
+			throw new Error("potionType must be a string");
 		}
 		validKeysFound++;
 	}
@@ -351,7 +359,7 @@ function canEquipInSlot(itemStack: ItemStack, targetSlot: SlotName): boolean {
 		// All items can go inside the above SlotNames
 		return true;
 	}
-	const itemNamespace = getMcNamespace(itemStack.typeId);
+	const itemNamespace = getMcNamespace(itemStack.typeId) ?? "minecraft";
 	if (itemNamespace !== "minecraft") {
 		// Don't trust custom items to have enchantable slots set up in the same way as vanilla items.
 		return true;
@@ -368,27 +376,40 @@ function canEquipInSlot(itemStack: ItemStack, targetSlot: SlotName): boolean {
 	return slotNameMatchesEnchantableslots(enchantable.slots, targetSlot);
 }
 
+export function itemTypeToPotionDeliveryType(typeId: string): string | undefined {
+	switch (typeId) {
+		case "minecraft:potion":
+			return "Consume";
+		case "minecraft:splash_potion":
+			return "ThrownSplash";
+		case "minecraft:lingering_potion":
+			return "ThrownLingering";
+		default:
+			return undefined;
+	}
+}
+
 // biome-ignore assist/source/useSortedKeys: Want to keep it in the same order as declared in the ItemData interface.
 export const ItemDataValidation = {
 	typeId(value: string): BooleanWithMessage {
 		const result: boolean = ItemTypes.get(value) !== undefined;
 		return {
 			bool: result,
-			message: result ? "Valid" : "Invalid typeId",
+			message: result ? "Valid typeId" : "Invalid typeId",
 		};
 	},
 	amount(value: number): BooleanWithMessage {
 		const result: boolean = value > 0 || Number.isInteger(value);
 		return {
 			bool: result,
-			message: result ? "Valid" : "Invalid amount, must be a positve integer",
+			message: result ? "Valid amount" : "Invalid amount, must be a positve integer",
 		};
 	},
 	lockMode(value: ItemLockMode): BooleanWithMessage {
 		const result: boolean = Object.values(ItemLockMode).includes(value);
 		return {
 			bool: result,
-			message: result ? "Valid" : "Invalid lock mode",
+			message: result ? "Valid lock mode" : "Invalid lock mode",
 		};
 	},
 	nameTag(value: string): BooleanWithMessage {
@@ -396,7 +417,7 @@ export const ItemDataValidation = {
 		const result: boolean = value.length <= 253;
 		return {
 			bool: result,
-			message: result ? "Valid" : "Nametag length must be 253 characters or less",
+			message: result ? "Valid nametag" : "Nametag length must be 253 characters or less",
 		};
 	},
 	durability(durability: ItemDurability, itemStack: ItemStack): BooleanWithMessage {
@@ -427,7 +448,7 @@ export const ItemDataValidation = {
 		}
 		return {
 			bool: true,
-			message: "Valid",
+			message: "Valid durability",
 		};
 	},
 	dye(value: RGB): BooleanWithMessage {
@@ -441,7 +462,7 @@ export const ItemDataValidation = {
 		return {
 			bool: result,
 			message: result
-				? "Valid"
+				? "Valid dye"
 				: `Dye must include three values between 0 and 1.\nEx: "dye":{"red":0,"blue":1,"green":0.5}`,
 		};
 	},
@@ -476,7 +497,7 @@ export const ItemDataValidation = {
 		}
 		return {
 			bool: true,
-			message: "Valid",
+			message: "Valid enchants",
 		};
 	},
 	slot(value: SlotData, itemStack: ItemStack, amount: number): BooleanWithMessage {
@@ -502,7 +523,7 @@ export const ItemDataValidation = {
 		// data.slot.replaceItem is a boolean. Nothing to check there.
 		return {
 			bool: true,
-			message: "Valid",
+			message: "Valid SlotData",
 		};
 	},
 	canPlaceOnAndCanDestroy(value: string[], propertyName: string): BooleanWithMessage {
@@ -522,7 +543,45 @@ export const ItemDataValidation = {
 		}
 		return {
 			bool: true,
-			message: "Valid",
+			message: `Valid ${propertyName}`,
+		};
+	},
+	// Pass ItemData directly to edit potionType if its missing a namespace.
+	potionType(data: ItemData, itemTypeId: string): BooleanWithMessage {
+		if (data.potionType === undefined) {
+			return {
+				bool: false,
+				message: "potionType is undefined. (This error shouldnt ever be seen)",
+			};
+		}
+		const deliveryType = itemTypeToPotionDeliveryType(itemTypeId);
+		if (deliveryType === undefined) {
+			return {
+				bool: false,
+				message: `${itemTypeId} is not compatible with potionType`,
+			};
+		}
+		const effectTypeNamespace = getMcNamespace(data.potionType);
+		if (effectTypeNamespace === undefined) {
+			data.potionType = `minecraft:${data.potionType}`;
+		}
+		const effect: PotionEffectType | undefined = Potions.getEffectType(data.potionType);
+		if (effect === undefined) {
+			const allEffectTypes = Potions.getAllEffectTypes();
+			let effectTypeList: string = "";
+			for (const type of allEffectTypes) {
+				effectTypeList += `${type.id}\n`;
+			}
+			// Remove final newline character
+			effectTypeList = effectTypeList.slice(0, effectTypeList.length - 1);
+			return {
+				bool: false,
+				message: `Invalid potionType "${data.potionType}". Valid options include:\n${effectTypeList}`,
+			};
+		}
+		return {
+			bool: true,
+			message: "Valid potionData",
 		};
 	},
 	complete(data: ItemData): BooleanWithMessage {
@@ -574,6 +633,13 @@ export const ItemDataValidation = {
 				return result;
 			}
 		}
+		if (data.potionType) {
+			result = ItemDataValidation.potionType(data, data.typeId);
+			if (!result.bool) {
+				return result;
+			}
+		}
+		// ItemData.keepOnDeath is a boolean. Nothing to validate there.
 		if (data.canPlaceOn) {
 			result = ItemDataValidation.canPlaceOnAndCanDestroy(data.canPlaceOn, "canPlaceOn");
 			if (!result.bool) {
@@ -586,7 +652,6 @@ export const ItemDataValidation = {
 				return result;
 			}
 		}
-		// ItemData.keepOnDeath is a boolean. Nothing to validate there.
 		return {
 			bool: true,
 			message: "ItemData is valid",

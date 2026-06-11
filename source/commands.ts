@@ -74,14 +74,21 @@ function getGivexMessage(
 	selectorName: string,
 	successCount: number,
 	errors: string,
+	potionType?: string,
 ): string {
 	let message: string = "";
+	let itemName: string = prettyTypeId(itemTypeId);
+	if (potionType) {
+		potionType = `${potionType.slice(0, 256)}${potionType.length > 256 ? "..." : ""}`;
+		potionType = prettyTypeId(potionType);
+		itemName = `${potionType} ${itemName}`;
+	}
 	if (successCount === entities.length) {
-		message = `Gave ${prettyTypeId(itemTypeId)}§r * ${itemAmount} to ${selectorName}§r`;
+		message = `Gave ${itemName}§r * ${itemAmount} to ${selectorName}§r`;
 	} else if (successCount > 0) {
-		message = `Gave ${prettyTypeId(itemTypeId)}§r * ${itemAmount} to ${selectorName}§r\n§6However, failed to give to ${entities.length - successCount}/${entities.length} entit${entities.length - successCount !== 1 ? "ies" : "y"}`;
+		message = `Gave ${itemName}§r * ${itemAmount} to ${selectorName}§r\n§6However, failed to give to ${entities.length - successCount}/${entities.length} entit${entities.length - successCount !== 1 ? "ies" : "y"}`;
 	} else {
-		message = `§cUnable to give ${itemTypeId}§r§c to ${selectorName}§r§c`;
+		message = `§cUnable to give ${itemName}§r§c to ${selectorName}§r§c`;
 	}
 	if (errors) {
 		message += `\n§cError(s):\n${errors.slice(0, 1024)}${errors.length > 1024 ? "...\n" : ""}`;
@@ -101,6 +108,7 @@ function givexGiveItems(
 	amountToGive: number,
 	origin: CustomCommandOrigin,
 	selectorName: string,
+	potionType?: string,
 ): void {
 	let errors: string = "";
 	let successCount: number = 0;
@@ -125,6 +133,7 @@ function givexGiveItems(
 			selectorName,
 			successCount,
 			errors,
+			potionType,
 		),
 		status: successCount > 0 ? CustomCommandStatus.Success : CustomCommandStatus.Failure,
 	});
@@ -136,6 +145,7 @@ function givexReplaceItems(
 	slot: SlotData,
 	origin: CustomCommandOrigin,
 	selectorName: string,
+	potionType?: string,
 ): void {
 	let successCount: number = 0;
 	let errors: string = "";
@@ -155,13 +165,14 @@ function givexReplaceItems(
 			selectorName,
 			successCount,
 			errors,
+			potionType,
 		),
 		status: successCount > 0 ? CustomCommandStatus.Success : CustomCommandStatus.Failure,
 	});
 }
 
 const GIVEX_COMMAND: CustomCommand = {
-	description: "Give items with specific properties",
+	description: "Give items with specific properties.",
 	mandatoryParameters: [
 		{
 			name: "target",
@@ -238,9 +249,23 @@ function givexCommandCallback(
 		}
 		const itemStack: ItemStack = itemStackResult.item;
 		if (itemData.slot) {
-			givexReplaceItems(entities, itemStack, itemData.slot, origin, selectorName);
+			givexReplaceItems(
+				entities,
+				itemStack,
+				itemData.slot,
+				origin,
+				selectorName,
+				itemData.potionType,
+			);
 		} else {
-			givexGiveItems(entities, itemStack, itemData.amount, origin, selectorName);
+			givexGiveItems(
+				entities,
+				itemStack,
+				itemData.amount,
+				origin,
+				selectorName,
+				itemData.potionType,
+			);
 		}
 	});
 	return {
@@ -251,7 +276,7 @@ function givexCommandCallback(
 
 // Use server ui to easily generate item data json
 const HELP_COMMAND: CustomCommand = {
-	description: "Easily generate a givex command",
+	description: "Easily generate givex json.",
 	name: `${NAMESPACE}:help`,
 	permissionLevel: CommandPermissionLevel.GameDirectors,
 };

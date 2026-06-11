@@ -8,8 +8,9 @@ import {
 	ItemComponentTypes,
 	type ItemEnchantableComponent,
 	ItemStack,
+	Potions,
 } from "@minecraft/server";
-import { ItemDataValidation } from "./itemData";
+import { ItemDataValidation, itemTypeToPotionDeliveryType } from "./itemData";
 import type { BooleanWithMessage, EnchantData, ItemData, ItemDurability } from "./types";
 
 function applyDurability(item: ItemStack, value: ItemDurability): BooleanWithMessage {
@@ -104,13 +105,60 @@ function applyEnchantData(
 	};
 }
 
+function createPotionItem(
+	potionType: string,
+	itemTypeId: string,
+): {
+	item: ItemStack | undefined;
+	message: string;
+} {
+	const deliveryType = itemTypeToPotionDeliveryType(itemTypeId);
+	if (deliveryType === undefined) {
+		return {
+			item: undefined,
+			message: `${itemTypeId} is not compatible with potionType`,
+		};
+	}
+	let item: ItemStack;
+	try {
+		item = Potions.resolve(potionType, deliveryType);
+		return {
+			item: item,
+			message: "Created potion item",
+		};
+	} catch (error) {
+		if (error instanceof Error) {
+			return {
+				item: undefined,
+				message: error.message.length > 0 ? error.message : "Unable to create potion item",
+			};
+		}
+	}
+	return {
+		item: undefined,
+		message: "Unable to create potion item",
+	};
+}
+
 export function dataToStack(data: ItemData): {
 	item: ItemStack | undefined;
 	warning: string | undefined;
 } {
 	let itemStack: ItemStack;
 	try {
-		itemStack = new ItemStack(data.typeId);
+		if (!data.potionType) {
+			itemStack = new ItemStack(data.typeId);
+		} else {
+			const potionItemResult = createPotionItem(data.potionType, data.typeId);
+			if (potionItemResult.item) {
+				itemStack = potionItemResult.item;
+			} else {
+				return {
+					item: undefined,
+					warning: potionItemResult.message,
+				};
+			}
+		}
 	} catch (error) {
 		if (error instanceof InvalidItemStackError) {
 			return {
