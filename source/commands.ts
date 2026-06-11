@@ -52,25 +52,6 @@ function afterTickCommandResultHandler(
 	}
 }
 
-function getCommandEntities(
-	origin: CustomCommandOrigin,
-	selectorResult?: Entity[],
-): Entity[] | undefined {
-	if (selectorResult) {
-		if (selectorResult.length > 0) {
-			return selectorResult;
-		} else {
-			return undefined;
-		}
-	} else if (origin.sourceEntity) {
-		return [origin.sourceEntity];
-	} else if (origin.initiator) {
-		return [origin.initiator];
-	} else {
-		return undefined;
-	}
-}
-
 function getSelectorName(entities: Entity[]): string {
 	if (entities.length > 1) {
 		return "selectors";
@@ -183,6 +164,10 @@ const GIVEX_COMMAND: CustomCommand = {
 	description: "Give items with specific properties",
 	mandatoryParameters: [
 		{
+			name: "target",
+			type: CustomCommandParamType.EntitySelector,
+		},
+		{
 			name: "itemName",
 			type: CustomCommandParamType.ItemType,
 		},
@@ -193,10 +178,6 @@ const GIVEX_COMMAND: CustomCommand = {
 			name: "json",
 			type: CustomCommandParamType.String,
 		},
-		{
-			name: "target",
-			type: CustomCommandParamType.EntitySelector,
-		},
 	],
 	permissionLevel: CommandPermissionLevel.GameDirectors,
 };
@@ -204,11 +185,11 @@ const GIVEX_COMMAND: CustomCommand = {
 // Players must use escape characters for double quotes: \"
 function givexCommandCallback(
 	origin: CustomCommandOrigin,
+	selectorResult: Entity[],
 	itemType: ItemType,
 	json?: string,
-	selectorResult?: Entity[],
 ): CustomCommandResult {
-	const entities: Entity[] | undefined = getCommandEntities(origin, selectorResult);
+	const entities: Entity[] = selectorResult;
 	if (entities === undefined) {
 		const message = "Unable to give item to selector\nError(s):\nNo valid selector";
 		commandBlockFailureMessage(origin, message);
