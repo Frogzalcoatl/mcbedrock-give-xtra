@@ -13,7 +13,7 @@ import {
 import { ItemDataValidation, itemTypeToPotionDeliveryType } from "./itemData";
 import type { BooleanWithMessage, EnchantData, ItemData, ItemDurability } from "./types";
 
-function applyDurability(item: ItemStack, value: ItemDurability): BooleanWithMessage {
+export function applyDurability(item: ItemStack, value: ItemDurability): BooleanWithMessage {
 	const durabilityComponent = item.getComponent(ItemComponentTypes.Durability);
 	if (durabilityComponent === undefined || !durabilityComponent.isValid) {
 		return {
@@ -59,7 +59,7 @@ function applyDye(item: ItemStack, color: RGB): BooleanWithMessage {
 }
 */
 
-function applyEnchantData(
+export function applyEnchantData(
 	enchantableComponent: ItemEnchantableComponent,
 	data: EnchantData,
 ): BooleanWithMessage {
@@ -247,7 +247,7 @@ export function dataToStack(data: ItemData): {
 	}
 	if (data.canDestroy !== undefined) {
 		try {
-			itemStack.setCanDestroy(data.canPlaceOn);
+			itemStack.setCanDestroy(data.canDestroy);
 		} catch (error) {
 			if (error instanceof Error) {
 				warning += `Unable to set canDestroy: ${error.message}\n`;

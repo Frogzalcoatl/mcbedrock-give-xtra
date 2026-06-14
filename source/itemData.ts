@@ -8,10 +8,11 @@ import {
 	ItemTypes,
 	type PotionEffectType,
 	Potions,
-	type RGB,
 } from "@minecraft/server";
 import { getMcNamespace } from "./prettyTypeId";
 import {
+	ArrowEffectTypes,
+	BedColors,
 	type BooleanWithMessage,
 	type EnchantData,
 	EnchantDataKeyCount,
@@ -23,7 +24,9 @@ import {
 	ItemDataMaxAmount,
 	type ItemDurability,
 	type SlotData,
-	SlotDataKeyCountMax,
+	SlotDataIdDefault,
+	SlotDataKeepOldItemDefault,
+	SlotDataKeyCount,
 	SlotDataKeys,
 	SlotName,
 } from "./types";
@@ -78,11 +81,24 @@ function isSlotData(obj: any): obj is SlotData {
 	if (typeof obj !== "object" || obj === null) {
 		throw new Error("slot must be an object");
 	}
+	// Keys with default values
+	let validKeysFound: number = 0;
+	if (obj.keepOldItem === undefined) {
+		obj.keepOldItem = SlotDataKeepOldItemDefault;
+	} else if (typeof obj.keepOldItem !== "boolean") {
+		throw new Error("slot.keepOldItem must be a boolean");
+	}
+	validKeysFound++;
+	if (obj.id === undefined) {
+		obj.id = SlotDataIdDefault;
+	} else if (typeof obj.id !== "number") {
+		throw new Error("slot.id must be a number");
+	}
+	validKeysFound++;
 	const objKeys = Object.keys(obj);
-	if (objKeys.length > SlotDataKeyCountMax) {
+	if (objKeys.length !== SlotDataKeyCount) {
 		throw new Error(getInvalidKeyMessage(objKeys, SlotDataKeys));
 	}
-	let validKeysFound = 0;
 	// Mandatory keys
 	if (obj.name === undefined) {
 		throw new Error("SlotData requires name");
@@ -93,19 +109,6 @@ function isSlotData(obj: any): obj is SlotData {
 		);
 	}
 	validKeysFound++;
-	// Optional keys
-	if (obj.id !== undefined) {
-		validKeysFound++;
-		if (typeof obj.id !== "number") {
-			throw new Error("slot.id must be a number");
-		}
-	}
-	if (obj.replaceItem !== undefined) {
-		validKeysFound++;
-		if (typeof obj.replaceItem !== "boolean") {
-			throw new Error("slot.replaceItem must be a boolean");
-		}
-	}
 	if (validKeysFound !== objKeys.length) {
 		throw new Error(getInvalidKeyMessage(objKeys, SlotDataKeys));
 	}
@@ -157,10 +160,11 @@ function isItemData(obj: any): obj is ItemData {
 	}
 	// Keys with default values
 	let validKeysFound: number = 0;
-	if (typeof obj.amount !== "number") {
+	if (obj.amount === undefined) {
 		obj.amount = ItemDataDefaultAmount;
-	}
-	if (obj.amount > ItemDataMaxAmount) {
+	} else if (typeof obj.amount !== "number") {
+		throw new Error("amount must be a number");
+	} else if (obj.amount > ItemDataMaxAmount) {
 		throw new Error(
 			`The number you have entered (${obj.amount}) is too big, it must be at most ${ItemDataMaxAmount}`,
 		);
@@ -221,7 +225,7 @@ function isItemData(obj: any): obj is ItemData {
 	if (obj.slot !== undefined) {
 		if (!isSlotData(obj.slot)) {
 			throw new Error(
-				"slot must be an object containing name, and optionally id and replaceItem",
+				"slot must be an object containing name, id and optionally keepOldItem",
 			);
 		}
 		validKeysFound++;
@@ -229,6 +233,18 @@ function isItemData(obj: any): obj is ItemData {
 	if (obj.potionType !== undefined) {
 		if (typeof obj.potionType !== "string") {
 			throw new Error("potionType must be a string");
+		}
+		validKeysFound++;
+	}
+	if (obj.arrowType !== undefined) {
+		if (typeof obj.arrowType !== "string") {
+			throw new Error("arrowType must be a string");
+		}
+		validKeysFound++;
+	}
+	if (obj.bedColor !== undefined) {
+		if (typeof obj.bedColor !== "string") {
+			throw new Error("bedColor must be a string");
 		}
 		validKeysFound++;
 	}
@@ -259,6 +275,7 @@ function isItemData(obj: any): obj is ItemData {
 export function parseItemData(
 	strToParse: string,
 	itemTypeId: string,
+	amount: number,
 ): {
 	itemData: ItemData | undefined;
 	syntaxError: string | undefined;
@@ -288,7 +305,14 @@ export function parseItemData(
 					syntaxError: `Remove json key "typeId", as you have already defined it in the command`,
 				};
 			}
+			if (parsedData.amount !== undefined) {
+				return {
+					itemData: undefined,
+					syntaxError: `Remove json key "amount", as you have already defined it in the command`,
+				};
+			}
 			parsedData.typeId = itemTypeId;
+			parsedData.amount = amount;
 		}
 		if (isItemData(parsedData)) {
 			return {
@@ -315,7 +339,6 @@ const VANILLA_OFFHAND_ITEM_TYPES: string[] = [
 	"minecraft:shield",
 	"minecraft:totem_of_undying",
 	"minecraft:arrow",
-	"minecraft:tipped_arrow",
 	"minecraft:firework_rocket",
 	"minecraft:empty_map",
 	"minecraft:filled_map",
@@ -451,6 +474,7 @@ export const ItemDataValidation = {
 			message: "Valid durability",
 		};
 	},
+	/*
 	dye(value: RGB): BooleanWithMessage {
 		const result: boolean =
 			value.red <= 0 ||
@@ -466,12 +490,13 @@ export const ItemDataValidation = {
 				: `Dye must include three values between 0 and 1.\nEx: "dye":{"red":0,"blue":1,"green":0.5}`,
 		};
 	},
+	*/
 	enchants(value: EnchantData[], itemStack: ItemStack): BooleanWithMessage {
 		const enchantableComonent = itemStack.getComponent(ItemComponentTypes.Enchantable);
 		if (enchantableComonent === undefined) {
 			return {
 				bool: false,
-				message: "Cannot apply enchants to selected item",
+				message: `Cannot apply enchants to selected item "${itemStack.typeId}"`,
 			};
 		}
 		for (const enchant of value) {
@@ -479,19 +504,19 @@ export const ItemDataValidation = {
 			if (type === undefined) {
 				return {
 					bool: false,
-					message: `Invalid enchantment id ${enchant.id}`,
+					message: `Invalid enchantment id "${enchant.id}"`,
 				};
 			}
 			if (enchant.level <= 0 || enchant.level > type.maxLevel) {
 				return {
 					bool: false,
-					message: `Invalid enchantment level for ${enchant.id}. Max level is ${type.maxLevel}`,
+					message: `Invalid enchantment level for "${enchant.id}". Max level is ${type.maxLevel}`,
 				};
 			}
 			if (!enchantableComonent.canAddEnchantment({ level: enchant.level, type: type })) {
 				return {
 					bool: false,
-					message: `${enchant.id} cannot be applied to ${itemStack.typeId}`,
+					message: `"${enchant.id}" cannot be applied to "${itemStack.typeId}"`,
 				};
 			}
 		}
@@ -508,10 +533,10 @@ export const ItemDataValidation = {
 			};
 		}
 		// Skipping max slot.id. Can use givex on non players, so max id varies.
-		if (value.id && (!Number.isInteger(value.id) || value.id < 0)) {
+		if (!Number.isInteger(value.id) || value.id < 0) {
 			return {
 				bool: false,
-				message: `Slot id must be an integer between 0 and 35`,
+				message: `Slot id must be an integer greater than or equal to 0`,
 			};
 		}
 		if (amount > itemStack.maxAmount) {
@@ -520,7 +545,7 @@ export const ItemDataValidation = {
 				message: `Amount ${amount} exceeds the maximum for ${itemStack.typeId} (${itemStack.maxAmount})\nIf you would like to give an amount exceeding the max stack size, you cannot select a slot.`,
 			};
 		}
-		// data.slot.replaceItem is a boolean. Nothing to check there.
+		// data.slot.keepOldItem is a boolean. Nothing to check there.
 		return {
 			bool: true,
 			message: "Valid SlotData",
@@ -547,18 +572,19 @@ export const ItemDataValidation = {
 		};
 	},
 	// Pass ItemData directly to edit potionType if its missing a namespace.
-	potionType(data: ItemData, itemTypeId: string): BooleanWithMessage {
-		if (data.potionType === undefined) {
+	potionType(data: ItemData, potionType: string): BooleanWithMessage {
+		data.potionType = potionType;
+		if (data.arrowType !== undefined) {
 			return {
 				bool: false,
-				message: "potionType is undefined. (This error shouldnt ever be seen)",
+				message: "Cannot have both arrowType and potionType",
 			};
 		}
-		const deliveryType = itemTypeToPotionDeliveryType(itemTypeId);
+		const deliveryType = itemTypeToPotionDeliveryType(data.typeId);
 		if (deliveryType === undefined) {
 			return {
 				bool: false,
-				message: `${itemTypeId} is not compatible with potionType`,
+				message: `${data.typeId} is not compatible with potionType`,
 			};
 		}
 		const effectTypeNamespace = getMcNamespace(data.potionType);
@@ -583,6 +609,44 @@ export const ItemDataValidation = {
 			bool: true,
 			message: "Valid potionData",
 		};
+	},
+	arrowType(data: ItemData, arrowType: string): BooleanWithMessage {
+		data.arrowType = arrowType;
+		if (data.typeId !== "minecraft:arrow") {
+			return {
+				bool: false,
+				message: `${data.typeId} is not compatible with arrowType. Use "minecraft:arrow:"`,
+			};
+		}
+		if (!ArrowEffectTypes.includes(arrowType)) {
+			return {
+				bool: false,
+				message: `Invalid arrowType "${arrowType}". Valid options include:\n${ArrowEffectTypes.join(", ")}`,
+			};
+		}
+		return {
+			bool: true,
+			message: "Valid arrowType",
+		};
+	},
+	bedColor(data: ItemData, bedColor: string): BooleanWithMessage {
+		if (data.typeId !== "minecraft:bed") {
+			return {
+				bool: false,
+				message: `${data.typeId} is not compatible with bedColor. Use "minecraft:bed"`,
+			};
+		}
+		if (BedColors.includes(bedColor)) {
+			return {
+				bool: true,
+				message: "Valid bedColor",
+			};
+		} else {
+			return {
+				bool: false,
+				message: `Invalid bedColor "${bedColor}". Valid options include:\n${BedColors.join(", ")}`,
+			};
+		}
 	},
 	complete(data: ItemData): BooleanWithMessage {
 		let result: BooleanWithMessage;
@@ -634,7 +698,19 @@ export const ItemDataValidation = {
 			}
 		}
 		if (data.potionType) {
-			result = ItemDataValidation.potionType(data, data.typeId);
+			result = ItemDataValidation.potionType(data, data.potionType);
+			if (!result.bool) {
+				return result;
+			}
+		}
+		if (data.arrowType) {
+			result = ItemDataValidation.arrowType(data, data.arrowType);
+			if (!result.bool) {
+				return result;
+			}
+		}
+		if (data.bedColor) {
+			result = ItemDataValidation.bedColor(data, data.bedColor);
 			if (!result.bool) {
 				return result;
 			}

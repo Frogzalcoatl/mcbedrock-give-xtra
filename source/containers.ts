@@ -1,4 +1,3 @@
-import "@minecraft/server";
 import {
 	type Container,
 	type Entity,
@@ -7,21 +6,53 @@ import {
 	type ItemStack,
 	Player,
 } from "@minecraft/server";
+import {
+	copyItemStackProperties,
+	runReplaceItemCommand,
+	setDataValueItemInContainer as setDataValueItemInSlot,
+} from "./dataValueItems";
 import { prettyTypeId } from "./prettyTypeId";
 import { type BooleanWithMessage, type SlotData, SlotName } from "./types";
 
 // Cannot be used in restricted execution
-export function giveItem(
+function addItemsToContainer(
 	entity: Entity,
 	container: Container,
 	itemStack: ItemStack,
-	amountToGive: number = 1,
+	amountToGive: number,
+	dataValue: number,
 ): BooleanWithMessage {
 	if (!entity.isValid || !container.isValid) {
 		return {
 			bool: false,
 			message: `Unable to give ${prettyTypeId(itemStack.typeId)} to invalid entity`,
 		};
+	}
+	if (dataValue !== 0) {
+		const slotForItem = container.firstEmptySlot();
+		if (slotForItem === undefined) {
+			return {
+				bool: false,
+				message: `Unable to give ${itemStack} with data value ${dataValue}. Container is full and no way to spawn data value item as entity.`,
+			};
+		}
+		// Just giving 1 with /replaceitem to get the itemstack
+		itemStack.amount = 1;
+		const result = setDataValueItemInSlot(entity, container, itemStack, slotForItem, dataValue);
+		if (!result.bool) {
+			return {
+				bool: false,
+				message: result.message,
+			};
+		}
+		if (result.itemStack === undefined) {
+			return {
+				bool: false,
+				message: `Gave 1 ${itemStack.typeId} but was unable to apply custom properties, so did not give the rest.`,
+			};
+		}
+		itemStack = result.itemStack; // This itemstack now has the data value attached internally.
+		amountToGive--; // Since one item was given using the function above.
 	}
 	let amountLeft: number = amountToGive;
 	while (amountLeft > 0) {
@@ -55,38 +86,14 @@ export function giveItem(
 	};
 }
 
-function firstEmptySlotWithinRange(
-	container: Container,
-	min: number,
-	max: number,
-): number | undefined {
-	if (
-		min < 0 ||
-		min >= container.size ||
-		max < min ||
-		max >= container.size ||
-		!container.isValid
-	) {
-		return undefined;
-	}
-	for (let i = min; i < max; i++) {
-		const slot = container.getSlot(i);
-		if (!slot.hasItem()) {
-			return i;
-		}
-	}
-	return undefined;
-}
-
 // Cannot be used in restricted execution
-function setItemInContainer(
+function setItemInSlot(
 	entity: Entity,
 	container: Container,
 	item: ItemStack,
-	slotId: number | undefined,
-	destroyOldItem: boolean,
-	manualMinSlotId?: number,
-	manualMaxSlotId?: number,
+	slotId: number,
+	keepOldItem: boolean,
+	dataValue: number = 0,
 ): BooleanWithMessage {
 	if (!container.isValid) {
 		return {
@@ -94,31 +101,30 @@ function setItemInContainer(
 			message: `${entity.typeId} container is invalid`,
 		};
 	}
-	const minSlotId = manualMinSlotId ?? 0;
-	const maxSlotId = manualMaxSlotId ?? container.size - 1;
-	if (slotId === undefined) {
-		const firstEmptySlot: number | undefined = firstEmptySlotWithinRange(
+	let oldItem: ItemStack | undefined;
+	if (keepOldItem) {
+		oldItem = container.getItem(slotId);
+	}
+	if (dataValue === 0) {
+		container.setItem(slotId, item);
+	} else {
+		const dataValueItemResult = setDataValueItemInSlot(
+			entity,
 			container,
-			minSlotId,
-			maxSlotId,
+			item,
+			slotId,
+			dataValue,
 		);
-		if (firstEmptySlot !== undefined) {
-			slotId = firstEmptySlot;
-		} else {
+		if (!dataValueItemResult.bool) {
 			return {
 				bool: false,
-				message: `Unable to find valid slot id in ${entity.typeId} within range ${minSlotId}-${maxSlotId}`,
+				message: dataValueItemResult.message,
 			};
 		}
 	}
-	let oldItem: ItemStack | undefined;
-	if (!destroyOldItem) {
-		oldItem = container.getItem(slotId);
-	}
-	container.setItem(slotId, item);
 	let oldItemGiveResult: BooleanWithMessage | undefined;
 	if (oldItem) {
-		oldItemGiveResult = giveItem(entity, container, oldItem, oldItem.amount);
+		oldItemGiveResult = addItemsToContainer(entity, container, oldItem, oldItem.amount, 0);
 	}
 	let message: string = `Replaced item in slot ${slotId}`;
 	if (oldItemGiveResult && !oldItemGiveResult.bool) {
@@ -127,6 +133,130 @@ function setItemInContainer(
 	return {
 		bool: true,
 		message: message,
+	};
+}
+
+function replaceItemInventory(
+	entity: Entity,
+	item: ItemStack,
+	slot: SlotData,
+	itemDataValue: number,
+): BooleanWithMessage {
+	const inventory = entity.getComponent(EntityComponentTypes.Inventory);
+	if (inventory === undefined || !inventory.isValid) {
+		return {
+			bool: false,
+			message: `Unable to get inventory of ${entity.typeId}`,
+		};
+	}
+	return setItemInSlot(
+		entity,
+		inventory.container,
+		item,
+		slot.id,
+		slot.keepOldItem,
+		itemDataValue,
+	);
+}
+
+function replaceItemHotbar(
+	entity: Entity,
+	item: ItemStack,
+	slot: SlotData,
+	itemDataValue: number,
+): BooleanWithMessage {
+	if (!(entity instanceof Player)) {
+		return {
+			bool: false,
+			message: "Only players have a hotbar",
+		};
+	}
+	const inventory = entity.getComponent(EntityComponentTypes.Inventory);
+	if (inventory === undefined || !inventory.isValid) {
+		return {
+			bool: false,
+			message: `Unable to get inventory of ${entity.name}`,
+		};
+	}
+	if (slot.id < 0 || slot.id > 8) {
+		return {
+			bool: false,
+			message: `Invalid hotbar slot id "${slot.id}". Must be between 0 and 8`,
+		};
+	}
+	return setItemInSlot(
+		entity,
+		inventory.container,
+		item,
+		slot.id,
+		slot.keepOldItem,
+		itemDataValue,
+	);
+}
+
+const MobChestEntityTypes: string[] = ["minecraft:llama", "minecraft:donkey", "minecraft:mule"];
+
+// Includes SlotName.Saddle, SlotName.Armor, and SlotName.MobChest
+// Don't want to include custom tameable mobs here. My implementation was forced to be too oddly specific.
+function replaceItemTameable(
+	entity: Entity,
+	item: ItemStack,
+	slot: SlotData,
+	itemDataValue: number,
+): BooleanWithMessage {
+	const inventory = entity.getComponent(EntityComponentTypes.Inventory);
+	const isTamed = entity.getComponent(EntityComponentTypes.IsTamed);
+	if (
+		inventory === undefined ||
+		!inventory.isValid ||
+		isTamed === undefined ||
+		!isTamed.isValid
+	) {
+		return {
+			bool: false,
+			message: `Unable to get ${slot.name} from ${entity.typeId}.`,
+		};
+	}
+	if (slot.name === SlotName.MobChest) {
+		if (!MobChestEntityTypes.includes(entity.typeId)) {
+			return {
+				bool: false,
+				message: `Unable to get ${slot.name} from ${entity.typeId}. Only accessible on vanilla tamed entities.`,
+			};
+		}
+		if (slot.id) {
+			// Account for saddle/carpet slot (slot 0);
+			slot.id++;
+		}
+		return setItemInSlot(
+			entity,
+			inventory.container,
+			item,
+			slot.id,
+			slot.keepOldItem,
+			itemDataValue,
+		);
+	}
+	if (slot.name === SlotName.Saddle) {
+		// Saddle is inventory slot 0 on tameable mobs.
+		slot.id = 0;
+	} else if (slot.name === SlotName.Armor) {
+		// Horse Armor is inventory slot 1 on tameable mobs.
+		slot.id = 1;
+	}
+	const result = setItemInSlot(
+		entity,
+		inventory.container,
+		item,
+		slot.id,
+		slot.keepOldItem,
+		itemDataValue,
+	);
+	return {
+		bool: result.bool,
+		message: result.bool
+			? `Gave ${entity.typeId}§r ${item.typeId}§r in ${slot.name}`
+			: result.message,
 	};
 }
 
@@ -149,151 +279,15 @@ function slotNameToEquipmentSlot(name: SlotName): EquipmentSlot | undefined {
 	}
 }
 
-function replaceItemInventory(entity: Entity, item: ItemStack, slot: SlotData): BooleanWithMessage {
-	const inventory = entity.getComponent(EntityComponentTypes.Inventory);
-	if (inventory === undefined || !inventory.isValid) {
-		return {
-			bool: false,
-			message: `Unable to get inventory of ${entity.typeId}`,
-		};
-	}
-	return setItemInContainer(entity, inventory.container, item, slot.id, slot.replaceItem ?? true);
-}
-
-function replaceItemHotbar(entity: Entity, item: ItemStack, slot: SlotData): BooleanWithMessage {
-	if (!(entity instanceof Player)) {
-		return {
-			bool: false,
-			message: "Only players have a hotbar",
-		};
-	}
-	const inventory = entity.getComponent(EntityComponentTypes.Inventory);
-	if (inventory === undefined || !inventory.isValid) {
-		return {
-			bool: false,
-			message: `Unable to get inventory of ${entity.name}`,
-		};
-	}
-	const minHotbarId: number = 0;
-	const maxHotbarId: number = 8;
-	return setItemInContainer(
-		entity,
-		inventory.container,
-		item,
-		slot.id,
-		slot.replaceItem ?? true,
-		minHotbarId,
-		maxHotbarId,
-	);
-}
-
-const MobChestEntityTypes: string[] = ["minecraft:llama", "minecraft:donkey", "minecraft:mule"];
-
-// Includes SlotName.Saddle, SlotName.Armor, and SlotName.MobChest
-// Don't want to include custom tameable mobs here. My implementation was forced to be too oddly specific.
-function replaceItemTameable(entity: Entity, item: ItemStack, slot: SlotData): BooleanWithMessage {
-	const inventory = entity.getComponent(EntityComponentTypes.Inventory);
-	const isTamed = entity.getComponent(EntityComponentTypes.IsTamed);
-	if (
-		inventory === undefined ||
-		!inventory.isValid ||
-		isTamed === undefined ||
-		!isTamed.isValid
-	) {
-		return {
-			bool: false,
-			message: `Unable to get ${slot.name} from ${entity.typeId}. Only accessible on tamed entities.`,
-		};
-	}
-	if (slot.name === SlotName.MobChest) {
-		if (!MobChestEntityTypes.includes(entity.typeId)) {
-			return {
-				bool: false,
-				message: `Unable to get ${slot.name} from ${entity.typeId}`,
-			};
-		}
-		if (slot.id) {
-			// Account for saddle/carpet slot (slot 0);
-			slot.id++;
-		}
-		const minSlotId: number = 1;
-		return setItemInContainer(
-			entity,
-			inventory.container,
-			item,
-			slot.id,
-			slot.replaceItem ?? true,
-			minSlotId,
-		);
-	}
-	if (slot.name === SlotName.Saddle) {
-		// Saddle is inventory slot 0 on tameable mobs.
-		slot.id = 0;
-	} else if (slot.name === SlotName.Armor) {
-		// Horse Armor is inventory slot 1 on tameable mobs.
-		slot.id = 1;
-	}
-	const result = setItemInContainer(
-		entity,
-		inventory.container,
-		item,
-		slot.id,
-		slot.replaceItem ?? true,
-		slot.id,
-		slot.id,
-	);
-	return {
-		bool: result.bool,
-		message: result.bool
-			? `Gave ${entity.typeId}§r ${item.typeId}§r in ${slot.name}`
-			: result.message,
-	};
-}
-
-// Returns formatted minecraft:can_destroy, minecraft:item_lock, and/or minecraft:keep_on_death
-function getCommandJson(item: ItemStack): string {
-	const canPlaceOn = item.getCanPlaceOn();
-	const canDestroy = item.getCanDestroy();
-	if (!item.keepOnDeath && canPlaceOn.length === 0 && canDestroy.length === 0) {
-		return "";
-	}
-	let str: string = "{";
-	if (item.keepOnDeath) {
-		// For some reason its an empty object instead of a boolean.
-		str += '"keep_on_death":{},';
-	}
-	if (canPlaceOn.length > 0) {
-		str += '"can_place_on":{"blocks":[';
-		for (const block of canPlaceOn) {
-			str += `"${block}",`;
-		}
-		// Remove final comma and add closing brackets
-		str = `${str.slice(0, str.length - 1)}]},`;
-	}
-	if (canDestroy.length > 0) {
-		str += '"can_destroy":{"blocks":[';
-		for (const block of canDestroy) {
-			str += `"${block}",`;
-		}
-		// Remove final comma and add closing brackets
-		str = `${str.slice(0, str.length - 1)}]},`;
-	}
-	// Remove final comma and add closing bracket
-	str = `${str.slice(0, str.length - 1)}}`;
-	// Final bracket is valid syntax despite the color being off on vscode
-	return str;
-}
-
 function replaceItemEquippable(
 	entity: Entity,
 	item: ItemStack,
 	slot: SlotData,
+	itemDataValue: number,
 ): BooleanWithMessage {
 	const equippable = entity.getComponent(EntityComponentTypes.Equippable);
 	if (equippable === undefined) {
-		entity.runCommand(
-			`/replaceitem entity @s ${slot.name} ${slot.id ?? 0} ${item.typeId} ${item.amount} 0 ${getCommandJson(item)}`,
-		);
+		runReplaceItemCommand(entity, item, slot.name, slot.id, itemDataValue);
 		return {
 			bool: false,
 			message: `Ran replaceitem command on ${entity.typeId} for ${item.typeId}. Any special properties were omitted.\n(Equippable doesn't work on mobs. Blame Mojang)`,
@@ -307,9 +301,29 @@ function replaceItemEquippable(
 		};
 	}
 	let oldItem: ItemStack | undefined;
-	// use === false to avoid running on undefined
-	if (slot.replaceItem === false) {
+	if (slot.keepOldItem) {
 		oldItem = equippable.getEquipment(equipmentSlot);
+	}
+	if (itemDataValue !== 0) {
+		const replaceItemResult: boolean = runReplaceItemCommand(
+			entity,
+			item,
+			slot.name,
+			slot.id,
+			itemDataValue,
+		);
+		if (!replaceItemResult) {
+			return {
+				bool: false,
+				message: `Unable to run replaceitem command for ${item.typeId} with data value ${itemDataValue}`,
+			};
+		}
+		const itemStackInSlot = equippable.getEquipment(equipmentSlot);
+		if (itemStackInSlot !== undefined) {
+			copyItemStackProperties(item, itemStackInSlot);
+			// itemStack now has data value internally
+			item = itemStackInSlot;
+		}
 	}
 	const equippableResult: boolean = equippable.setEquipment(equipmentSlot, item);
 	if (!equippableResult) {
@@ -330,7 +344,13 @@ function replaceItemEquippable(
 					: "Unable to spawn old item as entity",
 			};
 		} else {
-			oldItemGiveResult = giveItem(entity, inventory.container, item, item.amount);
+			oldItemGiveResult = addItemsToContainer(
+				entity,
+				inventory.container,
+				item,
+				item.amount,
+				0,
+			);
 		}
 	}
 	let message: string = `Equipped ${item.typeId} in slot ${slot.name}`;
@@ -344,28 +364,44 @@ function replaceItemEquippable(
 }
 
 // Cannot be used in restricted execution
-export function replaceItem(entity: Entity, item: ItemStack, slot: SlotData): BooleanWithMessage {
+export function giveItems(
+	entity: Entity,
+	item: ItemStack,
+	amount: number,
+	slot: SlotData | undefined,
+	itemDataValue: number,
+): BooleanWithMessage {
 	if (!entity.isValid) {
 		return {
 			bool: false,
 			message: `Entity ${entity.typeId} is invalid (Might be unloaded)`,
 		};
 	}
+	if (slot === undefined) {
+		const inventory = entity.getComponent(EntityComponentTypes.Inventory);
+		if (inventory === undefined || !inventory.isValid) {
+			return {
+				bool: false,
+				message: `Unable to get ${entity.typeId} inventory`,
+			};
+		}
+		return addItemsToContainer(entity, inventory.container, item, amount, itemDataValue);
+	}
 	switch (slot.name) {
 		case SlotName.Inventory:
-			return replaceItemInventory(entity, item, slot);
+			return replaceItemInventory(entity, item, slot, itemDataValue);
 		case SlotName.Hotbar:
-			return replaceItemHotbar(entity, item, slot);
+			return replaceItemHotbar(entity, item, slot, itemDataValue);
 		case SlotName.Saddle:
 		case SlotName.Armor:
 		case SlotName.MobChest:
-			return replaceItemTameable(entity, item, slot);
+			return replaceItemTameable(entity, item, slot, itemDataValue);
 		case SlotName.Head:
 		case SlotName.Chest:
 		case SlotName.Legs:
 		case SlotName.Feet:
 		case SlotName.Mainhand:
 		case SlotName.Offhand:
-			return replaceItemEquippable(entity, item, slot);
+			return replaceItemEquippable(entity, item, slot, itemDataValue);
 	}
 }

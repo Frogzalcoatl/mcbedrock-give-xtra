@@ -1,1 +1,3 @@
+blockx command for block inventories
+
 Help command (server-ui)

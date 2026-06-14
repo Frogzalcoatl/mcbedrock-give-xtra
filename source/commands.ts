@@ -7,14 +7,15 @@ import {
 	CustomCommandSource,
 	CustomCommandStatus,
 	type Entity,
-	EntityComponentTypes,
 	ItemStack,
 	type ItemType,
 	Player,
+	PlayerPermissionLevel,
 	system,
 	world,
 } from "@minecraft/server";
-import { giveItem, replaceItem } from "./containers";
+import { giveItems } from "./containers";
+import { getItemCommandDataValue } from "./dataValueItems";
 import { HelpForm, showForm } from "./forms";
 import { ItemDataValidation, parseItemData } from "./itemData";
 import { dataToStack } from "./itemStack";
@@ -31,7 +32,7 @@ function afterTickCommandResultHandler(
 		return;
 	}
 	if (origin.sourceBlock && world.gameRules.commandBlockOutput) {
-		// §7 makes text gray, §o italicizes
+		// §7 makes text gray, §o italicizes, §r resets formatting
 		// Using same format as commandblockoutput in game
 		world.sendMessage(`§7§o[CommandBlock§r: ${result.message}]`);
 	} else if (
@@ -50,6 +51,13 @@ function afterTickCommandResultHandler(
 		origin.initiator.sendMessage(
 			`${result.status === CustomCommandStatus.Failure ? "§c" : ""}${result.message}`,
 		);
+	}
+}
+
+// Errors are often too long to fit in the command block ui, so send them in chat if commandblockoutput is enabled.
+function commandBlockFailureMessage(origin: CustomCommandOrigin, message: string): void {
+	if (origin.sourceType === CustomCommandSource.Block && world.gameRules.commandBlockOutput) {
+		world.sendMessage(`§7§o[CommandBlock§r:\n§c${message}§r]`);
 	}
 }
 
@@ -75,14 +83,14 @@ function getGivexMessage(
 	selectorName: string,
 	successCount: number,
 	errors: string,
-	potionType?: string,
+	specialIdentifier: string | undefined,
 ): string {
 	let message: string = "";
 	let itemName: string = prettyTypeId(itemTypeId);
-	if (potionType) {
-		potionType = `${potionType.slice(0, 256)}${potionType.length > 256 ? "..." : ""}`;
-		potionType = prettyTypeId(potionType);
-		itemName = `${potionType} ${itemName}`;
+	if (specialIdentifier) {
+		specialIdentifier = `${specialIdentifier.slice(0, 256)}${specialIdentifier.length > 256 ? "..." : ""}`;
+		specialIdentifier = prettyTypeId(specialIdentifier);
+		itemName = `${specialIdentifier} ${itemName}`;
 	}
 	if (successCount === entities.length) {
 		message = `Gave ${itemName}§r * ${itemAmount} to ${selectorName}§r`;
@@ -97,82 +105,43 @@ function getGivexMessage(
 	return message;
 }
 
-function commandBlockFailureMessage(origin: CustomCommandOrigin, message: string): void {
-	if (origin.sourceType === CustomCommandSource.Block && world.gameRules.commandBlockOutput) {
-		world.sendMessage(`§7§o[CommandBlock§r:\n§c${message}§r]`);
-	}
-}
-
-function givexGiveItems(
+function runGivex(
 	entities: Entity[],
 	itemStack: ItemStack,
+	origin: CustomCommandOrigin,
+	selectorName: string,
 	amountToGive: number,
-	origin: CustomCommandOrigin,
-	selectorName: string,
-	potionType?: string,
+	slot: SlotData | undefined,
+	itemDataValue: number,
+	specialIdentifier: string | undefined, // For potions, tipped arrows, bed colors
 ): void {
-	let errors: string = "";
-	let successCount: number = 0;
-	for (const entity of entities) {
-		const inventory = entity.getComponent(EntityComponentTypes.Inventory);
-		if (inventory === undefined || !inventory.isValid) {
-			errors += `-Unable to get inventory of ${entity.nameTag.length !== 0 ? entity.nameTag : entity.typeId}\n`;
-			continue;
+	system.run(() => {
+		let errors: string = "";
+		let successCount: number = 0;
+		for (const entity of entities) {
+			const result = giveItems(entity, itemStack, amountToGive, slot, itemDataValue);
+			if (result.bool) {
+				successCount++;
+			} else {
+				errors += `-${result.message}\n`;
+			}
 		}
-		const result = giveItem(entity, inventory.container, itemStack, amountToGive);
-		if (result.bool) {
-			successCount++;
-		} else {
-			errors += `-${result.message}\n`;
-		}
-	}
-	afterTickCommandResultHandler(origin, {
-		message: getGivexMessage(
-			entities,
-			itemStack.typeId,
-			amountToGive,
-			selectorName,
-			successCount,
-			errors,
-			potionType,
-		),
-		status: successCount > 0 ? CustomCommandStatus.Success : CustomCommandStatus.Failure,
+		afterTickCommandResultHandler(origin, {
+			message: getGivexMessage(
+				entities,
+				itemStack.typeId,
+				amountToGive,
+				selectorName,
+				successCount,
+				errors,
+				specialIdentifier,
+			),
+			status: successCount > 0 ? CustomCommandStatus.Success : CustomCommandStatus.Failure,
+		});
 	});
 }
 
-function givexReplaceItems(
-	entities: Entity[],
-	itemStack: ItemStack,
-	slot: SlotData,
-	origin: CustomCommandOrigin,
-	selectorName: string,
-	potionType?: string,
-): void {
-	let successCount: number = 0;
-	let errors: string = "";
-	for (const entity of entities) {
-		const result = replaceItem(entity, itemStack, slot);
-		if (result.bool) {
-			successCount++;
-		} else {
-			errors += `-${result.message}\n`;
-		}
-	}
-	afterTickCommandResultHandler(origin, {
-		message: getGivexMessage(
-			entities,
-			itemStack.typeId,
-			itemStack.amount,
-			selectorName,
-			successCount,
-			errors,
-			potionType,
-		),
-		status: successCount > 0 ? CustomCommandStatus.Success : CustomCommandStatus.Failure,
-	});
-}
-
-const GIVEX_COMMAND: CustomCommand = {
+export const GIVEX_COMMAND: CustomCommand = {
 	description: "Give items with specific properties.",
 	mandatoryParameters: [
 		{
@@ -187,6 +156,10 @@ const GIVEX_COMMAND: CustomCommand = {
 	name: `${NAMESPACE}:givex`,
 	optionalParameters: [
 		{
+			name: "amount",
+			type: CustomCommandParamType.Integer,
+		},
+		{
 			name: "json",
 			type: CustomCommandParamType.String,
 		},
@@ -195,14 +168,15 @@ const GIVEX_COMMAND: CustomCommand = {
 };
 
 // Players must use escape characters for double quotes: \"
-function givexCommandCallback(
+export function givexCommandCallback(
 	origin: CustomCommandOrigin,
 	selectorResult: Entity[],
 	itemType: ItemType,
+	amount: number = 1,
 	json?: string,
 ): CustomCommandResult {
 	const entities: Entity[] = selectorResult;
-	if (entities === undefined) {
+	if (entities.length === 0) {
 		const message = "Unable to give item to selector\nError(s):\nNo valid selector";
 		commandBlockFailureMessage(origin, message);
 		return {
@@ -212,15 +186,22 @@ function givexCommandCallback(
 	}
 	const selectorName: string = getSelectorName(entities);
 	if (json === undefined) {
-		system.run(() =>
-			givexGiveItems(entities, new ItemStack(itemType), 1, origin, selectorName),
+		runGivex(
+			entities,
+			new ItemStack(itemType.id),
+			origin,
+			selectorName,
+			amount,
+			undefined,
+			getItemCommandDataValue(itemType.id, undefined),
+			undefined,
 		);
 		return {
 			message: "Ran givex",
 			status: CustomCommandStatus.Success,
 		};
 	}
-	const itemDataResult = parseItemData(json, itemType.id);
+	const itemDataResult = parseItemData(json, itemType.id, amount);
 	if (itemDataResult.itemData === undefined) {
 		const message = `Unable to give item to ${selectorName}§r§c\nError(s):\n-${itemDataResult.syntaxError ?? "Unknown error in your json. (sorry)"}`;
 		commandBlockFailureMessage(origin, message);
@@ -230,7 +211,7 @@ function givexCommandCallback(
 		};
 	}
 	const itemData: ItemData = itemDataResult.itemData;
-	const validationResult = ItemDataValidation.complete(itemDataResult.itemData);
+	const validationResult = ItemDataValidation.complete(itemData);
 	if (!validationResult.bool) {
 		const message = `Unable to give item to ${selectorName}§r§c\nError(s)\n${validationResult.message}`;
 		commandBlockFailureMessage(origin, message);
@@ -248,26 +229,32 @@ function givexCommandCallback(
 			});
 			return;
 		}
-		const itemStack: ItemStack = itemStackResult.item;
-		if (itemData.slot) {
-			givexReplaceItems(
-				entities,
-				itemStack,
-				itemData.slot,
-				origin,
-				selectorName,
-				itemData.potionType,
-			);
-		} else {
-			givexGiveItems(
-				entities,
-				itemStack,
-				itemData.amount,
-				origin,
-				selectorName,
-				itemData.potionType,
-			);
+		const itemStack = itemStackResult.item;
+		let specialIdentifier: string | undefined;
+		if (itemData.potionType) {
+			specialIdentifier = itemData.potionType;
+		} else if (itemData.arrowType) {
+			specialIdentifier = itemData.arrowType;
+		} else if (itemData.bedColor) {
+			specialIdentifier = itemData.bedColor;
 		}
+		// Used for items that still use the old data system instead of individual typeIds
+		let itemCommandDataValue: number = 0;
+		if (itemData.arrowType) {
+			itemCommandDataValue = getItemCommandDataValue(itemData.typeId, itemData.arrowType);
+		} else if (itemData.bedColor) {
+			itemCommandDataValue = getItemCommandDataValue(itemData.typeId, itemData.bedColor);
+		}
+		runGivex(
+			entities,
+			itemStack,
+			origin,
+			selectorName,
+			itemData.amount,
+			itemData.slot,
+			itemCommandDataValue,
+			specialIdentifier,
+		);
 	});
 	return {
 		message: `Ran givex`,
@@ -276,21 +263,24 @@ function givexCommandCallback(
 }
 
 // Use server ui to easily generate item data json
-const HELP_COMMAND: CustomCommand = {
+export const HELP_COMMAND: CustomCommand = {
 	description: "Easily generate givex json.",
 	name: `${NAMESPACE}:help`,
 	permissionLevel: CommandPermissionLevel.GameDirectors,
 };
 
-function helpCommandCallback(origin: CustomCommandOrigin): CustomCommandResult {
+export function helpCommandCallback(origin: CustomCommandOrigin): CustomCommandResult {
 	let viewer: Player;
 	if (origin.sourceEntity instanceof Player) {
 		viewer = origin.sourceEntity;
-	} else if (origin.initiator instanceof Player) {
+	} else if (
+		origin.initiator instanceof Player &&
+		origin.initiator.playerPermissionLevel === PlayerPermissionLevel.Operator
+	) {
 		viewer = origin.initiator;
 	} else {
 		return {
-			message: `No valid player for form`,
+			message: `No valid operator for form`,
 			status: CustomCommandStatus.Failure,
 		};
 	}
@@ -302,8 +292,3 @@ function helpCommandCallback(origin: CustomCommandOrigin): CustomCommandResult {
 		status: CustomCommandStatus.Success,
 	};
 }
-
-system.beforeEvents.startup.subscribe((e) => {
-	e.customCommandRegistry.registerCommand(GIVEX_COMMAND, givexCommandCallback);
-	e.customCommandRegistry.registerCommand(HELP_COMMAND, helpCommandCallback);
-});
