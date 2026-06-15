@@ -1,0 +1,20 @@
+:: My second batch file! :D
+
+@echo off
+setlocal
+
+:: Reset the variable in case it was set elsewhere
+:: (Suggestion from ai, rest was me tho fr)
+set "runCommands="
+
+set /P "runCommands=Would you like to create pack symlinks in the shared com.mojang folder? (y/n): "
+if /I "%runCommands%"=="y" (
+	echo Running commands...
+	:: %~dp0 represents directory of batch file
+	mklink /j "%appdata%\Minecraft Bedrock\Users\Shared\games\com.mojang\development_resource_packs\mcbedrock-give-xtra" "%~dp0resource_pack"
+	mklink /j "%appdata%\Minecraft Bedrock\Users\Shared\games\com.mojang\development_behavior_packs\mcbedrock-give-xtra" "%~dp0behavior_pack"
+) else (
+	echo Cancelled
+)
+echo.
+pause
