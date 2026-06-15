@@ -48,7 +48,7 @@ function afterTickCommandResultHandler(
 	commandBlockOutputMessage(origin, result);
 }
 
-function givexGetMessage(
+function givexFormatMessage(
 	context: GivexContext,
 	successCount: number,
 	errors: string,
@@ -89,14 +89,13 @@ function givexGetMessage(
 
 function givexRecieverCheck(context: GivexContext): CustomCommandResult {
 	if (context.recievers.length === 0) {
-		const message: string = givexGetMessage(
+		return {
+			message: givexFormatMessage(
 			context,
 			0,
 			"No valid selector",
 			undefined,
-		);
-		return {
-			message: message,
+		),
 			status: CustomCommandStatus.Success,
 		};
 	}
@@ -109,14 +108,13 @@ function givexRecieverCheck(context: GivexContext): CustomCommandResult {
 // Trying to access an itemstack created using minecraft:air crashes the world
 function givexAirCheck(context: GivexContext): CustomCommandResult {
 	if (context.itemType.id === "minecraft:air") {
-		const message: string = givexGetMessage(
+		return {
+			message: givexFormatMessage(
 			context,
 			0,
 			`Invalid item type "${prettyTypeId(context.itemType.id)}"`,
 			undefined,
-		);
-		return {
-			message: message,
+		),
 			status: CustomCommandStatus.Failure,
 		};
 	}
@@ -128,14 +126,13 @@ function givexAirCheck(context: GivexContext): CustomCommandResult {
 
 function givexAmountCheck(context: GivexContext): CustomCommandResult {
 	if (context.itemAmount > ItemDataMaxAmount) {
-		const message = givexGetMessage(
+		return {
+			message: givexFormatMessage(
 			context,
 			0,
 			`Amount ${context.itemAmount} exceeds the maximum of ${ItemDataMaxAmount}`,
 			undefined,
-		);
-		return {
-			message: message,
+		),
 			status: CustomCommandStatus.Failure,
 		};
 	}
@@ -189,7 +186,7 @@ function givexGiveItemStack(
 			}
 		}
 	return {
-		message: givexGetMessage(context, successCount, errors, specialIdentifier),
+		message: givexFormatMessage(context, successCount, errors, specialIdentifier),
 		status: successCount > 0 ? CustomCommandStatus.Success : CustomCommandStatus.Failure
 	}
 }
@@ -200,17 +197,13 @@ function givexGiveItemType(context: GivexContext): CustomCommandResult {
 			commandBlockOutputMessage(context.origin, amountCheckResult);
 			return amountCheckResult;
 		}
-		givexGiveItemStack(
+		return givexGiveItemStack(
 			context,
 			new ItemStack(context.itemType),
 			undefined,
 			getItemCommandDataValue(context.itemType.id, undefined),
 			undefined,
 		);
-		return {
-			message: `Ran ${context.commandName}`,
-			status: CustomCommandStatus.Success,
-		};
 }
 
 function givexGetSpecialIdentifier(itemData: ItemData): string | undefined {
@@ -249,7 +242,7 @@ function givexGetItemData(context: GivexContext): { result: CustomCommandResult,
 	if (itemDataResult.itemData === undefined) {
 		return {
 			result: {
-				message: givexGetMessage(
+				message: givexFormatMessage(
 					context,
 					0,
 					itemDataResult.syntaxError ?? "Unknown error in your json. (sorry)",
@@ -273,7 +266,7 @@ function givexValidateItemData(context: GivexContext, itemData: ItemData): Custo
 	const validationResult = ItemDataValidation.complete(itemData);
 	if (!validationResult.bool) {
 		return {
-			message: givexGetMessage(context, 0, validationResult.message, undefined),
+			message: givexFormatMessage(context, 0, validationResult.message, undefined),
 			status: CustomCommandStatus.Failure,
 		};
 	}
@@ -444,7 +437,7 @@ export function blockxGetBlock(context: GivexContext, location: Vector3): {block
 			return {
 					block: undefined,
 					result: {
-						message: givexGetMessage(
+						message: givexFormatMessage(
 							context,
 							0,
 							errorMessage ?? `Unable to get block at location ${vector3ToString(location)}`,
@@ -458,7 +451,7 @@ export function blockxGetBlock(context: GivexContext, location: Vector3): {block
 			return {
 				block: undefined,
 				result: {
-					message: givexGetMessage(
+					message: givexFormatMessage(
 					context,
 					0,
 					`Unable to get block at location ${vector3ToString(location)}`,

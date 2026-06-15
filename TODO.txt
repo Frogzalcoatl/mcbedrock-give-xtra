@@ -1,3 +1,5 @@
-spawnx command (spawn itemdata). Use this for the dataValueItem functions too if possible.
+itemdata handling for spawn item entity. Use this for the dataValueItem functions too if possible.
+
+clearx (clear items based on properties)
 
 Help command (server-ui)
