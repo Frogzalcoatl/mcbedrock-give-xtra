@@ -22,6 +22,6 @@
 		"target": "es2023",
 		"types": []
 	},
-	"exclude": ["scripts", "node_modules"],
-	"include": ["source"]
+	"exclude": ["behavior_pack/scripts", "node_modules"],
+	"include": ["behavior_pack/source"]
 }

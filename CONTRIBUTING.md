@@ -28,7 +28,7 @@ You need the following utilities installed: [pnpm](https://pnpm.io/), [node LTS]
 	pnpm install
 	```
 
-3. Create symlinks in the com.mojang folder
+3. Create symlinks to the behavior and resource packs in the com.mojang folder. (Added by Frogzalcoatl)
 
 	Open `deploy-pack.bat` and enter "y" to link this project to the com.mojang directory.
 

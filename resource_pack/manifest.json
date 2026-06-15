@@ -1,24 +1,24 @@
 {
-  "format_version": 2,
-  "header": {
-    "name": "Give Xtra",
-    "description": "Expansion of /give command by Frogzalcoatl. With major help from SunnyTheFennec \"xskt\".",
-    "uuid": "02ae392b-2b73-4de4-a884-e5d64367b027",
-    "version": [1, 0, 0],
-    "min_engine_version": [1, 26, 21]
-  },
-  "modules": [
-    {
-      "description": "Resource Pack Module",
-      "type": "resources",
-      "uuid": "a03bf39f-d1b7-4f7f-955d-126fd5e869fa",
-      "version": [1, 0, 0]
-    }
-  ],
-  "dependencies": [
-	{
+	"dependencies": [
+		{
 			"uuid": "2abb69c6-99ed-40b9-b442-126c32b8a9b1",
 			"version": [1, 0, 0]
 		}
-  ]
+	],
+	"format_version": 2,
+	"header": {
+		"description": "Expansion of /give command by Frogzalcoatl. With major help from SunnyTheFennec \"xskt\".",
+		"min_engine_version": [1, 26, 21],
+		"name": "Give Xtra",
+		"uuid": "02ae392b-2b73-4de4-a884-e5d64367b027",
+		"version": [1, 0, 0]
+	},
+	"modules": [
+		{
+			"description": "Resource Pack Module",
+			"type": "resources",
+			"uuid": "a03bf39f-d1b7-4f7f-955d-126fd5e869fa",
+			"version": [1, 0, 0]
+		}
+	]
 }

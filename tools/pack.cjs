@@ -10,7 +10,7 @@ const OUTPUT_DIRECTORY_NAME = "_temp_mcpack_directory";
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const OUTPUT_DIRECTORY_PATH = path.join(PROJECT_ROOT, OUTPUT_DIRECTORY_NAME);
 
-const SKIP_DIRECTORIES = [".vscode", "node_modules", "source", "tools", OUTPUT_DIRECTORY_NAME];
+const SKIP_DIRECTORIES = [".vscode", "node_modules", "behavior_pack/source", "tools", OUTPUT_DIRECTORY_NAME];
 const SKIP_FILES = [
 	"build-mcpack.cjs",
 	"esbuild.cjs",
