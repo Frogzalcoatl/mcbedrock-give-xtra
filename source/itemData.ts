@@ -28,6 +28,7 @@ import {
 	SlotDataKeepOldItemDefault,
 	SlotDataKeyCount,
 	SlotDataKeys,
+	SlotDataNameDefault,
 	SlotName,
 } from "./types";
 
@@ -92,20 +93,15 @@ function isSlotData(obj: any): obj is SlotData {
 	} else if (typeof obj.id !== "number") {
 		throw new Error("slot.id must be a number");
 	}
-	const objKeys = Object.keys(obj);
-	if (objKeys.length !== SlotDataKeyCount) {
-		throw new Error(getInvalidKeyMessage(objKeys, SlotDataKeys));
-	}
-	// Mandatory keys
 	if (obj.name === undefined) {
-		throw new Error("SlotData requires name");
-	}
-	if (!Object.values(SlotName).includes(obj.name)) {
+		obj.name = SlotDataNameDefault;
+	} else if (!Object.values(SlotName).includes(obj.name)) {
 		throw new Error(
 			`Invalid slot.name "${obj.name}". Valid values include:\n${Object.values(SlotName).join(", ")}`,
 		);
 	}
-	if (Object.keys(obj).length !== objKeys.length) {
+	const objKeys = Object.keys(obj);
+	if (objKeys.length !== SlotDataKeyCount) {
 		throw new Error(getInvalidKeyMessage(objKeys, SlotDataKeys));
 	}
 	return true;

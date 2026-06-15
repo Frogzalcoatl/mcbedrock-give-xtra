@@ -1,4 +1,4 @@
-import { type Entity, Player } from "@minecraft/server";
+import { Block, type Entity, Player, type Vector3 } from "@minecraft/server";
 
 export function prettyTypeId(typeId: string): string {
 	const namespaceColonIndex: number = typeId.indexOf(":");
@@ -29,18 +29,23 @@ export function getMcNamespace(typeId: string): string | undefined {
 	}
 }
 
-export function getEntityName(entity: Entity): string {
-	if (entity instanceof Player) {
-		return `${entity.name}§r`;
-	} else if (entity.nameTag) {
-		return `${entity.nameTag}`;
+export function getRecieverName(reciever: Entity | Block): string {
+	if (reciever instanceof Block) {
+		return prettyTypeId(reciever.typeId);
+	} else if (reciever instanceof Player) {
+		return `${reciever.name}§r`;
+	} else if (reciever.nameTag) {
+		return `${reciever.nameTag}`;
 	} else {
-		return prettyTypeId(entity.typeId);
+		return prettyTypeId(reciever.typeId);
 	}
 }
 
 // Since names are trailed with §r, if I want to maintain the color of the message, i need to append a color after each §r
 export function appendColorAfterResets(str: string, colorCode: string): string {
-	str.replaceAll("§r", `§r${colorCode}`);
-	return str;
+	return str.replaceAll("§r", `§r${colorCode}`);
+}
+
+export function vector3ToString(vector: Vector3): string {
+	return `${vector.x} ${vector.y} ${vector.z}`;
 }

@@ -1,4 +1,6 @@
 import {
+	Block,
+	type CommandResult,
 	type Container,
 	type Entity,
 	ItemComponentTypes,
@@ -6,6 +8,7 @@ import {
 	type ItemStack,
 	Player,
 } from "@minecraft/server";
+import { vector3ToString } from "./prettyTypeId";
 import {
 	ArrowEffectSartingDataValue,
 	ArrowEffectTypes,
@@ -96,22 +99,29 @@ function getCommandJson(item: ItemStack): string {
 }
 
 export function runReplaceItemCommand(
-	entity: Entity,
+	reciever: Entity | Block,
 	item: ItemStack,
 	slotName: string,
 	slotId: number,
 	dataValue: number,
 ): boolean {
-	if (slotName === SlotName.Inventory) {
-		if (entity instanceof Player) {
-			const result = getCommandSlotData(slotId);
-			slotId = result.id;
-			slotName = result.slotName;
+	let commandResult: CommandResult;
+	if (reciever instanceof Block) {
+		commandResult = reciever.dimension.runCommand(
+			`/replaceitem block ${vector3ToString(reciever.location)} slot.container ${slotId} ${item.typeId} ${item.amount} ${dataValue} ${getCommandJson(item)}`,
+		);
+	} else {
+		if (slotName === SlotName.Inventory) {
+			if (reciever instanceof Player) {
+				const result = getCommandSlotData(slotId);
+				slotId = result.id;
+				slotName = result.slotName;
+			}
 		}
+		commandResult = reciever.runCommand(
+			`/replaceitem entity @s ${slotName} ${slotId} ${item.typeId} ${item.amount} ${dataValue} ${getCommandJson(item)}`,
+		);
 	}
-	const commandResult = entity.runCommand(
-		`/replaceitem entity @s ${slotName} ${slotId} ${item.typeId} ${item.amount} ${dataValue} ${getCommandJson(item)}`,
-	);
 	return commandResult.successCount > 0;
 }
 
@@ -151,14 +161,14 @@ export function copyItemStackProperties(from: ItemStack, to: ItemStack): Boolean
 
 // Returns itemStack of given item (with data value attached internally)
 export function setDataValueItemInContainer(
-	entity: Entity,
+	reciever: Entity | Block,
 	container: Container,
 	item: ItemStack,
 	slotId: number,
 	dataValue: number,
 ): { bool: boolean; message: string; itemStack: ItemStack | undefined } {
 	const replaceItemResult = runReplaceItemCommand(
-		entity,
+		reciever,
 		item,
 		SlotName.Inventory,
 		slotId,

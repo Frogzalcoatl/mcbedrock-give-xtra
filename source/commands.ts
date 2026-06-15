@@ -1,4 +1,5 @@
 import {
+	Block,
 	CommandPermissionLevel,
 	type CustomCommand,
 	type CustomCommandOrigin,
@@ -6,21 +7,28 @@ import {
 	type CustomCommandResult,
 	CustomCommandSource,
 	CustomCommandStatus,
-	type Entity,
+	type Dimension,
+	Entity,
 	ItemStack,
 	type ItemType,
 	Player,
 	PlayerPermissionLevel,
 	system,
+	type Vector3,
 	world,
 } from "@minecraft/server";
-import { giveItems } from "./containers";
+import { giveItemToBlock, giveItemToEntity } from "./containers";
 import { getItemCommandDataValue } from "./dataValueItems";
 import { HelpForm, showForm } from "./forms";
 import { ItemDataValidation, parseItemData } from "./itemData";
 import { dataToStack } from "./itemStack";
-import { appendColorAfterResets, getEntityName, prettyTypeId } from "./prettyTypeId";
-import type { ItemData, SlotData } from "./types";
+import {
+	appendColorAfterResets,
+	getRecieverName,
+	prettyTypeId,
+	vector3ToString,
+} from "./prettyTypeId";
+import { type BooleanWithMessage, type ItemData, ItemDataMaxAmount, type SlotData } from "./types";
 
 const NAMESPACE: string = "givex";
 
@@ -63,13 +71,16 @@ function commandBlockOutputMessage(
 	}
 }
 
-function getSelectorName(entities: Entity[]): string {
-	if (entities.length > 1) {
+function getSelectorName(recievers: Entity[] | Block): string {
+	if (recievers instanceof Block) {
+		return prettyTypeId(recievers.typeId);
+	}
+	if (recievers.length > 1) {
 		return "selectors";
-	} else if (entities.length === 1) {
-		const entity: Entity | undefined = entities[0];
+	} else if (recievers.length === 1) {
+		const entity: Entity | undefined = recievers[0];
 		if (entity) {
-			return getEntityName(entity);
+			return getRecieverName(entity);
 		} else {
 			return "selector";
 		}
@@ -79,7 +90,7 @@ function getSelectorName(entities: Entity[]): string {
 }
 
 function getGivexMessage(
-	entities: Entity[],
+	recievers: Entity[] | Block[],
 	itemTypeId: string,
 	itemAmount: number,
 	selectorName: string,
@@ -94,22 +105,22 @@ function getGivexMessage(
 		specialIdentifier = prettyTypeId(specialIdentifier);
 		itemName = `${specialIdentifier} ${itemName}`;
 	}
-	if (successCount === entities.length) {
+	if (successCount === recievers.length) {
 		message = `Gave ${itemName}§r * ${itemAmount} to ${selectorName}§r`;
 	} else if (successCount > 0) {
-		message = `Gave ${itemName}§r * ${itemAmount} to ${selectorName}§r\n§6However, failed to give to ${entities.length - successCount}/${entities.length} entit${entities.length - successCount !== 1 ? "ies" : "y"}`;
+		message = `Gave ${itemName}§r * ${itemAmount} to ${selectorName}§r\n§6However, failed to give to ${recievers.length - successCount}/${recievers.length} entit${recievers.length - successCount !== 1 ? "ies" : "y"}`;
 	} else {
 		message = `§cUnable to give ${itemName}§r§c to ${selectorName}§r§c`;
 	}
 	if (errors) {
-		errors = appendColorAfterResets(errors, "§c");
 		message += `\n§cError(s):\n${errors.slice(0, 1024)}${errors.length > 1024 ? "...\n" : ""}`;
+		message = appendColorAfterResets(message, "§c");
 	}
 	return message;
 }
 
-function runGivex(
-	entities: Entity[],
+function runGive(
+	recievers: Entity[] | Block[],
 	itemStack: ItemStack,
 	origin: CustomCommandOrigin,
 	selectorName: string,
@@ -121,8 +132,13 @@ function runGivex(
 	system.run(() => {
 		let errors: string = "";
 		let successCount: number = 0;
-		for (const entity of entities) {
-			const result = giveItems(entity, itemStack, amountToGive, slot, itemDataValue);
+		for (const reciever of recievers) {
+			let result: BooleanWithMessage;
+			if (reciever instanceof Entity) {
+				result = giveItemToEntity(reciever, itemStack, amountToGive, slot, itemDataValue);
+			} else {
+				result = giveItemToBlock(reciever, itemStack, amountToGive, slot, itemDataValue);
+			}
 			if (result.bool) {
 				successCount++;
 			} else {
@@ -132,7 +148,7 @@ function runGivex(
 		afterTickCommandResultHandler(
 			origin,
 			getGivexMessage(
-				entities,
+				recievers,
 				itemStack.typeId,
 				amountToGive,
 				selectorName,
@@ -145,8 +161,173 @@ function runGivex(
 	});
 }
 
+function runGivex(
+	commandName: "givex" | "blockx",
+	origin: CustomCommandOrigin,
+	recievers: Entity[] | Block[],
+	selectorName: string,
+	itemType: ItemType,
+	amount: number,
+	json: string | undefined,
+): CustomCommandResult {
+	if (recievers.length === 0) {
+		const message: string = getGivexMessage(
+			recievers,
+			itemType.id,
+			amount,
+			selectorName,
+			0,
+			"No valid selector",
+			undefined,
+		);
+		const status = CustomCommandStatus.Failure;
+		commandBlockOutputMessage(origin, message, status);
+		return {
+			message: message,
+			status: CustomCommandStatus.Failure,
+		};
+	}
+	// Trying to access an itemstack created using minecraft:air crashes the world
+	if (itemType.id === "minecraft:air") {
+		const message: string = getGivexMessage(
+			recievers,
+			itemType.id,
+			amount,
+			selectorName,
+			0,
+			`Invalid item type "${prettyTypeId(itemType.id)}"`,
+			undefined,
+		);
+		const status = CustomCommandStatus.Failure;
+		commandBlockOutputMessage(origin, message, status);
+		return {
+			message: message,
+			status: CustomCommandStatus.Failure,
+		};
+	}
+	if (json === undefined) {
+		if (amount > ItemDataMaxAmount) {
+			const message = getGivexMessage(
+				recievers,
+				itemType.id,
+				amount,
+				selectorName,
+				0,
+				`Amount ${amount} exceeds the maximum of ${ItemDataMaxAmount}`,
+				undefined,
+			);
+			const status = CustomCommandStatus.Failure;
+			commandBlockOutputMessage(origin, message, status);
+			return {
+				message: message,
+				status: status,
+			};
+		}
+		runGive(
+			recievers,
+			new ItemStack(itemType.id),
+			origin,
+			selectorName,
+			amount,
+			undefined,
+			getItemCommandDataValue(itemType.id, undefined),
+			undefined,
+		);
+		return {
+			message: `Ran ${commandName}`,
+			status: CustomCommandStatus.Success,
+		};
+	}
+	const itemDataResult = parseItemData(json, itemType.id, amount);
+	if (itemDataResult.itemData === undefined) {
+		const message: string = getGivexMessage(
+			recievers,
+			itemType.id,
+			amount,
+			selectorName,
+			0,
+			itemDataResult.syntaxError ?? "Unknown error in your json. (sorry)",
+			undefined,
+		);
+		const status = CustomCommandStatus.Failure;
+		commandBlockOutputMessage(origin, message, status);
+		return {
+			message: message,
+			status: status,
+		};
+	}
+	const itemData: ItemData = itemDataResult.itemData;
+	const validationResult = ItemDataValidation.complete(itemData);
+	if (!validationResult.bool) {
+		const message = getGivexMessage(
+			recievers,
+			itemType.id,
+			amount,
+			selectorName,
+			0,
+			validationResult.message,
+			undefined,
+		);
+		const status = CustomCommandStatus.Failure;
+		commandBlockOutputMessage(origin, message, status);
+		return {
+			message: message,
+			status: status,
+		};
+	}
+	system.run(() => {
+		const itemStackResult = dataToStack(itemData);
+		if (itemStackResult.item === undefined) {
+			afterTickCommandResultHandler(
+				origin,
+				getGivexMessage(
+					recievers,
+					itemType.id,
+					amount,
+					selectorName,
+					0,
+					itemStackResult.warning ?? "Failed to create item stack.",
+					undefined,
+				),
+				CustomCommandStatus.Failure,
+			);
+			return;
+		}
+		const itemStack = itemStackResult.item;
+		let specialIdentifier: string | undefined;
+		if (itemData.potionType) {
+			specialIdentifier = itemData.potionType;
+		} else if (itemData.arrowType) {
+			specialIdentifier = itemData.arrowType;
+		} else if (itemData.bedColor) {
+			specialIdentifier = itemData.bedColor;
+		}
+		// Used for items that still use the old data system instead of individual typeIds
+		let itemCommandDataValue: number = 0;
+		if (itemData.arrowType) {
+			itemCommandDataValue = getItemCommandDataValue(itemData.typeId, itemData.arrowType);
+		} else if (itemData.bedColor) {
+			itemCommandDataValue = getItemCommandDataValue(itemData.typeId, itemData.bedColor);
+		}
+		runGive(
+			recievers,
+			itemStack,
+			origin,
+			selectorName,
+			itemData.amount,
+			itemData.slot,
+			itemCommandDataValue,
+			specialIdentifier,
+		);
+	});
+	return {
+		message: `Ran ${commandName}`,
+		status: CustomCommandStatus.Success,
+	};
+}
+
 export const GIVEX_COMMAND: CustomCommand = {
-	description: "Give items with specific properties.",
+	description: "Give items with specific properties to entities.",
 	mandatoryParameters: [
 		{
 			name: "target",
@@ -181,125 +362,98 @@ export function givexCommandCallback(
 ): CustomCommandResult {
 	const entities: Entity[] = selectorResult;
 	const selectorName: string = getSelectorName(entities);
-	if (entities.length === 0) {
-		const message: string = getGivexMessage(
-			entities,
-			itemType.id,
-			amount,
-			selectorName,
-			0,
-			"No valid selector",
-			undefined,
-		);
-		const status = CustomCommandStatus.Failure;
-		commandBlockOutputMessage(origin, message, status);
+	return runGivex("givex", origin, entities, selectorName, itemType, amount, json);
+}
+
+export const BLOCKX_COMMAND: CustomCommand = {
+	description: "Give items with specific properties to blocks.",
+	mandatoryParameters: [
+		{
+			name: "position",
+			type: CustomCommandParamType.Location,
+		},
+		{
+			name: "itemName",
+			type: CustomCommandParamType.ItemType,
+		},
+	],
+	name: `${NAMESPACE}:blockx`,
+	optionalParameters: [
+		{
+			name: "amount",
+			type: CustomCommandParamType.Integer,
+		},
+		{
+			name: "json",
+			type: CustomCommandParamType.String,
+		},
+	],
+	permissionLevel: CommandPermissionLevel.GameDirectors,
+};
+
+export function blockxCommandCallback(
+	origin: CustomCommandOrigin,
+	location: Vector3,
+	itemType: ItemType,
+	amount: number = 1,
+	json?: string,
+): CustomCommandResult {
+	let dimension: Dimension | undefined;
+	if (origin.sourceEntity) {
+		dimension = origin.sourceEntity.dimension;
+	} else if (origin.initiator) {
+		dimension = origin.initiator.dimension;
+	} else if (origin.sourceBlock) {
+		dimension = origin.sourceBlock.dimension;
+	}
+	if (dimension === undefined) {
 		return {
-			message: message,
+			message: getGivexMessage(
+				[],
+				itemType.id,
+				amount,
+				"block",
+				0,
+				"Unable to get block due to invalid origin",
+				undefined,
+			),
 			status: CustomCommandStatus.Failure,
 		};
 	}
-	if (json === undefined) {
-		runGivex(
-			entities,
-			new ItemStack(itemType.id),
-			origin,
-			selectorName,
-			amount,
-			undefined,
-			getItemCommandDataValue(itemType.id, undefined),
-			undefined,
-		);
-		return {
-			message: "Ran givex",
-			status: CustomCommandStatus.Success,
-		};
-	}
-	const itemDataResult = parseItemData(json, itemType.id, amount);
-	if (itemDataResult.itemData === undefined) {
-		const message: string = getGivexMessage(
-			entities,
-			itemType.id,
-			amount,
-			selectorName,
-			0,
-			itemDataResult.syntaxError ?? "Unknown error in your json. (sorry)",
-			undefined,
-		);
-		const status = CustomCommandStatus.Failure;
-		commandBlockOutputMessage(origin, message, status);
-		return {
-			message: message,
-			status: status,
-		};
-	}
-	const itemData: ItemData = itemDataResult.itemData;
-	const validationResult = ItemDataValidation.complete(itemData);
-	if (!validationResult.bool) {
-		const message = getGivexMessage(
-			entities,
-			itemType.id,
-			amount,
-			selectorName,
-			0,
-			validationResult.message,
-			undefined,
-		);
-		const status = CustomCommandStatus.Failure;
-		commandBlockOutputMessage(origin, message, status);
-		return {
-			message: message,
-			status: status,
-		};
-	}
-	system.run(() => {
-		const itemStackResult = dataToStack(itemData);
-		if (itemStackResult.item === undefined) {
-			afterTickCommandResultHandler(
-				origin,
-				getGivexMessage(
-					entities,
+	let block: Block | undefined;
+	try {
+		block = dimension.getBlock(location);
+	} catch (error) {
+		if (error instanceof Error) {
+			return {
+				message: getGivexMessage(
+					[],
 					itemType.id,
 					amount,
-					selectorName,
+					"block",
 					0,
-					itemStackResult.warning ?? "Failed to create item stack.",
+					error.message,
 					undefined,
 				),
-				CustomCommandStatus.Failure,
-			);
-			return;
+				status: CustomCommandStatus.Failure,
+			};
 		}
-		const itemStack = itemStackResult.item;
-		let specialIdentifier: string | undefined;
-		if (itemData.potionType) {
-			specialIdentifier = itemData.potionType;
-		} else if (itemData.arrowType) {
-			specialIdentifier = itemData.arrowType;
-		} else if (itemData.bedColor) {
-			specialIdentifier = itemData.bedColor;
-		}
-		// Used for items that still use the old data system instead of individual typeIds
-		let itemCommandDataValue: number = 0;
-		if (itemData.arrowType) {
-			itemCommandDataValue = getItemCommandDataValue(itemData.typeId, itemData.arrowType);
-		} else if (itemData.bedColor) {
-			itemCommandDataValue = getItemCommandDataValue(itemData.typeId, itemData.bedColor);
-		}
-		runGivex(
-			entities,
-			itemStack,
-			origin,
-			selectorName,
-			itemData.amount,
-			itemData.slot,
-			itemCommandDataValue,
-			specialIdentifier,
-		);
-	});
-	return {
-		message: `Ran givex`,
-		status: CustomCommandStatus.Success,
-	};
+	}
+	if (block === undefined) {
+		return {
+			message: getGivexMessage(
+				[],
+				itemType.id,
+				amount,
+				"block",
+				0,
+				`Unable to get block at location ${vector3ToString(location)}`,
+				undefined,
+			),
+			status: CustomCommandStatus.Failure,
+		};
+	}
+	return runGivex("blockx", origin, [block], getSelectorName(block), itemType, amount, json);
 }
 
 // Use server ui to easily generate item data json

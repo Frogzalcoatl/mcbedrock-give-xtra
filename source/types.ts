@@ -41,6 +41,7 @@ export const SlotDataKeys = ["name", "id", "keepOldItem"];
 export const SlotDataKeyCount: number = SlotDataKeys.length;
 export const SlotDataKeepOldItemDefault: boolean = false;
 export const SlotDataIdDefault: number = 0;
+export const SlotDataNameDefault: SlotName = SlotName.Inventory;
 
 // As of MC v26.21, there's no official way to access tipped arrows besides item data values
 // This array is in order of data value starting at 6 = night_vision
