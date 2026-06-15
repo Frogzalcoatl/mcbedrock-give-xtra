@@ -45,9 +45,6 @@ function isEnchantData(obj: any): obj is EnchantData {
 	if (typeof obj !== "object" || obj === null) {
 		throw new Error("enchant must be an object");
 	}
-	if (Object.keys(obj).length !== EnchantDataKeyCount) {
-		throw new Error(getInvalidKeyMessage(Object.keys(obj), EnchantDataKeys));
-	}
 	if (obj.id === undefined) {
 		throw new Error("enchant requires id");
 	}
@@ -59,6 +56,9 @@ function isEnchantData(obj: any): obj is EnchantData {
 	}
 	if (typeof obj.level !== "number") {
 		throw new Error(`${obj.id} enchant.level must be a number`);
+	}
+	if (Object.keys(obj).length !== EnchantDataKeyCount) {
+		throw new Error(getInvalidKeyMessage(Object.keys(obj), EnchantDataKeys));
 	}
 	return true;
 }
@@ -82,19 +82,16 @@ function isSlotData(obj: any): obj is SlotData {
 		throw new Error("slot must be an object");
 	}
 	// Keys with default values
-	let validKeysFound: number = 0;
 	if (obj.keepOldItem === undefined) {
 		obj.keepOldItem = SlotDataKeepOldItemDefault;
 	} else if (typeof obj.keepOldItem !== "boolean") {
 		throw new Error("slot.keepOldItem must be a boolean");
 	}
-	validKeysFound++;
 	if (obj.id === undefined) {
 		obj.id = SlotDataIdDefault;
 	} else if (typeof obj.id !== "number") {
 		throw new Error("slot.id must be a number");
 	}
-	validKeysFound++;
 	const objKeys = Object.keys(obj);
 	if (objKeys.length !== SlotDataKeyCount) {
 		throw new Error(getInvalidKeyMessage(objKeys, SlotDataKeys));
@@ -108,8 +105,7 @@ function isSlotData(obj: any): obj is SlotData {
 			`Invalid slot.name "${obj.name}". Valid values include:\n${Object.values(SlotName).join(", ")}`,
 		);
 	}
-	validKeysFound++;
-	if (validKeysFound !== objKeys.length) {
+	if (Object.keys(obj).length !== objKeys.length) {
 		throw new Error(getInvalidKeyMessage(objKeys, SlotDataKeys));
 	}
 	return true;
@@ -334,30 +330,6 @@ export function parseItemData(
 	};
 }
 
-function slotNameMatchesEnchantableslots(
-	itemEnchantSlots: EnchantmentSlot[],
-	slotName: SlotName,
-): boolean {
-	switch (slotName) {
-		case SlotName.Head:
-			return (
-				itemEnchantSlots.includes(EnchantmentSlot.ArmorHead) ||
-				itemEnchantSlots.includes(EnchantmentSlot.CosmeticHead)
-			);
-		case SlotName.Chest:
-			return (
-				itemEnchantSlots.includes(EnchantmentSlot.ArmorTorso) ||
-				itemEnchantSlots.includes(EnchantmentSlot.Elytra)
-			);
-		case SlotName.Legs:
-			return itemEnchantSlots.includes(EnchantmentSlot.ArmorLegs);
-		case SlotName.Feet:
-			return itemEnchantSlots.includes(EnchantmentSlot.ArmorFeet);
-		default:
-			return true;
-	}
-}
-
 function canEquipInSlot(itemStack: ItemStack, targetSlot: SlotName): boolean {
 	if (
 		targetSlot === SlotName.Inventory ||
@@ -382,7 +354,25 @@ function canEquipInSlot(itemStack: ItemStack, targetSlot: SlotName): boolean {
 		// All vanilla items in armor slots seem to have enchantable slots set up, even if theyre not enchantable.
 		return false;
 	}
-	return slotNameMatchesEnchantableslots(enchantable.slots, targetSlot);
+	const itemEnchantSlots = enchantable.slots;
+	switch (targetSlot) {
+		case SlotName.Head:
+			return (
+				itemEnchantSlots.includes(EnchantmentSlot.ArmorHead) ||
+				itemEnchantSlots.includes(EnchantmentSlot.CosmeticHead)
+			);
+		case SlotName.Chest:
+			return (
+				itemEnchantSlots.includes(EnchantmentSlot.ArmorTorso) ||
+				itemEnchantSlots.includes(EnchantmentSlot.Elytra)
+			);
+		case SlotName.Legs:
+			return itemEnchantSlots.includes(EnchantmentSlot.ArmorLegs);
+		case SlotName.Feet:
+			return itemEnchantSlots.includes(EnchantmentSlot.ArmorFeet);
+		default:
+			return true;
+	}
 }
 
 export function itemTypeToPotionDeliveryType(typeId: string): string | undefined {
@@ -408,7 +398,7 @@ export const ItemDataValidation = {
 		};
 	},
 	amount(value: number): BooleanWithMessage {
-		const result: boolean = value > 0 || Number.isInteger(value);
+		const result: boolean = value > 0 && Number.isInteger(value) && value < ItemDataMaxAmount;
 		return {
 			bool: result,
 			message: result ? "Valid amount" : "Invalid amount, must be a positve integer",
@@ -440,7 +430,7 @@ export const ItemDataValidation = {
 		if (durability === "unbreakable") {
 			return {
 				bool: true,
-				message: "Valid",
+				message: "Valid durability",
 			};
 		}
 		if (!Number.isInteger(durability) || durability <= 0) {

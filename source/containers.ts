@@ -11,7 +11,7 @@ import {
 	runReplaceItemCommand,
 	setDataValueItemInContainer as setDataValueItemInSlot,
 } from "./dataValueItems";
-import { prettyTypeId } from "./prettyTypeId";
+import { getEntityName, prettyTypeId } from "./prettyTypeId";
 import { type BooleanWithMessage, type SlotData, SlotName } from "./types";
 
 // Cannot be used in restricted execution
@@ -48,7 +48,7 @@ function addItemsToContainer(
 		if (result.itemStack === undefined) {
 			return {
 				bool: false,
-				message: `Gave 1 ${itemStack.typeId} but was unable to apply custom properties, so did not give the rest.`,
+				message: `Gave ${prettyTypeId(itemStack.typeId)} * 1 to ${getEntityName(entity)} but was unable to apply custom properties, so did not give the rest.`,
 			};
 		}
 		itemStack = result.itemStack; // This itemstack now has the data value attached internally.
@@ -67,13 +67,12 @@ function addItemsToContainer(
 		}
 		amountLeft -= itemStack.amount;
 	}
-	const entityName = entity instanceof Player ? entity.name : prettyTypeId(entity.typeId);
 	// Spawn items as entities
 	while (amountLeft > 0) {
 		if (!entity.isValid) {
 			return {
 				bool: false,
-				message: `Only gave ${prettyTypeId(itemStack.type.id)} * ${amountToGive - amountLeft}/${amountToGive} to ${entityName}§r. Unable to spawn items on invalid entity.`,
+				message: `Only gave ${prettyTypeId(itemStack.type.id)} * ${amountToGive - amountLeft}/${amountToGive} to ${getEntityName(entity)}§r. Unable to spawn items on invalid entity.`,
 			};
 		}
 		itemStack.amount = Math.min(itemStack.maxAmount, amountLeft);
@@ -82,7 +81,7 @@ function addItemsToContainer(
 	}
 	return {
 		bool: true,
-		message: `Gave ${prettyTypeId(itemStack.type.id)} * ${amountToGive} to ${entityName}`,
+		message: `Gave ${prettyTypeId(itemStack.type.id)} * ${amountToGive} to ${getEntityName(entity)}`,
 	};
 }
 
@@ -98,7 +97,7 @@ function setItemInSlot(
 	if (!container.isValid) {
 		return {
 			bool: false,
-			message: `${entity.typeId} container is invalid`,
+			message: `${getEntityName(entity)} container is invalid`,
 		};
 	}
 	let oldItem: ItemStack | undefined;
@@ -146,7 +145,7 @@ function replaceItemInventory(
 	if (inventory === undefined || !inventory.isValid) {
 		return {
 			bool: false,
-			message: `Unable to get inventory of ${entity.typeId}`,
+			message: `Unable to get inventory of ${getEntityName(entity)}`,
 		};
 	}
 	return setItemInSlot(
@@ -214,14 +213,14 @@ function replaceItemTameable(
 	) {
 		return {
 			bool: false,
-			message: `Unable to get ${slot.name} from ${entity.typeId}.`,
+			message: `Unable to get ${slot.name} from ${getEntityName(entity)}.`,
 		};
 	}
 	if (slot.name === SlotName.MobChest) {
 		if (!MobChestEntityTypes.includes(entity.typeId)) {
 			return {
 				bool: false,
-				message: `Unable to get ${slot.name} from ${entity.typeId}. Only accessible on vanilla tamed entities.`,
+				message: `Unable to get ${slot.name} from ${getEntityName(entity)}. Only accessible on vanilla tamed entities.`,
 			};
 		}
 		if (slot.id) {
@@ -255,7 +254,7 @@ function replaceItemTameable(
 	return {
 		bool: result.bool,
 		message: result.bool
-			? `Gave ${entity.typeId}§r ${item.typeId}§r in ${slot.name}`
+			? `Gave ${getEntityName(entity)} ${item.typeId} in ${slot.name}`
 			: result.message,
 	};
 }
@@ -290,14 +289,14 @@ function replaceItemEquippable(
 		runReplaceItemCommand(entity, item, slot.name, slot.id, itemDataValue);
 		return {
 			bool: false,
-			message: `Ran replaceitem command on ${entity.typeId} for ${item.typeId} in ${slot.name}. Special properties were omitted.\n(Equippable doesn't work on mobs. Blame Mojang)`,
+			message: `Ran replaceitem command on ${getEntityName(entity)} for ${item.typeId} in ${slot.name}. Special properties were omitted.\n(Equippable component doesn't work on mobs. Blame Mojang)`,
 		};
 	}
 	const equipmentSlot: EquipmentSlot | undefined = slotNameToEquipmentSlot(slot.name);
 	if (equipmentSlot === undefined) {
 		return {
 			bool: false,
-			message: `Unable to convert ${slot.name} to EquipmentSlot`,
+			message: `Unable to convert ${slot.name} to EquipmentSlot for ${getEntityName(entity)}`,
 		};
 	}
 	let oldItem: ItemStack | undefined;
@@ -315,13 +314,13 @@ function replaceItemEquippable(
 		if (!replaceItemResult) {
 			return {
 				bool: false,
-				message: `Unable to run replaceitem command for ${item.typeId} with data value ${itemDataValue}`,
+				message: `Unable to run replaceitem command for ${item.typeId} with data value ${itemDataValue} for ${getEntityName(entity)}`,
 			};
 		}
 		const itemStackInSlot = equippable.getEquipment(equipmentSlot);
 		if (itemStackInSlot !== undefined) {
 			copyItemStackProperties(item, itemStackInSlot);
-			// itemStack now has data value internally
+			// itemStack now has special properties and data value internally
 			item = itemStackInSlot;
 		}
 	}
@@ -343,14 +342,6 @@ function replaceItemEquippable(
 					? "Spawned old item as entity"
 					: "Unable to spawn old item as entity",
 			};
-		} else {
-			oldItemGiveResult = addItemsToContainer(
-				entity,
-				inventory.container,
-				item,
-				item.amount,
-				0,
-			);
 		}
 	}
 	let message: string = `Equipped ${item.typeId} in slot ${slot.name}`;
@@ -374,9 +365,10 @@ export function giveItems(
 	if (!entity.isValid) {
 		return {
 			bool: false,
-			message: `Entity ${entity.typeId} is invalid (Might be unloaded)`,
+			message: `Entity ${getEntityName(entity)} is invalid (Might be unloaded)`,
 		};
 	}
+	// Just give item to free slots in inventory
 	if (slot === undefined) {
 		const inventory = entity.getComponent(EntityComponentTypes.Inventory);
 		if (inventory === undefined || !inventory.isValid) {

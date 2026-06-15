@@ -19,45 +19,47 @@ import { getItemCommandDataValue } from "./dataValueItems";
 import { HelpForm, showForm } from "./forms";
 import { ItemDataValidation, parseItemData } from "./itemData";
 import { dataToStack } from "./itemStack";
-import { prettyTypeId } from "./prettyTypeId";
+import { appendColorAfterResets, getEntityName, prettyTypeId } from "./prettyTypeId";
 import type { ItemData, SlotData } from "./types";
 
 const NAMESPACE: string = "givex";
 
 function afterTickCommandResultHandler(
 	origin: CustomCommandOrigin,
-	result: CustomCommandResult,
+	message: string,
+	status: CustomCommandStatus,
 ): void {
-	if (result.message === undefined) {
-		return;
+	if (status === CustomCommandStatus.Failure) {
+		message = `§c${message}`;
 	}
-	if (origin.sourceBlock && world.gameRules.commandBlockOutput) {
-		// §7 makes text gray, §o italicizes, §r resets formatting
-		// Using same format as commandblockoutput in game
-		world.sendMessage(`§7§o[CommandBlock§r: ${result.message}]`);
-	} else if (
+	if (
 		origin.sourceEntity &&
 		origin.sourceEntity instanceof Player &&
 		world.gameRules.sendCommandFeedback
 	) {
-		origin.sourceEntity.sendMessage(
-			`${result.status === CustomCommandStatus.Failure ? "§c" : ""}${result.message}`,
-		);
+		origin.sourceEntity.sendMessage(message);
 	} else if (
 		origin.initiator &&
 		origin.initiator instanceof Player &&
 		world.gameRules.sendCommandFeedback
 	) {
-		origin.initiator.sendMessage(
-			`${result.status === CustomCommandStatus.Failure ? "§c" : ""}${result.message}`,
-		);
+		origin.initiator.sendMessage(message);
 	}
+	commandBlockOutputMessage(origin, message, status);
 }
 
 // Errors are often too long to fit in the command block ui, so send them in chat if commandblockoutput is enabled.
-function commandBlockFailureMessage(origin: CustomCommandOrigin, message: string): void {
+function commandBlockOutputMessage(
+	origin: CustomCommandOrigin,
+	message: string,
+	status: CustomCommandStatus,
+): void {
 	if (origin.sourceType === CustomCommandSource.Block && world.gameRules.commandBlockOutput) {
-		world.sendMessage(`§7§o[CommandBlock§r:\n§c${message}§r]`);
+		// §7 makes text gray, §o italicizes, §r resets formatting
+		// Using same format as commandblockoutput in game
+		world.sendMessage(
+			`§7§o[CommandBlock§r:\n${status === CustomCommandStatus.Failure ? "§c" : ""}${message}§r]`,
+		);
 	}
 }
 
@@ -67,7 +69,7 @@ function getSelectorName(entities: Entity[]): string {
 	} else if (entities.length === 1) {
 		const entity: Entity | undefined = entities[0];
 		if (entity) {
-			return entity.nameTag ? entity.nameTag : entity.typeId;
+			return getEntityName(entity);
 		} else {
 			return "selector";
 		}
@@ -100,6 +102,7 @@ function getGivexMessage(
 		message = `§cUnable to give ${itemName}§r§c to ${selectorName}§r§c`;
 	}
 	if (errors) {
+		errors = appendColorAfterResets(errors, "§c");
 		message += `\n§cError(s):\n${errors.slice(0, 1024)}${errors.length > 1024 ? "...\n" : ""}`;
 	}
 	return message;
@@ -126,8 +129,9 @@ function runGivex(
 				errors += `-${result.message}\n`;
 			}
 		}
-		afterTickCommandResultHandler(origin, {
-			message: getGivexMessage(
+		afterTickCommandResultHandler(
+			origin,
+			getGivexMessage(
 				entities,
 				itemStack.typeId,
 				amountToGive,
@@ -136,8 +140,8 @@ function runGivex(
 				errors,
 				specialIdentifier,
 			),
-			status: successCount > 0 ? CustomCommandStatus.Success : CustomCommandStatus.Failure,
-		});
+			successCount > 0 ? CustomCommandStatus.Success : CustomCommandStatus.Failure,
+		);
 	});
 }
 
@@ -176,15 +180,24 @@ export function givexCommandCallback(
 	json?: string,
 ): CustomCommandResult {
 	const entities: Entity[] = selectorResult;
+	const selectorName: string = getSelectorName(entities);
 	if (entities.length === 0) {
-		const message = "Unable to give item to selector\nError(s):\nNo valid selector";
-		commandBlockFailureMessage(origin, message);
+		const message: string = getGivexMessage(
+			entities,
+			itemType.id,
+			amount,
+			selectorName,
+			0,
+			"No valid selector",
+			undefined,
+		);
+		const status = CustomCommandStatus.Failure;
+		commandBlockOutputMessage(origin, message, status);
 		return {
 			message: message,
 			status: CustomCommandStatus.Failure,
 		};
 	}
-	const selectorName: string = getSelectorName(entities);
 	if (json === undefined) {
 		runGivex(
 			entities,
@@ -203,30 +216,57 @@ export function givexCommandCallback(
 	}
 	const itemDataResult = parseItemData(json, itemType.id, amount);
 	if (itemDataResult.itemData === undefined) {
-		const message = `Unable to give item to ${selectorName}§r§c\nError(s):\n-${itemDataResult.syntaxError ?? "Unknown error in your json. (sorry)"}`;
-		commandBlockFailureMessage(origin, message);
+		const message: string = getGivexMessage(
+			entities,
+			itemType.id,
+			amount,
+			selectorName,
+			0,
+			itemDataResult.syntaxError ?? "Unknown error in your json. (sorry)",
+			undefined,
+		);
+		const status = CustomCommandStatus.Failure;
+		commandBlockOutputMessage(origin, message, status);
 		return {
 			message: message,
-			status: CustomCommandStatus.Failure,
+			status: status,
 		};
 	}
 	const itemData: ItemData = itemDataResult.itemData;
 	const validationResult = ItemDataValidation.complete(itemData);
 	if (!validationResult.bool) {
-		const message = `Unable to give item to ${selectorName}§r§c\nError(s)\n${validationResult.message}`;
-		commandBlockFailureMessage(origin, message);
+		const message = getGivexMessage(
+			entities,
+			itemType.id,
+			amount,
+			selectorName,
+			0,
+			validationResult.message,
+			undefined,
+		);
+		const status = CustomCommandStatus.Failure;
+		commandBlockOutputMessage(origin, message, status);
 		return {
 			message: message,
-			status: CustomCommandStatus.Failure,
+			status: status,
 		};
 	}
 	system.run(() => {
 		const itemStackResult = dataToStack(itemData);
 		if (itemStackResult.item === undefined) {
-			afterTickCommandResultHandler(origin, {
-				message: `Unable to give item to ${selectorName}§r§c\nError(s)\n${itemStackResult.warning ?? "Failed to create item stack."}`,
-				status: CustomCommandStatus.Failure,
-			});
+			afterTickCommandResultHandler(
+				origin,
+				getGivexMessage(
+					entities,
+					itemType.id,
+					amount,
+					selectorName,
+					0,
+					itemStackResult.warning ?? "Failed to create item stack.",
+					undefined,
+				),
+				CustomCommandStatus.Failure,
+			);
 			return;
 		}
 		const itemStack = itemStackResult.item;

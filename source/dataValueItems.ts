@@ -14,9 +14,8 @@ import {
 	SlotName,
 } from "./types";
 
-// Can alternatively pass item typeid
 export function getItemCommandDataValue(typeId: string, dataId: string | undefined): number {
-	// npcs are the only mob that still use data values. The rest have their own type id. Just default all references of the old spawn egg to npc.
+	// npcs are the only spawn egg that still use data values. The rest have their own type id. Just redirect all references of the old spawn egg typeid to npc.
 	if (typeId === "minecraft:spawn_egg") {
 		return 51;
 	}
@@ -39,7 +38,7 @@ export function getItemCommandDataValue(typeId: string, dataId: string | undefin
 }
 
 // Inventory and hotbar are separated for replaceitem command, so id is handled differently than in @minecraft/server functions.
-function getCommandHotbarId(slotId: number): { slotName: string; id: number } {
+function getCommandSlotData(slotId: number): { slotName: string; id: number } {
 	if (slotId <= 8) {
 		return {
 			id: slotId,
@@ -105,7 +104,7 @@ export function runReplaceItemCommand(
 ): boolean {
 	if (slotName === SlotName.Inventory) {
 		if (entity instanceof Player) {
-			const result = getCommandHotbarId(slotId);
+			const result = getCommandSlotData(slotId);
 			slotId = result.id;
 			slotName = result.slotName;
 		}
@@ -113,16 +112,6 @@ export function runReplaceItemCommand(
 	const commandResult = entity.runCommand(
 		`/replaceitem entity @s ${slotName} ${slotId} ${item.typeId} ${item.amount} ${dataValue} ${getCommandJson(item)}`,
 	);
-	return commandResult.successCount > 0;
-}
-
-export function runGiveCommand(
-	entity: Entity,
-	itemType: string,
-	amount: number,
-	dataValue: number,
-): boolean {
-	const commandResult = entity.runCommand(`/give @s ${itemType} ${amount} ${dataValue}`);
 	return commandResult.successCount > 0;
 }
 
@@ -164,13 +153,13 @@ export function copyItemStackProperties(from: ItemStack, to: ItemStack): Boolean
 export function setDataValueItemInContainer(
 	entity: Entity,
 	container: Container,
-	template: ItemStack,
+	item: ItemStack,
 	slotId: number,
 	dataValue: number,
 ): { bool: boolean; message: string; itemStack: ItemStack | undefined } {
 	const replaceItemResult = runReplaceItemCommand(
 		entity,
-		template,
+		item,
 		SlotName.Inventory,
 		slotId,
 		dataValue,
@@ -179,7 +168,7 @@ export function setDataValueItemInContainer(
 		return {
 			bool: false,
 			itemStack: undefined,
-			message: `Failed to run replaceitem on ${template.typeId} with data value ${dataValue}`,
+			message: `Failed to run replaceitem on ${item.typeId} with data value ${dataValue}`,
 		};
 	}
 	if (!container.isValid || slotId < 0 || slotId >= container.size) {
@@ -195,10 +184,10 @@ export function setDataValueItemInContainer(
 			// Returning true since the item was still technically given, just doesn't have any special properties.
 			bool: true,
 			itemStack: undefined,
-			message: `Unable to get ${template.typeId} with data value ${dataValue} given by replaceitem`,
+			message: `Unable to get ${item.typeId} with data value ${dataValue} given by replaceitem`,
 		};
 	}
-	copyItemStackProperties(template, givenItem);
+	copyItemStackProperties(item, givenItem);
 	container.setItem(slotId, givenItem);
 	return {
 		bool: true,
