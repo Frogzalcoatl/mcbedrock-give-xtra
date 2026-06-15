@@ -1,5 +1,4 @@
 itemdata handling for spawn item entity. Use this for the dataValueItem functions too if possible.
-
-clearx (clear items based on properties)
+	Add custom entity with inventory for data value itemstacks
 
 Help command (server-ui)
