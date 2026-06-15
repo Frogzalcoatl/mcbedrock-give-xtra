@@ -1,4 +1,4 @@
-import type { ItemLockMode, Player } from "@minecraft/server";
+import type { Block, CustomCommandOrigin, DimensionLocation, Entity, ItemLockMode, ItemType, Player } from "@minecraft/server";
 
 export interface BooleanWithMessage {
 	bool: boolean;
@@ -159,6 +159,16 @@ export const ItemDataKeyCountMin: number = 2;
 export const ItemDataDefaultAmount: number = 1;
 // Matches max amount in vanilla /give
 export const ItemDataMaxAmount: number = 32767;
+
+export interface GivexContext {
+	commandName: "givex" | "blockx" | "spawnx";
+	origin: CustomCommandOrigin;
+	recievers: Entity[] | Block[] | DimensionLocation[];
+	selectorName: string;
+	itemType: ItemType;
+	itemAmount: number;
+	json: string | undefined;
+}
 
 export interface FormButton {
 	addStyling: boolean;
