@@ -7,11 +7,15 @@
 		{
 			"module_name": "@minecraft/server-ui",
 			"version": "2.0.0"
+		},
+		{
+			"uuid": "02ae392b-2b73-4de4-a884-e5d64367b027",
+			"version": [1, 0, 0]
 		}
 	],
 	"format_version": 2,
 	"header": {
-		"description": "Expansion of /give command. By Frogzalcoatl. With major help from SunnyTheFennec \"xskt\".",
+		"description": "Expansion of /give command by Frogzalcoatl. With major help from SunnyTheFennec \"xskt\".",
 		"min_engine_version": [1, 26, 21],
 		"name": "Give Xtra",
 		"uuid": "2abb69c6-99ed-40b9-b442-126c32b8a9b1",
