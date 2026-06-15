@@ -7,7 +7,7 @@ import { blockxGetBlock, getDimensionFromOrigin, givexRun } from "./givex";
 
 const NAMESPACE: string = "givex";
 
-function givexGetSelectorName(recievers: Entity[] | Block): string {
+function getSelectorName(recievers: Entity[] | Block): string {
 	if (recievers instanceof Block) {
 		return prettyTypeId(recievers.typeId);
 	}
@@ -63,7 +63,7 @@ export function givexCommandCallback(
 		commandName: "givex",
 		origin: origin,
 		recievers: selectorResult,
-		selectorName: givexGetSelectorName(selectorResult),
+		selectorName: getSelectorName(selectorResult),
 		itemType: itemType,
 		itemAmount: amount,
 		json: json
@@ -118,7 +118,7 @@ export function blockxCommandCallback(
 		return blockResult.result;
 	}
 	context.recievers = [blockResult.block];
-	context.selectorName = givexGetSelectorName(blockResult.block);
+	context.selectorName = getSelectorName(blockResult.block);
 	return givexRun(context, false);
 }
 
@@ -181,10 +181,14 @@ export function spawnxCommandCallback(
 export const HELP_COMMAND: CustomCommand = {
 	description: "Easily generate givex json.",
 	name: `${NAMESPACE}:help`,
+	optionalParameters: [{
+		name: "itemName",
+		type: CustomCommandParamType.ItemType
+	}],
 	permissionLevel: CommandPermissionLevel.GameDirectors,
 };
 
-export function helpCommandCallback(origin: CustomCommandOrigin): CustomCommandResult {
+export function helpCommandCallback(origin: CustomCommandOrigin, itemType?: ItemType): CustomCommandResult {
 	let viewer: Player;
 	if (origin.sourceEntity instanceof Player) {
 		viewer = origin.sourceEntity;
