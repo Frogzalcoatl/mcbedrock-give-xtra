@@ -451,14 +451,14 @@ export function giveItemToBlock(
 	if (!block.isValid) {
 		return {
 			bool: false,
-			message: `Block at location ${vector3ToString(block.location)} is invalid.`,
+			message: `Block at location ${vector3ToString(block.location, 0)} is invalid.`,
 		};
 	}
 	const inventory = block.getComponent(BlockComponentTypes.Inventory);
 	if (inventory === undefined || !inventory.isValid || inventory.container === undefined) {
 		return {
 			bool: false,
-			message: `${prettyTypeId(block.typeId)} at location ${vector3ToString(block.location)} does not have a valid inventory`,
+			message: `${prettyTypeId(block.typeId)} at location ${vector3ToString(block.location, 0)} does not have a valid inventory`,
 		};
 	}
 	if (slot) {

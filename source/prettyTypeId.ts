@@ -46,6 +46,13 @@ export function appendColorAfterResets(str: string, colorCode: string): string {
 	return str.replaceAll("§r", `§r${colorCode}`);
 }
 
-export function vector3ToString(vector: Vector3): string {
-	return `${vector.x} ${vector.y} ${vector.z}`;
+function truncTo(num: number, decimalPlaces: number) {
+	if (decimalPlaces < 0) {
+		return num;
+	}
+	return Math.trunc(num * 10 ** decimalPlaces) / 10 ** decimalPlaces;
+}
+
+export function vector3ToString(vector: Vector3, decimalPlaces: number): string {
+	return `${truncTo(vector.x, decimalPlaces)} ${truncTo(vector.y, decimalPlaces)} ${truncTo(vector.z, decimalPlaces)}`;
 }

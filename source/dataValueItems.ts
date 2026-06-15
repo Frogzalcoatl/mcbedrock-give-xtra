@@ -108,7 +108,7 @@ export function runReplaceItemCommand(
 	let commandResult: CommandResult;
 	if (reciever instanceof Block) {
 		commandResult = reciever.dimension.runCommand(
-			`/replaceitem block ${vector3ToString(reciever.location)} slot.container ${slotId} ${item.typeId} ${item.amount} ${dataValue} ${getCommandJson(item)}`,
+			`/replaceitem block ${vector3ToString(reciever.location, 3)} slot.container ${slotId} ${item.typeId} ${item.amount} ${dataValue} ${getCommandJson(item)}`,
 		);
 	} else {
 		if (slotName === SlotName.Inventory) {

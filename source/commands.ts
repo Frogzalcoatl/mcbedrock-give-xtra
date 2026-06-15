@@ -175,7 +175,7 @@ export function spawnxCommandCallback(
 		json: json,
 		origin: origin,
 		recievers: [],
-		selectorName: `location ${vector3ToString(position)}`,
+		selectorName: `location ${vector3ToString(position, 0)}`,
 	};
 	const dimensionResult = getDimensionFromOrigin(origin);
 	if (dimensionResult.dimension === undefined) {

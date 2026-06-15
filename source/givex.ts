@@ -384,7 +384,10 @@ export function givexRun(
 		return prep.result;
 	}
 	if (context.json === undefined) {
-		return givexGiveItemType(context);
+		system.run(() => givexGiveItemType(context));
+		return {
+			status: CustomCommandStatus.Success,
+		};
 	}
 	// itemData should not be undefined beyond this point
 	if (prep.itemData === undefined) {
@@ -479,7 +482,8 @@ export function blockxGetBlock(
 				message: givexFormatMessage(
 					context,
 					0,
-					errorMessage ?? `Unable to get block at location ${vector3ToString(location)}`,
+					errorMessage ??
+						`Unable to get block at location ${vector3ToString(location, 0)}`,
 					undefined,
 				),
 				status: CustomCommandStatus.Failure,
@@ -493,7 +497,7 @@ export function blockxGetBlock(
 				message: givexFormatMessage(
 					context,
 					0,
-					`Unable to get block at location ${vector3ToString(location)}`,
+					`Unable to get block at location ${vector3ToString(location, 0)}`,
 					undefined,
 				),
 				status: CustomCommandStatus.Failure,
