@@ -290,7 +290,7 @@ function replaceItemEquippable(
 		runReplaceItemCommand(entity, item, slot.name, slot.id, itemDataValue);
 		return {
 			bool: false,
-			message: `Ran replaceitem command on ${entity.typeId} for ${item.typeId}. Any special properties were omitted.\n(Equippable doesn't work on mobs. Blame Mojang)`,
+			message: `Ran replaceitem command on ${entity.typeId} for ${item.typeId} in ${slot.name}. Special properties were omitted.\n(Equippable doesn't work on mobs. Blame Mojang)`,
 		};
 	}
 	const equipmentSlot: EquipmentSlot | undefined = slotNameToEquipmentSlot(slot.name);

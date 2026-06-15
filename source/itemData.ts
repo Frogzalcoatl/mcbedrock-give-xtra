@@ -334,18 +334,6 @@ export function parseItemData(
 	};
 }
 
-// Last updated: MC version 26.21
-const VANILLA_OFFHAND_ITEM_TYPES: string[] = [
-	"minecraft:shield",
-	"minecraft:totem_of_undying",
-	"minecraft:arrow",
-	"minecraft:firework_rocket",
-	"minecraft:empty_map",
-	"minecraft:filled_map",
-	"minecraft:nautilus_shell",
-	"minecraft:sparkler",
-];
-
 function slotNameMatchesEnchantableslots(
 	itemEnchantSlots: EnchantmentSlot[],
 	slotName: SlotName,
@@ -377,7 +365,8 @@ function canEquipInSlot(itemStack: ItemStack, targetSlot: SlotName): boolean {
 		targetSlot === SlotName.Mainhand ||
 		targetSlot === SlotName.Hotbar ||
 		targetSlot === SlotName.Saddle ||
-		targetSlot === SlotName.Armor
+		targetSlot === SlotName.Armor ||
+		targetSlot === SlotName.Offhand // No good way to check this with custom items
 	) {
 		// All items can go inside the above SlotNames
 		return true;
@@ -386,9 +375,6 @@ function canEquipInSlot(itemStack: ItemStack, targetSlot: SlotName): boolean {
 	if (itemNamespace !== "minecraft") {
 		// Don't trust custom items to have enchantable slots set up in the same way as vanilla items.
 		return true;
-	}
-	if (targetSlot === SlotName.Offhand) {
-		return VANILLA_OFFHAND_ITEM_TYPES.includes(itemStack.typeId);
 	}
 	// Only armor slots remain.
 	const enchantable = itemStack.getComponent(ItemComponentTypes.Enchantable);

@@ -42,16 +42,6 @@ export const SlotDataKeyCount: number = SlotDataKeys.length;
 export const SlotDataKeepOldItemDefault: boolean = false;
 export const SlotDataIdDefault: number = 0;
 
-/* The following item components are not supported due to scripting limitations:
-
-	Firework rocket types:
-	no way to give with commands or scripting
-
-	Filled maps:
-	replaceitem doesnt work with map data values while /give does for some reason.
-	Dont want to half implement map ids for when slot is undefined only
-*/
-
 // As of MC v26.21, there's no official way to access tipped arrows besides item data values
 // This array is in order of data value starting at 6 = night_vision
 export const ArrowEffectSartingDataValue: number = 6;
@@ -119,6 +109,16 @@ export const BedColors: string[] = [
 	"red",
 	"black",
 ];
+
+/* The following item components are not supported due to scripting limitations:
+
+	Firework rocket types:
+	no way to give with commands or scripting
+
+	Filled maps:
+	replaceitem doesnt work with map data values while /give does for some reason.
+	Dont want to force half implementation of map ids when slot is undefined only.
+*/
 
 export interface ItemData {
 	typeId: string;
