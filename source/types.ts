@@ -1,4 +1,12 @@
-import type { Block, CustomCommandOrigin, DimensionLocation, Entity, ItemLockMode, ItemType, Player } from "@minecraft/server";
+import type {
+	Block,
+	CustomCommandOrigin,
+	DimensionLocation,
+	Entity,
+	ItemLockMode,
+	ItemType,
+	Player,
+} from "@minecraft/server";
 
 export interface BooleanWithMessage {
 	bool: boolean;

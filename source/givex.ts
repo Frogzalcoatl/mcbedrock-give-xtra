@@ -1,17 +1,37 @@
-import { Entity, Block, CustomCommandResult, CustomCommandStatus, ItemStack, system, CustomCommandOrigin, CustomCommandSource, Player, world, Vector3, Dimension } from "@minecraft/server";
-import { giveItemToEntity, giveItemToBlock } from "./containers";
+import {
+	Block,
+	type CustomCommandOrigin,
+	type CustomCommandResult,
+	CustomCommandSource,
+	CustomCommandStatus,
+	type Dimension,
+	Entity,
+	ItemStack,
+	Player,
+	system,
+	type Vector3,
+	world,
+} from "@minecraft/server";
+import { giveItemToBlock, giveItemToEntity } from "./containers";
 import { getItemCommandDataValue } from "./dataValueItems";
-import { parseItemData, ItemDataValidation } from "./itemData";
+import { ItemDataValidation, parseItemData } from "./itemData";
 import { dataToStack } from "./itemStack";
-import { prettyTypeId, appendColorAfterResets, vector3ToString } from "./prettyTypeId";
-import { GivexContext, ItemDataMaxAmount, SlotData, BooleanWithMessage, ItemData } from "./types";
+import { appendColorAfterResets, prettyTypeId, vector3ToString } from "./prettyTypeId";
+import {
+	type BooleanWithMessage,
+	type GivexContext,
+	type ItemData,
+	ItemDataMaxAmount,
+	type SlotData,
+} from "./types";
 
 // Errors are often too long to fit in the command block ui, so send them in chat if commandblockoutput is enabled.
-function commandBlockOutputMessage(
-	origin: CustomCommandOrigin,
-	result: CustomCommandResult
-): void {
-	if (origin.sourceType === CustomCommandSource.Block && world.gameRules.commandBlockOutput && result.message) {
+function commandBlockOutputMessage(origin: CustomCommandOrigin, result: CustomCommandResult): void {
+	if (
+		origin.sourceType === CustomCommandSource.Block &&
+		world.gameRules.commandBlockOutput &&
+		result.message
+	) {
 		// §7 makes text gray, §o italicizes, §r resets formatting
 		// Using same format as commandblockoutput in game
 		world.sendMessage(
@@ -22,7 +42,7 @@ function commandBlockOutputMessage(
 
 function afterTickCommandResultHandler(
 	origin: CustomCommandOrigin,
-	result: CustomCommandResult
+	result: CustomCommandResult,
 ): void {
 	if (!result.message) {
 		return;
@@ -31,15 +51,13 @@ function afterTickCommandResultHandler(
 		result.message = `§c${result.message}`;
 	}
 	if (
-		origin.sourceEntity &&
-		origin.sourceEntity.isValid &&
+		origin.sourceEntity?.isValid &&
 		origin.sourceEntity instanceof Player &&
 		world.gameRules.sendCommandFeedback
 	) {
 		origin.sourceEntity.sendMessage(result.message);
 	} else if (
-		origin.initiator &&
-		origin.initiator.isValid &&
+		origin.initiator?.isValid &&
 		origin.initiator instanceof Player &&
 		world.gameRules.sendCommandFeedback
 	) {
@@ -90,19 +108,14 @@ function givexFormatMessage(
 function givexRecieverCheck(context: GivexContext): CustomCommandResult {
 	if (context.recievers.length === 0) {
 		return {
-			message: givexFormatMessage(
-			context,
-			0,
-			"No valid selector",
-			undefined,
-		),
+			message: givexFormatMessage(context, 0, "No valid selector", undefined),
 			status: CustomCommandStatus.Success,
 		};
 	}
 	return {
+		message: "Recievers are valid",
 		status: CustomCommandStatus.Success,
-		message: "Recievers are valid"
-	}
+	};
 }
 
 // Trying to access an itemstack created using minecraft:air crashes the world
@@ -110,36 +123,36 @@ function givexAirCheck(context: GivexContext): CustomCommandResult {
 	if (context.itemType.id === "minecraft:air") {
 		return {
 			message: givexFormatMessage(
-			context,
-			0,
-			`Invalid item type "${prettyTypeId(context.itemType.id)}"`,
-			undefined,
-		),
+				context,
+				0,
+				`Invalid item type "${prettyTypeId(context.itemType.id)}"`,
+				undefined,
+			),
 			status: CustomCommandStatus.Failure,
 		};
 	}
 	return {
 		message: "typeid air check successful",
-		status: CustomCommandStatus.Success
-	}
+		status: CustomCommandStatus.Success,
+	};
 }
 
 function givexAmountCheck(context: GivexContext): CustomCommandResult {
 	if (context.itemAmount > ItemDataMaxAmount) {
 		return {
 			message: givexFormatMessage(
-			context,
-			0,
-			`Amount ${context.itemAmount} exceeds the maximum of ${ItemDataMaxAmount}`,
-			undefined,
-		),
+				context,
+				0,
+				`Amount ${context.itemAmount} exceeds the maximum of ${ItemDataMaxAmount}`,
+				undefined,
+			),
 			status: CustomCommandStatus.Failure,
 		};
 	}
 	return {
 		message: "Amount is valid",
-		status: CustomCommandStatus.Success
-	}
+		status: CustomCommandStatus.Success,
+	};
 }
 
 // Cannot be run in restricted execution
@@ -150,60 +163,65 @@ function givexGiveItemStack(
 	itemDataValue: number,
 	specialIdentifier: string | undefined, // For potions, tipped arrows, bed colors
 ): CustomCommandResult {
-		let errors: string = "";
-		let successCount: number = 0;
-		for (const reciever of context.recievers) {
-			let result: BooleanWithMessage;
-			if (reciever instanceof Entity) {
-				result = giveItemToEntity(reciever, itemStack, context.itemAmount, slot, itemDataValue);
-			} else if (reciever instanceof Block) {
-				result = giveItemToBlock(reciever, itemStack, context.itemAmount, slot, itemDataValue);
-			} else { // DimensionLocation
-				try {
-					reciever.dimension.spawnItem(itemStack, { x: reciever.x, y: reciever.y, z: reciever.z });
-				} catch (error) {
-					if (error instanceof Error) {
-						result = {
-							bool: false,
-							message: error.message
-						};
-					} else {
-						result = {
-							bool: false,
-							message: `Unknown error occured while attempting to spawn ${prettyTypeId(itemStack.typeId)}`
-						};
-					}
+	let errors: string = "";
+	let successCount: number = 0;
+	for (const reciever of context.recievers) {
+		let result: BooleanWithMessage;
+		if (reciever instanceof Entity) {
+			result = giveItemToEntity(reciever, itemStack, context.itemAmount, slot, itemDataValue);
+		} else if (reciever instanceof Block) {
+			result = giveItemToBlock(reciever, itemStack, context.itemAmount, slot, itemDataValue);
+		} else {
+			// DimensionLocation
+			try {
+				reciever.dimension.spawnItem(itemStack, {
+					x: reciever.x,
+					y: reciever.y,
+					z: reciever.z,
+				});
+			} catch (error) {
+				if (error instanceof Error) {
+					result = {
+						bool: false,
+						message: error.message,
+					};
+				} else {
+					result = {
+						bool: false,
+						message: `Unknown error occured while attempting to spawn ${prettyTypeId(itemStack.typeId)}`,
+					};
 				}
-				result = {
-					bool: true,
-					message: `Spawned ${prettyTypeId(itemStack.typeId)}`
-				};
 			}
-			if (result.bool) {
-				successCount++;
-			} else {
-				errors += `-${result.message}\n`;
-			}
+			result = {
+				bool: true,
+				message: `Spawned ${prettyTypeId(itemStack.typeId)}`,
+			};
 		}
+		if (result.bool) {
+			successCount++;
+		} else {
+			errors += `-${result.message}\n`;
+		}
+	}
 	return {
 		message: givexFormatMessage(context, successCount, errors, specialIdentifier),
-		status: successCount > 0 ? CustomCommandStatus.Success : CustomCommandStatus.Failure
-	}
+		status: successCount > 0 ? CustomCommandStatus.Success : CustomCommandStatus.Failure,
+	};
 }
 
 function givexGiveItemType(context: GivexContext): CustomCommandResult {
 	const amountCheckResult: CustomCommandResult = givexAmountCheck(context);
-		if (amountCheckResult.status === CustomCommandStatus.Failure) {
-			commandBlockOutputMessage(context.origin, amountCheckResult);
-			return amountCheckResult;
-		}
-		return givexGiveItemStack(
-			context,
-			new ItemStack(context.itemType),
-			undefined,
-			getItemCommandDataValue(context.itemType.id, undefined),
-			undefined,
-		);
+	if (amountCheckResult.status === CustomCommandStatus.Failure) {
+		commandBlockOutputMessage(context.origin, amountCheckResult);
+		return amountCheckResult;
+	}
+	return givexGiveItemStack(
+		context,
+		new ItemStack(context.itemType),
+		undefined,
+		getItemCommandDataValue(context.itemType.id, undefined),
+		undefined,
+	);
 }
 
 function givexGetSpecialIdentifier(itemData: ItemData): string | undefined {
@@ -228,19 +246,23 @@ function givexGetCommandDataValue(itemData: ItemData): number {
 	}
 }
 
-function givexGetItemData(context: GivexContext): { result: CustomCommandResult, itemData: ItemData | undefined } {
+function givexGetItemData(context: GivexContext): {
+	result: CustomCommandResult;
+	itemData: ItemData | undefined;
+} {
 	if (context.json === undefined) {
 		return {
+			itemData: undefined,
 			result: {
+				message: "json is undefined",
 				status: CustomCommandStatus.Failure,
-				message: "json is undefined"
 			},
-			itemData: undefined
-		}
+		};
 	}
 	const itemDataResult = parseItemData(context.json, context.itemType.id, context.itemAmount);
 	if (itemDataResult.itemData === undefined) {
 		return {
+			itemData: undefined,
 			result: {
 				message: givexFormatMessage(
 					context,
@@ -250,16 +272,15 @@ function givexGetItemData(context: GivexContext): { result: CustomCommandResult,
 				),
 				status: CustomCommandStatus.Failure,
 			},
-			itemData: undefined
 		};
 	}
 	return {
+		itemData: itemDataResult.itemData,
 		result: {
 			message: "Valid ItemData",
-			status: CustomCommandStatus.Success
+			status: CustomCommandStatus.Success,
 		},
-		itemData: itemDataResult.itemData
-	}
+	};
 }
 
 function givexValidateItemData(context: GivexContext, itemData: ItemData): CustomCommandResult {
@@ -272,79 +293,91 @@ function givexValidateItemData(context: GivexContext, itemData: ItemData): Custo
 	}
 	return {
 		message: validationResult.message,
-		status: CustomCommandStatus.Success
-	}
+		status: CustomCommandStatus.Success,
+	};
 }
 
-function givexPrep(context: GivexContext): {result: CustomCommandResult, itemData: ItemData | undefined} {
+function givexPrep(context: GivexContext): {
+	result: CustomCommandResult;
+	itemData: ItemData | undefined;
+} {
 	const recieverResult: CustomCommandResult = givexRecieverCheck(context);
 	if (recieverResult.status === CustomCommandStatus.Failure) {
 		return {
 			itemData: undefined,
-			result: recieverResult
-		}
+			result: recieverResult,
+		};
 	}
 	const airCheckResult: CustomCommandResult = givexAirCheck(context);
 	if (airCheckResult.status === CustomCommandStatus.Failure) {
 		return {
 			itemData: undefined,
-			result: airCheckResult
-		}
+			result: airCheckResult,
+		};
 	}
 	if (context.json === undefined) {
 		return {
 			itemData: undefined,
 			result: {
-				status: CustomCommandStatus.Success
-			}
-		}
+				status: CustomCommandStatus.Success,
+			},
+		};
 	}
 	const itemDataResult = givexGetItemData(context);
-	if (itemDataResult.result.status === CustomCommandStatus.Failure || itemDataResult.itemData === undefined) {
+	if (
+		itemDataResult.result.status === CustomCommandStatus.Failure ||
+		itemDataResult.itemData === undefined
+	) {
 		return {
 			itemData: undefined,
-			result: itemDataResult.result
-		}
+			result: itemDataResult.result,
+		};
 	}
 	const itemData: ItemData = itemDataResult.itemData;
 	const validationResult = givexValidateItemData(context, itemData);
 	if (validationResult.status === CustomCommandStatus.Failure) {
 		return {
 			itemData: undefined,
-			result: validationResult
+			result: validationResult,
 		};
 	}
 	return {
 		itemData: itemData,
 		result: {
-			status: CustomCommandStatus.Success
-		}
-	}
+			status: CustomCommandStatus.Success,
+		},
+	};
 }
 
 // Cannot be run in restricted execution
-function givexGetItemStack(itemData: ItemData): { itemStack: ItemStack | undefined, result: CustomCommandResult } {
+function givexGetItemStack(itemData: ItemData): {
+	itemStack: ItemStack | undefined;
+	result: CustomCommandResult;
+} {
 	const itemStackResult = dataToStack(itemData);
-		if (itemStackResult.item === undefined) {
-			return {
-				itemStack: undefined,
-				result: {
-					status: CustomCommandStatus.Failure,
-					message: itemStackResult.warning ?? "Failed to create item stack."
-				}
-			}
-		} else {
-			return {
-				itemStack: itemStackResult.item,
-				result: {
-					status: CustomCommandStatus.Success
-				}
-			}
-		}
+	if (itemStackResult.item === undefined) {
+		return {
+			itemStack: undefined,
+			result: {
+				message: itemStackResult.warning ?? "Failed to create item stack.",
+				status: CustomCommandStatus.Failure,
+			},
+		};
+	} else {
+		return {
+			itemStack: itemStackResult.item,
+			result: {
+				status: CustomCommandStatus.Success,
+			},
+		};
+	}
 }
 
 // Automatically runs givex, blockx, or spawnx based on type of context.recievers
-export function givexRun(context: GivexContext, capAmountAtMaxStackSize: boolean): CustomCommandResult {
+export function givexRun(
+	context: GivexContext,
+	capAmountAtMaxStackSize: boolean,
+): CustomCommandResult {
 	const prep = givexPrep(context);
 	if (prep.result.status === CustomCommandStatus.Failure) {
 		commandBlockOutputMessage(context.origin, prep.result);
@@ -358,24 +391,24 @@ export function givexRun(context: GivexContext, capAmountAtMaxStackSize: boolean
 		commandBlockOutputMessage(context.origin, prep.result);
 		return {
 			message: prep.result.message ?? "",
-			status: CustomCommandStatus.Failure
-		}
+			status: CustomCommandStatus.Failure,
+		};
 	}
 	const itemData: ItemData = prep.itemData;
 	system.run(() => {
 		const itemStackResult = givexGetItemStack(itemData);
-		if (itemStackResult.result.status === CustomCommandStatus.Failure || itemStackResult.itemStack === undefined) {
+		if (
+			itemStackResult.result.status === CustomCommandStatus.Failure ||
+			itemStackResult.itemStack === undefined
+		) {
 			afterTickCommandResultHandler(context.origin, itemStackResult.result);
 			return;
 		}
 		if (capAmountAtMaxStackSize && itemStackResult.itemStack.maxAmount < context.itemAmount) {
-			afterTickCommandResultHandler(
-				context.origin,
-				{
-					message: `Amount ${context.itemAmount} exceeds maximum ${itemStackResult.itemStack.maxAmount}`,
-					status: CustomCommandStatus.Failure
-				}
-			);
+			afterTickCommandResultHandler(context.origin, {
+				message: `Amount ${context.itemAmount} exceeds maximum ${itemStackResult.itemStack.maxAmount}`,
+				status: CustomCommandStatus.Failure,
+			});
 			return;
 		}
 		const givexResult = givexGiveItemStack(
@@ -383,88 +416,94 @@ export function givexRun(context: GivexContext, capAmountAtMaxStackSize: boolean
 			itemStackResult.itemStack,
 			itemData.slot,
 			givexGetCommandDataValue(itemData),
-			givexGetSpecialIdentifier(itemData)
+			givexGetSpecialIdentifier(itemData),
 		);
 		afterTickCommandResultHandler(context.origin, givexResult);
 	});
 	return {
-		status: CustomCommandStatus.Success
-	}
+		status: CustomCommandStatus.Success,
+	};
 }
 
-export function getDimensionFromOrigin(origin: CustomCommandOrigin): {dimension: Dimension | undefined, result: CustomCommandResult} {
-	let dimension: Dimension | undefined
-	if (origin.sourceEntity && origin.sourceEntity.isValid) {
+export function getDimensionFromOrigin(origin: CustomCommandOrigin): {
+	dimension: Dimension | undefined;
+	result: CustomCommandResult;
+} {
+	let dimension: Dimension | undefined;
+	if (origin.sourceEntity?.isValid) {
 		dimension = origin.sourceEntity.dimension;
-	} else if (origin.initiator && origin.initiator.isValid) {
+	} else if (origin.initiator?.isValid) {
 		dimension = origin.initiator.dimension;
-	} else if (origin.sourceBlock && origin.sourceBlock.isValid) {
+	} else if (origin.sourceBlock?.isValid) {
 		dimension = origin.sourceBlock.dimension;
 	} else {
 		return {
 			dimension: undefined,
 			result: {
+				message: "Unable to get valid dimension from command origin",
 				status: CustomCommandStatus.Failure,
-				message: "Unable to get valid dimension from command origin"
-			}
-		}
+			},
+		};
 	}
 	return {
 		dimension: dimension,
 		result: {
-			status: CustomCommandStatus.Success
-		}
-	}
+			status: CustomCommandStatus.Success,
+		},
+	};
 }
 
-export function blockxGetBlock(context: GivexContext, location: Vector3): {block: Block | undefined, result: CustomCommandResult} {
+export function blockxGetBlock(
+	context: GivexContext,
+	location: Vector3,
+): { block: Block | undefined; result: CustomCommandResult } {
 	const dimensionResult = getDimensionFromOrigin(context.origin);
 	if (dimensionResult.dimension === undefined) {
 		return {
 			block: undefined,
-			result: dimensionResult.result
-		}
+			result: dimensionResult.result,
+		};
 	}
 	const dimension = dimensionResult.dimension;
-		let block: Block | undefined;
-		try {
-			block = dimension.getBlock(location);
-		} catch (error) {
-			let errorMessage: string | undefined;
-			if (error instanceof Error) {
-				errorMessage = error.message;
-			}
-			return {
-					block: undefined,
-					result: {
-						message: givexFormatMessage(
-							context,
-							0,
-							errorMessage ?? `Unable to get block at location ${vector3ToString(location)}`,
-							undefined,
-						),
-						status: CustomCommandStatus.Failure,
-					}
-				};
+	let block: Block | undefined;
+	try {
+		block = dimension.getBlock(location);
+	} catch (error) {
+		let errorMessage: string | undefined;
+		if (error instanceof Error) {
+			errorMessage = error.message;
 		}
-		if (block === undefined) {
-			return {
-				block: undefined,
-				result: {
-					message: givexFormatMessage(
+		return {
+			block: undefined,
+			result: {
+				message: givexFormatMessage(
+					context,
+					0,
+					errorMessage ?? `Unable to get block at location ${vector3ToString(location)}`,
+					undefined,
+				),
+				status: CustomCommandStatus.Failure,
+			},
+		};
+	}
+	if (block === undefined) {
+		return {
+			block: undefined,
+			result: {
+				message: givexFormatMessage(
 					context,
 					0,
 					`Unable to get block at location ${vector3ToString(location)}`,
 					undefined,
 				),
 				status: CustomCommandStatus.Failure,
-				}
-			};
-		}
+			},
+		};
+	}
 	return {
 		block: block,
 		result: {
-			status: CustomCommandStatus.Success
-		}
-	}
+			status: CustomCommandStatus.Success,
+		},
+	};
 }

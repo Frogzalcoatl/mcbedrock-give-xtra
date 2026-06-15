@@ -1,9 +1,22 @@
-import { Entity, Block, CustomCommandOrigin, CustomCommand, CustomCommandParamType, CommandPermissionLevel, ItemType, CustomCommandResult, Vector3, CustomCommandStatus, Player, PlayerPermissionLevel, system } from "@minecraft/server";
-import { showForm, HelpForm } from "./forms";
-import { prettyTypeId, getRecieverName, vector3ToString } from "./prettyTypeId";
-import { GivexContext } from "./types";
+import {
+	Block,
+	CommandPermissionLevel,
+	type CustomCommand,
+	type CustomCommandOrigin,
+	CustomCommandParamType,
+	type CustomCommandResult,
+	CustomCommandStatus,
+	type Entity,
+	type ItemType,
+	Player,
+	PlayerPermissionLevel,
+	system,
+	type Vector3,
+} from "@minecraft/server";
+import { HelpForm, showForm } from "./forms";
 import { blockxGetBlock, getDimensionFromOrigin, givexRun } from "./givex";
-
+import { getRecieverName, prettyTypeId, vector3ToString } from "./prettyTypeId";
+import type { GivexContext } from "./types";
 
 const NAMESPACE: string = "givex";
 
@@ -61,12 +74,12 @@ export function givexCommandCallback(
 ): CustomCommandResult {
 	const context: GivexContext = {
 		commandName: "givex",
+		itemAmount: amount,
+		itemType: itemType,
+		json: json,
 		origin: origin,
 		recievers: selectorResult,
 		selectorName: getSelectorName(selectorResult),
-		itemType: itemType,
-		itemAmount: amount,
-		json: json
 	};
 	return givexRun(context, false);
 }
@@ -106,13 +119,13 @@ export function blockxCommandCallback(
 ): CustomCommandResult {
 	const context: GivexContext = {
 		commandName: "blockx",
+		itemAmount: amount,
+		itemType: itemType,
+		json: json,
 		origin: origin,
 		recievers: [],
 		selectorName: "block",
-		itemType: itemType,
-		itemAmount: amount,
-		json: json
-	}
+	};
 	const blockResult = blockxGetBlock(context, location);
 	if (blockResult.block === undefined) {
 		return blockResult.result;
@@ -145,35 +158,37 @@ export const SPAWNX_COMMAND: CustomCommand = {
 			type: CustomCommandParamType.String,
 		},
 	],
-	permissionLevel: CommandPermissionLevel.GameDirectors
-}
+	permissionLevel: CommandPermissionLevel.GameDirectors,
+};
 
 export function spawnxCommandCallback(
 	origin: CustomCommandOrigin,
 	position: Vector3,
 	itemType: ItemType,
 	amount: number = 1,
-	json?: string
+	json?: string,
 ): CustomCommandResult {
 	const context: GivexContext = {
 		commandName: "spawnx",
+		itemAmount: amount,
+		itemType: itemType,
+		json: json,
 		origin: origin,
 		recievers: [],
 		selectorName: `location ${vector3ToString(position)}`,
-		itemType: itemType,
-		itemAmount: amount,
-		json: json
-	}
+	};
 	const dimensionResult = getDimensionFromOrigin(origin);
 	if (dimensionResult.dimension === undefined) {
 		return dimensionResult.result;
 	}
-	context.recievers = [{
-		dimension: dimensionResult.dimension,
-		x: position.x,
-		y: position.y,
-		z: position.z
-	}];
+	context.recievers = [
+		{
+			dimension: dimensionResult.dimension,
+			x: position.x,
+			y: position.y,
+			z: position.z,
+		},
+	];
 	return givexRun(context, true);
 }
 
@@ -181,14 +196,19 @@ export function spawnxCommandCallback(
 export const HELP_COMMAND: CustomCommand = {
 	description: "Easily generate givex json.",
 	name: `${NAMESPACE}:help`,
-	optionalParameters: [{
-		name: "itemName",
-		type: CustomCommandParamType.ItemType
-	}],
+	optionalParameters: [
+		{
+			name: "itemName",
+			type: CustomCommandParamType.ItemType,
+		},
+	],
 	permissionLevel: CommandPermissionLevel.GameDirectors,
 };
 
-export function helpCommandCallback(origin: CustomCommandOrigin, itemType?: ItemType): CustomCommandResult {
+export function helpCommandCallback(
+	origin: CustomCommandOrigin,
+	itemType?: ItemType,
+): CustomCommandResult {
 	let viewer: Player;
 	if (origin.sourceEntity instanceof Player) {
 		viewer = origin.sourceEntity;
