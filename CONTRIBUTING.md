@@ -50,7 +50,7 @@ You need the following utilities installed: [pnpm](https://pnpm.io/), [node LTS]
 - ``pnpm run clean`` Remotes temporary files.
 
 # Post-setup instructions.
-If you want to compress your code for mcpack builds, set minify: true in tools/esbuild.cjs.
+If you want to compress your code for mcaddon builds, set minify: true in tools/esbuild.cjs.
 
 ## Beta API
 This project is set up to use the stable version of gametest scripting modules. If you want to switch to beta, there is nothing stopping you. Just make sure to update both the version in package.json AND manifest.json
