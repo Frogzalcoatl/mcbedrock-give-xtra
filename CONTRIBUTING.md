@@ -7,7 +7,7 @@ A template repository for getting started with scripting gametest modules for Mi
 * Strict linting with Biome.
 * Development environment configured with extensions.
 * Minification and js.map.
-* Automated mcpack building.
+* Automated mcaddon building.
 
 ## Requirements
 You need the following utilities installed: [pnpm](https://pnpm.io/), [node LTS](https://nodejs.org/en/download), [vscode](https://code.visualstudio.com/)
