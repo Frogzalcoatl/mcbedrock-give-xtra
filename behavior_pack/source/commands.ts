@@ -13,7 +13,7 @@ import {
 	system,
 	type Vector3,
 } from "@minecraft/server";
-import { HelpForm, showForm } from "./forms";
+import { HelpForm } from "./actionForms";
 import { blockxGetBlock, getDimensionFromOrigin, givexRun } from "./givex";
 import { getRecieverName, prettyTypeId, vector3ToString } from "./prettyTypeId";
 import type { GivexContext } from "./types";
@@ -228,7 +228,7 @@ export function helpCommandCallback(
 	}
 	system.run(async () => {
 		viewer.playSound("random.pop", { pitch: 0.5, volume: 0.3 });
-		showForm(HelpForm, viewer);
+		HelpForm.show(viewer);
 	});
 	return {
 		status: CustomCommandStatus.Success,

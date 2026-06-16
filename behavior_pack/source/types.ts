@@ -6,7 +6,14 @@ import type {
 	ItemLockMode,
 	ItemType,
 	Player,
+	RawMessage,
 } from "@minecraft/server";
+import type {
+	ModalFormDataDropdownOptions,
+	ModalFormDataSliderOptions,
+	ModalFormDataTextFieldOptions,
+	ModalFormDataToggleOptions,
+} from "@minecraft/server-ui";
 
 export interface BooleanWithMessage {
 	bool: boolean;
@@ -178,27 +185,67 @@ export interface GivexContext {
 	json: string | undefined;
 }
 
-export interface FormButton {
-	addStyling: boolean;
-	callback: (viewer: Player, itemData?: ItemData) => Promise<void>;
-	iconPath?: string;
-	itemData?: ItemData;
-	text: string;
-	type: "button";
-}
-
 export interface FormTextComponent {
-	type: "body" | "header" | "label" | "title";
-	text: string;
+	type: "header" | "label";
+	text: RawMessage | string;
 }
 
 export interface FormDividerComponent {
 	type: "divider";
 }
 
-export type FormComponent = FormButton | FormTextComponent | FormDividerComponent;
-
-export interface Form {
-	title: string;
-	components: FormComponent[];
+export interface FormButton {
+	addStyling: boolean;
+	text: RawMessage | string;
+	type: "button";
 }
+
+export interface ActionFormButton extends FormButton {
+	callback: (viewer: Player) => Promise<void>;
+	iconPath?: string;
+}
+
+export interface ModalFormButton extends FormButton {
+	callback: (
+		viewer: Player,
+		formValues: (boolean | number | string | undefined)[],
+	) => Promise<void>;
+}
+
+export type ActionFormComponent = ActionFormButton | FormTextComponent | FormDividerComponent;
+
+export interface ModalFormDropdownComponent {
+	type: "dropdown";
+	label: RawMessage | string;
+	items: (RawMessage | string)[];
+	options?: ModalFormDataDropdownOptions;
+}
+
+export interface ModalFormSliderComponent {
+	type: "slider";
+	label: RawMessage | string;
+	minimumValue: number;
+	maximumValue: number;
+	options?: ModalFormDataSliderOptions;
+}
+
+export interface ModalFormTextFieldComponent {
+	type: "textField";
+	label: RawMessage | string;
+	placeHolderText?: RawMessage | string;
+	options?: ModalFormDataTextFieldOptions;
+}
+
+export interface ModalFormToggleComponent {
+	type: "toggle";
+	label: RawMessage | string;
+	options?: ModalFormDataToggleOptions;
+}
+
+export type ModalFormComponent =
+	| FormDividerComponent
+	| FormTextComponent
+	| ModalFormDropdownComponent
+	| ModalFormSliderComponent
+	| ModalFormTextFieldComponent
+	| ModalFormToggleComponent;
