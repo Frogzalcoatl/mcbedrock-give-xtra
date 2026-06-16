@@ -28,9 +28,9 @@ You need the following utilities installed: [pnpm](https://pnpm.io/), [node LTS]
 	pnpm install
 	```
 
-3. Create symlinks to the behavior and resource packs in the com.mojang folder. (Added by Frogzalcoatl)
+3. Link this project to the com.mojang folder. (Added by Frogzalcoatl)
 
-	Open `deploy-pack.bat` and enter "y" to link this project to the com.mojang directory.
+	Open `deploy-pack.bat` and enter "y" to create symlinks in the com.mojang folder.
 
 4. Open your IDE.
 
