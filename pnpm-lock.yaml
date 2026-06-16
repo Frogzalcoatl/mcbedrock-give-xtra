@@ -12,8 +12,8 @@ importers:
         specifier: ^2.4.16
         version: 2.4.16
       '@minecraft/server':
-        specifier: ^2.7.0
-        version: 2.7.0(@minecraft/common@1.2.0)(@minecraft/vanilla-data@1.26.21)
+        specifier: ^2.8.0
+        version: 2.8.0(@minecraft/common@1.2.0)(@minecraft/vanilla-data@1.26.21)
       '@minecraft/server-ui':
         specifier: ^2.0.0
         version: 2.0.0(@minecraft/vanilla-data@1.26.21)
@@ -57,24 +57,28 @@ packages:
     engines: {node: '>=14.21.3'}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@biomejs/cli-linux-arm64@2.4.16':
     resolution: {integrity: sha512-2kFb4//jxfZaP6D+Rj5VkHkxgyD9EoRAVBEQb8PKRv+s4NO2zYNJKXFaJmK1CmhufJOWEfpHKaRbOja7qjmdhQ==}
     engines: {node: '>=14.21.3'}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@biomejs/cli-linux-x64-musl@2.4.16':
     resolution: {integrity: sha512-iHDS+MCM65DPqWGu+ECC3uoALyj2H7F4nVUPxIPjz/PIl94EUu+EDfGZDzFP+NY1EOPVt9NQvwFqq7HdMmowdg==}
     engines: {node: '>=14.21.3'}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@biomejs/cli-linux-x64@2.4.16':
     resolution: {integrity: sha512-NbcBbi/nJqn5baae6wqRXdS7Gadf2uRpehSh6vMSYpG8OhkXl/Xg8aorWrJ+9VWqAT5ml90alLvorkpMW0nBwQ==}
     engines: {node: '>=14.21.3'}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@biomejs/cli-win32-arm64@2.4.16':
     resolution: {integrity: sha512-0rgImMsNb5v/chhkIFe3wu7PEFClS6RBAYUijGL9UsYN3PanSaoK24HSSuSJb1pYbYYVjzAyZTl3gtjJ84BM8A==}
@@ -252,6 +256,12 @@ packages:
 
   '@minecraft/server@2.7.0':
     resolution: {integrity: sha512-2gI80wxSBQ/U6JvGVYVDlbbSOywU8WPy6b5lvfetkWCKU+c//7UdY6dDAU2DkKmR/DzxmPqyy7YAKXwGJduRWQ==}
+    peerDependencies:
+      '@minecraft/common': ^1.2.0
+      '@minecraft/vanilla-data': '>=1.20.70'
+
+  '@minecraft/server@2.8.0':
+    resolution: {integrity: sha512-5VPlToP3IihUWrLHQJdNPSq++vPYnB+IZUVdO6kJ/VWVE29pN230f9SiCD28XU+Ujfh/EdjU3anktXG77pjWLA==}
     peerDependencies:
       '@minecraft/common': ^1.2.0
       '@minecraft/vanilla-data': '>=1.20.70'
@@ -559,6 +569,11 @@ snapshots:
       - '@minecraft/vanilla-data'
 
   '@minecraft/server@2.7.0(@minecraft/common@1.2.0)(@minecraft/vanilla-data@1.26.21)':
+    dependencies:
+      '@minecraft/common': 1.2.0
+      '@minecraft/vanilla-data': 1.26.21
+
+  '@minecraft/server@2.8.0(@minecraft/common@1.2.0)(@minecraft/vanilla-data@1.26.21)':
     dependencies:
       '@minecraft/common': 1.2.0
       '@minecraft/vanilla-data': 1.26.21
