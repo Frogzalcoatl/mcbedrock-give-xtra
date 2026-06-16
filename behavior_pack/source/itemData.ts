@@ -16,7 +16,6 @@ import {
 	BedColors,
 	type BooleanWithMessage,
 	type EnchantData,
-	EnchantDataKeyCount,
 	EnchantDataKeys,
 	type ItemData,
 	ItemDataDefaultAmount,
@@ -24,10 +23,10 @@ import {
 	ItemDataKeys,
 	ItemDataMaxAmount,
 	type ItemDurability,
+	MaxNameTagLength,
 	type SlotData,
 	SlotDataIdDefault,
 	SlotDataKeepOldItemDefault,
-	SlotDataKeyCount,
 	SlotDataKeys,
 	SlotDataNameDefault,
 	SlotName,
@@ -59,7 +58,7 @@ function isEnchantData(obj: any): obj is EnchantData {
 	if (typeof obj.level !== "number") {
 		throw new Error(`${obj.id} enchant.level must be a number`);
 	}
-	if (Object.keys(obj).length !== EnchantDataKeyCount) {
+	if (Object.keys(obj).length !== EnchantDataKeys.length) {
 		throw new Error(getInvalidKeyMessage(Object.keys(obj), EnchantDataKeys));
 	}
 	return true;
@@ -102,35 +101,12 @@ function isSlotData(obj: any): obj is SlotData {
 		);
 	}
 	const objKeys = Object.keys(obj);
-	if (objKeys.length !== SlotDataKeyCount) {
+	if (objKeys.length !== SlotDataKeys.length) {
 		throw new Error(getInvalidKeyMessage(objKeys, SlotDataKeys));
 	}
 	return true;
 }
 
-/* Will add back once mojang fixes dyeable component (Bug tracker MCPE-237577 and MCPE-232617)
-
-// biome-ignore lint/suspicious/noExplicitAny: Type is validated through the function. Any is required here.
-function isRgb(obj: any): obj is RGB {
-	if (typeof obj !== "object" || obj === null) {
-		throw new Error("dye must be an object");
-	}
-	// Stopped checking whether values fall between expected range 0-1 since that is checked in the validateItemData functions.
-	if (typeof obj.red !== "number") {
-		throw new Error("dye.red must be a number");
-	}
-	if (typeof obj.green !== "number") {
-		throw new Error("dye.green must be a number");
-	}
-	if (typeof obj.blue !== "number") {
-		throw new Error("dye.blue must be a number");
-	}
-	if (Object.keys(obj).length !== 3) {
-		throw new Error(`Dye must have exactly 3 keys (red, blue, green)`);
-	}
-	return true;
-}
-*/
 // biome-ignore lint/suspicious/noExplicitAny: Type is validated through the function. Any is required here.
 function isStringArray(arr: any, propertyName: string): arr is string[] {
 	if (typeof arr !== "object" || arr === null || !Array.isArray(arr)) {
@@ -199,19 +175,9 @@ function isItemData(obj: any): obj is ItemData {
 		}
 		validKeysFound++;
 	}
-	/* Will add back once mojang fixes dyeable component (Bug tracker MCPE-237577 and MCPE-232617)
-	if (obj.dye !== undefined) {
-		if (!isRgb(obj.dye)) {
-			throw new Error(
-				"dye must be an object with the properties red, green, and blue containing numbers",
-			);
-		}
-		validKeysFound++;
-	}
-	*/
 	if (obj.enchants !== undefined) {
 		if (!isEnchantDataArr(obj.enchants)) {
-			throw new Error("enchants must be an array of EnchantData");
+			throw new Error("enchants must be an array of object EnchantData");
 		}
 		validKeysFound++;
 	}
@@ -265,8 +231,8 @@ function isItemData(obj: any): obj is ItemData {
 	return true;
 }
 
-export function parseItemData(
-	strToParse: string,
+export function parseJsonArg(
+	strJson: string,
 	itemTypeId: string,
 	amount: number,
 ): {
@@ -276,54 +242,49 @@ export function parseItemData(
 	// biome-ignore lint/suspicious/noExplicitAny: any is required here for JSON.parse. Type will be assigned later.
 	let parsedData: any;
 	try {
-		parsedData = JSON.parse(strToParse);
-	} catch (e) {
-		if (e instanceof Error) {
-			return {
-				itemData: undefined,
-				syntaxError: e.message,
-			};
-		} else {
-			return {
-				itemData: undefined,
-				syntaxError: `Unknown error occurred`,
-			};
+		parsedData = JSON.parse(strJson);
+	} catch (error) {
+		let syntaxError: string = "Unknown error occurred";
+		if (error instanceof Error) {
+			syntaxError = error.message;
 		}
+		return {
+			itemData: undefined,
+			syntaxError: syntaxError,
+		};
 	}
-	try {
-		if (typeof parsedData === "object" && parsedData !== null) {
-			if (parsedData.typeId !== undefined) {
-				return {
-					itemData: undefined,
-					syntaxError: `Remove json key "typeId", as you have already defined it in the command`,
-				};
-			}
-			if (parsedData.amount !== undefined) {
-				return {
-					itemData: undefined,
-					syntaxError: `Remove json key "amount", as you have already defined it in the command`,
-				};
-			}
-			parsedData.typeId = itemTypeId;
-			parsedData.amount = amount;
+	if (typeof parsedData === "object" && parsedData !== null) {
+		if (parsedData.typeId !== undefined) {
+			return {
+				itemData: undefined,
+				syntaxError: `Remove json key "typeId", as you have already defined it in the command`,
+			};
 		}
+		if (parsedData.amount !== undefined) {
+			return {
+				itemData: undefined,
+				syntaxError: `Remove json key "amount", as you have already defined it in the command`,
+			};
+		}
+		parsedData.typeId = itemTypeId;
+		parsedData.amount = amount;
+	}
+	let syntaxError: string = "Object is not ItemData";
+	try {
 		if (isItemData(parsedData)) {
 			return {
 				itemData: parsedData,
 				syntaxError: undefined,
 			};
 		}
-	} catch (e) {
-		if (e instanceof Error) {
-			return {
-				itemData: undefined,
-				syntaxError: e.message,
-			};
+	} catch (error) {
+		if (error instanceof Error) {
+			syntaxError = error.message;
 		}
 	}
 	return {
 		itemData: undefined,
-		syntaxError: "Object is not ItemData",
+		syntaxError: syntaxError,
 	};
 }
 
@@ -387,34 +348,17 @@ export function itemTypeToPotionDeliveryType(typeId: string): string | undefined
 
 // biome-ignore assist/source/useSortedKeys: Want to keep it in the same order as declared in the ItemData interface.
 export const ItemDataValidation = {
-	typeId(value: string): BooleanWithMessage {
-		const result: boolean = ItemTypes.get(value) !== undefined;
-		return {
-			bool: result,
-			message: result ? "Valid typeId" : "Invalid typeId",
-		};
+	typeId(value: string): boolean {
+		return ItemTypes.get(value) !== undefined;
 	},
-	amount(value: number): BooleanWithMessage {
-		const result: boolean = value > 0 && Number.isInteger(value) && value < ItemDataMaxAmount;
-		return {
-			bool: result,
-			message: result ? "Valid amount" : "Invalid amount, must be a positve integer",
-		};
+	amount(value: number): boolean {
+		return value > 0 && Number.isInteger(value) && value < ItemDataMaxAmount;
 	},
-	lockMode(value: ItemLockMode): BooleanWithMessage {
-		const result: boolean = Object.values(ItemLockMode).includes(value);
-		return {
-			bool: result,
-			message: result ? "Valid lock mode" : "Invalid lock mode",
-		};
+	lockMode(value: ItemLockMode): boolean {
+		return Object.values(ItemLockMode).includes(value);
 	},
-	nameTag(value: string): BooleanWithMessage {
-		// 255 is the max item nametag length as stated in index.d.ts. Going by 253 since I automatically add §r to the start of nametag to avoid italicization.
-		const result: boolean = value.length <= 253;
-		return {
-			bool: result,
-			message: result ? "Valid nametag" : "Nametag length must be 253 characters or less",
-		};
+	nameTag(value: string): boolean {
+		return value.length <= MaxNameTagLength;
 	},
 	durability(durability: ItemDurability, itemStack: ItemStack): BooleanWithMessage {
 		const durabilityComponent = itemStack.getComponent(ItemComponentTypes.Durability);
@@ -430,7 +374,7 @@ export const ItemDataValidation = {
 				message: "Valid durability",
 			};
 		}
-		if (!Number.isInteger(durability) || durability <= 0) {
+		if (!Number.isInteger(durability) || durability < 0) {
 			return {
 				bool: false,
 				message: 'Durability must be a positive integer or "unbreakable"',
@@ -447,23 +391,6 @@ export const ItemDataValidation = {
 			message: "Valid durability",
 		};
 	},
-	/*
-	dye(value: RGB): BooleanWithMessage {
-		const result: boolean =
-			value.red <= 0 ||
-			value.red >= 1 ||
-			value.green <= 0 ||
-			value.green >= 1 ||
-			value.blue <= 0 ||
-			value.blue >= 1;
-		return {
-			bool: result,
-			message: result
-				? "Valid dye"
-				: `Dye must include three values between 0 and 1.\nEx: "dye":{"red":0,"blue":1,"green":0.5}`,
-		};
-	},
-	*/
 	enchants(value: EnchantData[], itemStack: ItemStack): BooleanWithMessage {
 		const enchantableComonent = itemStack.getComponent(ItemComponentTypes.Enchantable);
 		if (enchantableComonent === undefined) {
@@ -480,10 +407,14 @@ export const ItemDataValidation = {
 					message: `Invalid enchantment id "${enchant.id}"`,
 				};
 			}
-			if (enchant.level <= 0 || enchant.level > type.maxLevel) {
+			if (
+				enchant.level <= 0 ||
+				enchant.level > type.maxLevel ||
+				!Number.isInteger(enchant.level)
+			) {
 				return {
 					bool: false,
-					message: `Invalid enchantment level for "${enchant.id}". Max level is ${type.maxLevel}`,
+					message: `Invalid enchantment level for "${enchant.id}". Must be an integer within range 1-${type.maxLevel}`,
 				};
 			}
 			if (!enchantableComonent.canAddEnchantment({ level: enchant.level, type: type })) {
@@ -505,13 +436,14 @@ export const ItemDataValidation = {
 				message: `${itemStack.typeId} cannot be placed in ${value.name}`,
 			};
 		}
-		// Skipping max slot.id. Can use givex on non players, so max id varies.
+		// Skipping max slot.id. Container size varies.
 		if (!Number.isInteger(value.id) || value.id < 0) {
 			return {
 				bool: false,
 				message: `Slot id must be an integer greater than or equal to 0`,
 			};
 		}
+		// Cannot have an amount greater than the max if placing in a specific slot
 		if (amount > itemStack.maxAmount) {
 			return {
 				bool: false,
@@ -555,9 +487,14 @@ export const ItemDataValidation = {
 		}
 		const deliveryType = itemTypeToPotionDeliveryType(data.typeId);
 		if (deliveryType === undefined) {
+			let message: string = `${data.typeId} is not compatible with potionType`;
+			// In case user gets confused and tries to use potionType for tipped arrows
+			if (data.typeId === "minecraft:arrow") {
+				message += ". Use arrowType instead";
+			}
 			return {
 				bool: false,
-				message: `${data.typeId} is not compatible with potionType`,
+				message: message,
 			};
 		}
 		const effectTypeNamespace = getMcNamespace(data.potionType);
@@ -566,16 +503,9 @@ export const ItemDataValidation = {
 		}
 		const effect: PotionEffectType | undefined = Potions.getEffectType(data.potionType);
 		if (effect === undefined) {
-			const allEffectTypes = Potions.getAllEffectTypes();
-			let effectTypeList: string = "";
-			for (const type of allEffectTypes) {
-				effectTypeList += `${type.id}\n`;
-			}
-			// Remove final newline character
-			effectTypeList = effectTypeList.slice(0, effectTypeList.length - 1);
 			return {
 				bool: false,
-				message: `Invalid potionType "${data.potionType}". Valid options include:\n${effectTypeList}`,
+				message: `Invalid potionType "${data.potionType}". Valid options include:\n${Potions.getAllEffectTypes().join("\n")}`,
 			};
 		}
 		return {
@@ -622,83 +552,93 @@ export const ItemDataValidation = {
 		}
 	},
 	complete(data: ItemData): BooleanWithMessage {
-		let result: BooleanWithMessage;
-		result = ItemDataValidation.typeId(data.typeId);
-		if (!result.bool) {
-			return result;
+		const typeIdResult: boolean = ItemDataValidation.typeId(data.typeId);
+		if (!typeIdResult) {
+			return {
+				bool: false,
+				message: `Invalid typeId "${data.typeId}"`,
+			};
 		}
-		result = ItemDataValidation.amount(data.amount);
-		if (!result.bool) {
-			return result;
+		const amountResult: boolean = ItemDataValidation.amount(data.amount);
+		if (!amountResult) {
+			return {
+				bool: false,
+				message: `Invalid amount "${data.amount}"`,
+			};
 		}
 		if (data.lockMode) {
-			result = ItemDataValidation.lockMode(data.lockMode);
-			if (!result.bool) {
-				return result;
+			const lockModeResult: boolean = ItemDataValidation.lockMode(data.lockMode);
+			if (!lockModeResult) {
+				return {
+					bool: false,
+					message: `Invalid lockMode "${data.lockMode}". Valid options include:\n${Object.values(ItemLockMode).join(", ")}`,
+				};
 			}
 		}
 		if (data.nameTag) {
-			result = ItemDataValidation.nameTag(data.nameTag);
-			if (!result.bool) {
-				return result;
+			const nameTagResult: boolean = ItemDataValidation.nameTag(data.nameTag);
+			if (!nameTagResult) {
+				return {
+					bool: false,
+					message: `nameTag must be within 1-${MaxNameTagLength} characters`,
+				};
 			}
 		}
 		const itemStack = new ItemStack(data.typeId);
+		let messageResult: BooleanWithMessage;
 		if (data.durability) {
-			result = ItemDataValidation.durability(data.durability, itemStack);
-			if (!result.bool) {
-				return result;
+			messageResult = ItemDataValidation.durability(data.durability, itemStack);
+			if (!messageResult.bool) {
+				return messageResult;
 			}
 		}
-		/* Will add back once mojang fixes dyeable component (Bug tracker MCPE-237577 and MCPE-232617)
-		if (data.dye) {
-			result = ItemDataValidation.dye(data.dye);
-			if (!result.bool) {
-				return result;
-			}
-		}
-		*/
 		if (data.enchants) {
-			result = ItemDataValidation.enchants(data.enchants, itemStack);
-			if (!result.bool) {
-				return result;
+			messageResult = ItemDataValidation.enchants(data.enchants, itemStack);
+			if (!messageResult.bool) {
+				return messageResult;
 			}
 		}
 		if (data.slot) {
-			result = ItemDataValidation.slot(data.slot, itemStack, data.amount);
-			if (!result.bool) {
-				return result;
+			messageResult = ItemDataValidation.slot(data.slot, itemStack, data.amount);
+			if (!messageResult.bool) {
+				return messageResult;
 			}
 		}
 		if (data.potionType) {
-			result = ItemDataValidation.potionType(data, data.potionType);
-			if (!result.bool) {
-				return result;
+			messageResult = ItemDataValidation.potionType(data, data.potionType);
+			if (!messageResult.bool) {
+				return messageResult;
 			}
 		}
 		if (data.arrowType) {
-			result = ItemDataValidation.arrowType(data, data.arrowType);
-			if (!result.bool) {
-				return result;
+			messageResult = ItemDataValidation.arrowType(data, data.arrowType);
+			if (!messageResult.bool) {
+				return messageResult;
 			}
 		}
 		if (data.bedColor) {
-			result = ItemDataValidation.bedColor(data, data.bedColor);
-			if (!result.bool) {
-				return result;
+			messageResult = ItemDataValidation.bedColor(data, data.bedColor);
+			if (!messageResult.bool) {
+				return messageResult;
 			}
 		}
 		// ItemData.keepOnDeath is a boolean. Nothing to validate there.
 		if (data.canPlaceOn) {
-			result = ItemDataValidation.canPlaceOnAndCanDestroy(data.canPlaceOn, "canPlaceOn");
-			if (!result.bool) {
-				return result;
+			messageResult = ItemDataValidation.canPlaceOnAndCanDestroy(
+				data.canPlaceOn,
+				"canPlaceOn",
+			);
+			if (!messageResult.bool) {
+				return messageResult;
 			}
 		}
 		if (data.canDestroy) {
-			result = ItemDataValidation.canPlaceOnAndCanDestroy(data.canDestroy, "canDestroy");
-			if (!result.bool) {
-				return result;
+			messageResult = ItemDataValidation.canPlaceOnAndCanDestroy(
+				data.canDestroy,
+				"canDestroy",
+			);
+			if (!messageResult.bool) {
+				return messageResult;
 			}
 		}
 		return {

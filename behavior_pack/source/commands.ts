@@ -210,7 +210,10 @@ export function helpCommandCallback(
 	itemType?: ItemType,
 ): CustomCommandResult {
 	let viewer: Player;
-	if (origin.sourceEntity instanceof Player) {
+	if (
+		origin.sourceEntity instanceof Player &&
+		origin.sourceEntity.playerPermissionLevel === PlayerPermissionLevel.Operator
+	) {
 		viewer = origin.sourceEntity;
 	} else if (
 		origin.initiator instanceof Player &&

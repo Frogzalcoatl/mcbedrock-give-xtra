@@ -5,7 +5,6 @@ import {
 	EnchantmentTypeNotCompatibleError,
 	EnchantmentTypes,
 	EnchantmentTypeUnknownIdError,
-	InvalidItemStackError,
 	ItemComponentTypes,
 	type ItemEnchantableComponent,
 	ItemStack,
@@ -30,10 +29,10 @@ export function applyDurability(item: ItemStack, value: ItemDurability): Boolean
 			message: "Durability set to unbreakable",
 		};
 	}
-	if (value > durabilityComponent.maxDurability) {
+	if (value > durabilityComponent.maxDurability || value < 0) {
 		return {
 			bool: false,
-			message: "Durability cannot exceed max for item",
+			message: `Durability must be with range 0-${durabilityComponent.maxDurability} for this item`,
 		};
 	}
 	durabilityComponent.damage = durabilityComponent.maxDurability - value;
@@ -78,28 +77,19 @@ export function applyEnchantData(
 	};
 	try {
 		enchantableComponent.addEnchantment(enchant);
-	} catch (e) {
-		if (e instanceof EnchantmentLevelOutOfBoundsError) {
-			return {
-				bool: false,
-				message: `Invalid enchantment level ${enchant.level} for ${enchant.type.id}. Max is ${enchant.type.maxLevel}`,
-			};
-		} else if (e instanceof EnchantmentTypeUnknownIdError) {
-			return {
-				bool: false,
-				message: `Invalid enchantId "${enchant.type.id}"`,
-			};
-		} else if (e instanceof EnchantmentTypeNotCompatibleError) {
-			return {
-				bool: false,
-				message: `${enchant.type} not compatible with item`,
-			};
-		} else {
-			return {
-				bool: false,
-				message: `Unknown error occurred while applying ${enchant.type} to item`,
-			};
+	} catch (error) {
+		let message: string = `Unable to apply ${enchant.type} to item`;
+		if (error instanceof EnchantmentLevelOutOfBoundsError) {
+			message = `Invalid enchantment level ${enchant.level} for ${enchant.type.id}. Max is ${enchant.type.maxLevel}`;
+		} else if (error instanceof EnchantmentTypeUnknownIdError) {
+			message = `Invalid enchantId "${enchant.type.id}"`;
+		} else if (error instanceof EnchantmentTypeNotCompatibleError) {
+			message = `${enchant.type} not compatible with item`;
 		}
+		return {
+			bool: false,
+			message: message,
+		};
 	}
 	return {
 		bool: true,
@@ -122,6 +112,7 @@ function createPotionItem(
 		};
 	}
 	let item: ItemStack;
+	let message: string = "Unable to create potion item";
 	try {
 		item = Potions.resolve(potionType, deliveryType);
 		return {
@@ -130,15 +121,12 @@ function createPotionItem(
 		};
 	} catch (error) {
 		if (error instanceof Error) {
-			return {
-				item: undefined,
-				message: error.message.length > 0 ? error.message : "Unable to create potion item",
-			};
+			message += `: ${error.message}`;
 		}
 	}
 	return {
 		item: undefined,
-		message: "Unable to create potion item",
+		message: message,
 	};
 }
 
@@ -148,7 +136,7 @@ export function dataToStack(
 	locationOfReciever: DimensionLocation,
 ): {
 	item: ItemStack | undefined;
-	warning: string | undefined;
+	warnings: string | undefined;
 } {
 	let itemStack: ItemStack;
 	try {
@@ -161,33 +149,25 @@ export function dataToStack(
 			} else {
 				return {
 					item: undefined,
-					warning: potionItemResult.message,
+					warnings: potionItemResult.message,
 				};
 			}
 		}
 	} catch (error) {
-		if (error instanceof InvalidItemStackError) {
-			return {
-				item: undefined,
-				warning: `Invalid typeId: ${data.typeId}`,
-			};
-		} else if (error instanceof Error) {
-			return {
-				item: undefined,
-				warning: error.message,
-			};
-		} else {
-			return {
-				item: undefined,
-				warning: `Unknown error occurred due to typeId`,
-			};
+		let message: string = `Unable to create item`;
+		if (error instanceof Error) {
+			message += `: ${error.message}`;
 		}
+		return {
+			item: undefined,
+			warnings: message,
+		};
 	}
 	if (data.slot !== undefined) {
 		if (data.amount > itemStack.maxAmount) {
 			return {
 				item: undefined,
-				warning: `Amount ${data.amount} exceeds maximum for ${data.typeId} (${itemStack.maxAmount})\nIf you would like to give an amount exceeding the max stack size, you cannot select a slot.`,
+				warnings: `Amount ${data.amount} exceeds maximum for ${data.typeId} (${itemStack.maxAmount})\nIf you would like to give an amount exceeding the max stack size, you cannot select a slot.`,
 			};
 		}
 		itemStack.amount = data.amount;
@@ -203,11 +183,11 @@ export function dataToStack(
 	}
 	if (data.nameTag !== undefined) {
 		const nameTagResult = ItemDataValidation.nameTag(data.nameTag);
-		if (nameTagResult.bool) {
+		if (nameTagResult) {
 			// Add §r to reset auto italicization
 			itemStack.nameTag = `§r${data.nameTag}`;
 		} else {
-			warning += `${nameTagResult.message}. Skipped.\n`;
+			warning += `Invalid nameTag. Skipped.\n`;
 		}
 	}
 	if (data.durability !== undefined) {
@@ -244,22 +224,22 @@ export function dataToStack(
 		try {
 			itemStack.setCanPlaceOn(data.canPlaceOn);
 		} catch (error) {
+			let message: string = "Unable to set canPlaceOn";
 			if (error instanceof Error) {
-				warning += `Unable to set canPlaceOn: ${error.message}\n`;
-			} else {
-				warning += "Unable to set canPlaceOn\n";
+				message += `: ${error.message}`;
 			}
+			warning += `${message}\n`;
 		}
 	}
 	if (data.canDestroy !== undefined) {
 		try {
 			itemStack.setCanDestroy(data.canDestroy);
 		} catch (error) {
+			let message: string = "Unable to set canDestroy";
 			if (error instanceof Error) {
-				warning += `Unable to set canDestroy: ${error.message}\n`;
-			} else {
-				warning += "Unable to set canDestroy\n";
+				message += `: ${error.message}`;
 			}
+			warning += `${message}\n`;
 		}
 	}
 	const dataValue: number = getCommandDataValue(data);
@@ -268,12 +248,12 @@ export function dataToStack(
 		if (dataValueResult.item !== undefined) {
 			itemStack = dataValueResult.item;
 		} else {
-			warning += `Unable to apply data value ${dataValue} to item.\n${dataValueResult.message}\n`;
+			warning += `Unable to apply data value ${dataValue} to item.\n${dataValueResult.message}. Skipped\n`;
 		}
 	}
 	return {
 		item: itemStack,
 		// Trim final \n if any warnings were added
-		warning: warning.length > 0 ? warning.slice(0, warning.length - 1) : undefined,
+		warnings: warning.length > 0 ? warning.slice(0, warning.length - 1) : undefined,
 	};
 }

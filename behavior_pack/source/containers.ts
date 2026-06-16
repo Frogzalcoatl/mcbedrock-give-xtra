@@ -11,7 +11,7 @@ import {
 import { getRecieverName, prettyTypeId, vector3ToString } from "./prettyTypeId";
 import { type BooleanWithMessage, type SlotData, SlotName } from "./types";
 
-// Cannot be used in restricted execution
+// Cannot be run in restricted execution
 function addItemsToContainer(
 	reciever: Entity | Block,
 	container: Container,
@@ -27,22 +27,19 @@ function addItemsToContainer(
 	let amountLeft: number = amountToGive;
 	while (amountLeft > 0) {
 		itemStack.amount = Math.min(itemStack.maxAmount, amountLeft);
-		// Returns ItemStack on failure
 		let result: ItemStack | undefined;
 		try {
+			// Returns ItemStack on failure
 			result = container.addItem(itemStack);
 		} catch (error) {
+			let message: string = `Unable to add ${prettyTypeId(itemStack.typeId)} to container of ${getRecieverName(reciever)}`;
 			if (error instanceof Error) {
-				return {
-					bool: false,
-					message: error.message,
-				};
-			} else {
-				return {
-					bool: false,
-					message: `Unknown error occured while trying to add ${prettyTypeId(itemStack.typeId)} to container of ${getRecieverName(reciever)}`,
-				};
+				message += `: ${error.message}`;
 			}
+			return {
+				bool: false,
+				message: message,
+			};
 		}
 		// Inventory is full
 		if (result !== undefined) {
@@ -52,7 +49,7 @@ function addItemsToContainer(
 		}
 		amountLeft -= itemStack.amount;
 	}
-	// Spawn items as entities
+	// Spawn remaining items as entities
 	while (amountLeft > 0) {
 		if (!reciever.isValid) {
 			return {
@@ -64,17 +61,14 @@ function addItemsToContainer(
 		try {
 			reciever.dimension.spawnItem(itemStack, reciever.location);
 		} catch (error) {
+			let message: string = `Unable to spawn ${prettyTypeId(itemStack.typeId)} on ${getRecieverName(reciever)}`;
 			if (error instanceof Error) {
-				return {
-					bool: false,
-					message: error.message,
-				};
-			} else {
-				return {
-					bool: false,
-					message: `Unknown error occured while trying to spawn ${prettyTypeId(itemStack.typeId)} on ${getRecieverName(reciever)}`,
-				};
+				message += `: ${error.message}`;
 			}
+			return {
+				bool: false,
+				message: message,
+			};
 		}
 		amountLeft -= itemStack.amount;
 	}
@@ -84,7 +78,7 @@ function addItemsToContainer(
 	};
 }
 
-// Cannot be used in restricted execution
+// Cannot be run in restricted execution
 function setItemInSlot(
 	reciever: Entity | Block,
 	container: Container,
@@ -123,6 +117,7 @@ function setItemInSlot(
 	};
 }
 
+// Cannot be run in restricted execution
 function replaceItemInventory(entity: Entity, item: ItemStack, slot: SlotData): BooleanWithMessage {
 	const inventory = entity.getComponent(EntityComponentTypes.Inventory);
 	if (inventory === undefined || !inventory.isValid) {
@@ -134,18 +129,12 @@ function replaceItemInventory(entity: Entity, item: ItemStack, slot: SlotData): 
 	return setItemInSlot(entity, inventory.container, item, slot.id, slot.keepOldItem);
 }
 
+// Cannot be run in restricted execution
 function replaceItemHotbar(entity: Entity, item: ItemStack, slot: SlotData): BooleanWithMessage {
 	if (!(entity instanceof Player)) {
 		return {
 			bool: false,
 			message: "Only players have a hotbar",
-		};
-	}
-	const inventory = entity.getComponent(EntityComponentTypes.Inventory);
-	if (inventory === undefined || !inventory.isValid) {
-		return {
-			bool: false,
-			message: `Unable to get inventory of ${entity.name}`,
 		};
 	}
 	if (slot.id < 0 || slot.id > 8) {
@@ -154,13 +143,14 @@ function replaceItemHotbar(entity: Entity, item: ItemStack, slot: SlotData): Boo
 			message: `Invalid hotbar slot id "${slot.id}". Must be between 0 and 8`,
 		};
 	}
-	return setItemInSlot(entity, inventory.container, item, slot.id, slot.keepOldItem);
+	return replaceItemInventory(entity, item, slot);
 }
 
+// Don't want to include custom tameable mobs here. My implementation was forced to be too oddly specific.
 const MobChestEntityTypes: string[] = ["minecraft:llama", "minecraft:donkey", "minecraft:mule"];
 
 // Includes SlotName.Saddle, SlotName.Armor, and SlotName.MobChest
-// Don't want to include custom tameable mobs here. My implementation was forced to be too oddly specific.
+// Cannot be run in restricted execution
 function replaceItemTameable(entity: Entity, item: ItemStack, slot: SlotData): BooleanWithMessage {
 	const inventory = entity.getComponent(EntityComponentTypes.Inventory);
 	const isTamed = entity.getComponent(EntityComponentTypes.IsTamed);
@@ -172,7 +162,7 @@ function replaceItemTameable(entity: Entity, item: ItemStack, slot: SlotData): B
 	) {
 		return {
 			bool: false,
-			message: `Unable to get ${slot.name} from ${getRecieverName(entity)}.`,
+			message: `Unable to get ${slot.name} from ${getRecieverName(entity)}. Only accessible on vanilla tamed entities.`,
 		};
 	}
 	if (slot.name === SlotName.MobChest) {
@@ -223,6 +213,7 @@ function slotNameToEquipmentSlot(name: SlotName): EquipmentSlot | undefined {
 	}
 }
 
+// Cannot be run in restricted execution
 function replaceItemEquippable(
 	entity: Entity,
 	item: ItemStack,
@@ -250,20 +241,31 @@ function replaceItemEquippable(
 	if (!equippableResult) {
 		return {
 			bool: false,
-			message: `Unable to equip ${item.typeId} in ${slot.name}`,
+			message: `Unable to equip ${prettyTypeId(item.typeId)} in ${slot.name}`,
 		};
 	}
 	let oldItemGiveResult: BooleanWithMessage | undefined;
 	if (oldItem) {
 		const inventory = entity.getComponent(EntityComponentTypes.Inventory);
-		if (inventory === undefined) {
-			const itemEntity = entity.dimension.spawnItem(item, entity.location);
+		let addItemsResult: BooleanWithMessage | undefined;
+		if (inventory?.isValid && inventory.container.isValid) {
+			addItemsResult = addItemsToContainer(entity, inventory.container, item, item.amount);
+		}
+		if (inventory === undefined || (addItemsResult && !addItemsResult.bool)) {
 			oldItemGiveResult = {
-				bool: itemEntity.isValid,
-				message: itemEntity.isValid
-					? "Spawned old item as entity"
-					: "Unable to spawn old item as entity",
+				bool: true,
+				message: "Spawned old item as entity",
 			};
+			try {
+				entity.dimension.spawnItem(item, entity.location);
+			} catch (error) {
+				let message: string = "Unable to spawn old item as entity";
+				if (error instanceof Error) {
+					message += `: ${error.message}`;
+				}
+				oldItemGiveResult.bool = false;
+				oldItemGiveResult.message = message;
+			}
 		}
 	}
 	let message: string = `Equipped ${item.typeId} in slot ${slot.name}`;
@@ -276,7 +278,7 @@ function replaceItemEquippable(
 	};
 }
 
-// Cannot be used in restricted execution
+// Cannot be run in restricted execution
 export function giveItemToEntity(
 	entity: Entity,
 	item: ItemStack,
@@ -289,7 +291,7 @@ export function giveItemToEntity(
 			message: `Entity ${getRecieverName(entity)} is invalid (Might be unloaded)`,
 		};
 	}
-	// Just give item to free slots in inventory
+	// Just add item to free slots in inventory
 	if (slot === undefined) {
 		const inventory = entity.getComponent(EntityComponentTypes.Inventory);
 		if (inventory === undefined || !inventory.isValid) {
@@ -319,6 +321,7 @@ export function giveItemToEntity(
 	}
 }
 
+// Cannot be run in restricted execution
 export function giveItemToBlock(
 	block: Block,
 	item: ItemStack,

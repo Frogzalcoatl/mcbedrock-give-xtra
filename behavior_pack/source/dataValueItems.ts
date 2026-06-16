@@ -41,6 +41,7 @@ function copyItemStackProperties(from: ItemStack, to: ItemStack): BooleanWithMes
 	const toDurability = to.getComponent(ItemComponentTypes.Durability);
 	if (fromDurability && toDurability) {
 		toDurability.damage = fromDurability.damage;
+		toDurability.unbreakable = fromDurability.unbreakable;
 	}
 	to.keepOnDeath = from.keepOnDeath;
 	to.setCanPlaceOn(from.getCanPlaceOn());
@@ -51,12 +52,14 @@ function copyItemStackProperties(from: ItemStack, to: ItemStack): BooleanWithMes
 		try {
 			givenItemEnchantable.addEnchantments(templateEnchantable.getEnchantments());
 		} catch (error) {
+			let message: string = `Unable to copy itemstack echantments`;
 			if (error instanceof Error) {
-				return {
-					bool: false,
-					message: error.message,
-				};
+				message += `: ${error.message}`;
 			}
+			return {
+				bool: false,
+				message: message,
+			};
 		}
 	}
 	return {
@@ -75,7 +78,7 @@ export function getDataValueItem(
 	if (dataValue === 0) {
 		return {
 			item: item,
-			message: "Returned same item stack with data value 0",
+			message: "No data value to change (default is 0)",
 		};
 	}
 	const dimension: Dimension = locationForCustomEntity.dimension;

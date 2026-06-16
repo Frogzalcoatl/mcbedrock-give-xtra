@@ -20,7 +20,6 @@ export interface EnchantData {
 	level: number;
 }
 export const EnchantDataKeys: string[] = ["id", "level"];
-export const EnchantDataKeyCount: number = EnchantDataKeys.length;
 
 // Based on /replaceitem command slots.
 // Excluding slot.endchest. Cannot be accessed with scripting yet.
@@ -46,7 +45,6 @@ export interface SlotData {
 	keepOldItem: boolean;
 }
 export const SlotDataKeys = ["name", "id", "keepOldItem"];
-export const SlotDataKeyCount: number = SlotDataKeys.length;
 export const SlotDataKeepOldItemDefault: boolean = false;
 export const SlotDataIdDefault: number = 0;
 export const SlotDataNameDefault: SlotName = SlotName.Inventory;
@@ -126,7 +124,7 @@ export const BedColors: string[] = [
 
 	Filled maps:
 	replaceitem doesnt work with map data values while /give does for some reason.
-	Dont want to force half implementation of map ids when slot is undefined only.
+	Dont want to force a half implementation because of this.
 */
 
 export interface ItemData {
@@ -167,6 +165,8 @@ export const ItemDataKeyCountMin: number = 2;
 export const ItemDataDefaultAmount: number = 1;
 // Matches max amount in vanilla /give
 export const ItemDataMaxAmount: number = 32767;
+// 255 is the max item nametag length as stated in index.d.ts. Going by 253 since I automatically add §r to the start of nametag to avoid italicization.
+export const MaxNameTagLength: number = 253;
 
 export interface GivexContext {
 	commandName: "givex" | "blockx" | "spawnx";
