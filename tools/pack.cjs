@@ -4,22 +4,17 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { ZipArchive } = require("archiver");
 
-const MCPACK_FILENAME = "addon.mcpack";
-const OUTPUT_DIRECTORY_NAME = "_temp_mcpack_directory";
+const MCADDON_FILENAME = "mcbedrock-give-xtra.mcaddon";
+const OUTPUT_DIRECTORY_NAME = "_temp_mcaddon_directory";
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
+const BEHAVIOR_PACK_PATH = path.join(PROJECT_ROOT, "behavior_pack");
+const RESOURCE_PACK_PATH = path.join(PROJECT_ROOT, "resource_pack");
 const OUTPUT_DIRECTORY_PATH = path.join(PROJECT_ROOT, OUTPUT_DIRECTORY_NAME);
+const BEHAVIOR_PACK_OUTPUT_DIRECTORY_PATH = path.join(OUTPUT_DIRECTORY_PATH, "behavior_pack");
+const RESOURCE_PACK_OUTPUT_DIRECTORY_PATH = path.join(OUTPUT_DIRECTORY_PATH, "resource_pack");
 
-const SKIP_DIRECTORIES = [".vscode", "node_modules", "behavior_pack/source", "tools", OUTPUT_DIRECTORY_NAME];
-const SKIP_FILES = [
-	"build-mcpack.cjs",
-	"esbuild.cjs",
-	"package.json",
-	"pnpm-lock.yaml",
-	"pnpm-workspace.yaml",
-	"tsconfig.json",
-	MCPACK_FILENAME,
-];
+const SKIP_DIRECTORIES = ["source"];
 
 async function copyDirectory(source, destination) {
 	await fs.promises.mkdir(destination, { recursive: true });
@@ -31,7 +26,6 @@ async function copyDirectory(source, destination) {
 			if (SKIP_DIRECTORIES.includes(name)) continue;
 			await copyDirectory(sourcePath, destinationPath);
 		} else {
-			if (SKIP_FILES.includes(name)) continue;
 			await fs.promises.copyFile(sourcePath, destinationPath);
 		}
 	}
@@ -62,13 +56,17 @@ async function build() {
 		await fs.promises.rm(OUTPUT_DIRECTORY_PATH, { force: true, recursive: true });
 
 		console.log(`Creating temporary directory at: ${OUTPUT_DIRECTORY_PATH}`);
+		await copyDirectory(BEHAVIOR_PACK_PATH, BEHAVIOR_PACK_OUTPUT_DIRECTORY_PATH);
+		await copyDirectory(RESOURCE_PACK_PATH, RESOURCE_PACK_OUTPUT_DIRECTORY_PATH);
+		/* No longer copying files from root directory. None are needed.
 		await copyDirectory(PROJECT_ROOT, OUTPUT_DIRECTORY_PATH);
+		*/
 		console.log("Successfully copied files.");
 
-		const zipFilePath = path.join(PROJECT_ROOT, MCPACK_FILENAME);
-		console.log(`Zipping contents to ${MCPACK_FILENAME}...`);
+		const zipFilePath = path.join(PROJECT_ROOT, MCADDON_FILENAME);
+		console.log(`Zipping contents to ${MCADDON_FILENAME}...`);
 		await createZip(OUTPUT_DIRECTORY_PATH, zipFilePath);
-		console.log("Successfully created addon.mcpack.");
+		console.log(`Successfully created ${MCADDON_FILENAME}.`);
 
 		console.log("Deleting temporary output directory...");
 		await fs.promises.rm(OUTPUT_DIRECTORY_PATH, { force: true, recursive: true });
