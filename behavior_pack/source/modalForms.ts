@@ -2,17 +2,17 @@ import { type Player, type RawMessage, system } from "@minecraft/server";
 import { ModalFormData } from "@minecraft/server-ui";
 import { styleButtonText } from "./actionForms";
 import { ItemDataValidation } from "./itemData";
-import { type ItemDataCreationContext, type ModalFormButton, type ModalFormComponent } from "./types";
+import type { ItemDataCreationContext, ModalFormButton, ModalFormComponent } from "./types";
 
 export function getTemplateItemDataContext(): ItemDataCreationContext {
 	return {
-		data: {
-			typeId: "",
-			amount: 1
-		},
 		commandName: "givex",
-		location: { x: "~", y: "~", z: "~" }
-	}
+		data: {
+			amount: 1,
+			typeId: "",
+		},
+		location: { x: "~", y: "~", z: "~" },
+	};
 }
 
 export interface ModalFormArgs {
@@ -107,10 +107,10 @@ export const FormGetStartedArgs: ModalFormArgs = {
 	components: [
 		{
 			label: "§lWhat item would you like to use?§r\n\nEnter type ID:",
-			type: "textField",
 			options: {
-				tooltip: "Run /givex:help <itemType> for autocompletion"
-			}
+				tooltip: "Run /givex:help <itemType> for autocompletion",
+			},
+			type: "textField",
 		},
 		{
 			type: "divider",
@@ -138,7 +138,7 @@ export const FormGetStartedArgs: ModalFormArgs = {
 				return;
 			}
 			const newComponents: ModalFormComponent[] = JSON.parse(
-			JSON.stringify(FormGetStartedArgs.components),
+				JSON.stringify(FormGetStartedArgs.components),
 			);
 			const textFieldComponent = newComponents[0];
 			if (textFieldComponent === undefined || textFieldComponent.type !== "textField") {
@@ -147,7 +147,7 @@ export const FormGetStartedArgs: ModalFormArgs = {
 			}
 			textFieldComponent.label = `§lWhat item would you like to use?§r\n\n§cInvalid type ID: "${typeId}"§r\nEnter type ID:`;
 			textFieldComponent.options = {
-			defaultValue: `${typeId}`,
+				defaultValue: `${typeId}`,
 			};
 			const NewGetStarted = new ModalForm({
 				components: newComponents,
@@ -166,27 +166,35 @@ export const FormGetStartedArgs: ModalFormArgs = {
 export const FormSelectCommandType = new ModalForm({
 	components: [
 		{
+			items: ["Give to Player", "Give to Block (e.g: Chest), Spawn as Item Entity"],
 			label: "What would you like to do with the item?",
 			type: "dropdown",
-			items: ["Give to Player", "Give to Block (e.g: Chest), Spawn as Item Entity"]
-		}
+		},
 	],
 	submitButton: {
 		addStyling: true,
 		callback: async (viewer, formValues, context) => {
 			const selection = formValues[0];
 			if (selection === undefined || typeof selection !== "number") {
-				viewer.sendMessage("§cUnable to open next form. Selection is undefined or incorrect type");
+				viewer.sendMessage(
+					"§cUnable to open next form. Selection is undefined or incorrect type",
+				);
 				return;
 			}
 			switch (selection) {
-				case 0: context.commandName = "givex"; break;
-				case 1: context.commandName = "blockx"; break;
-				case 2: context.commandName = "spawnx"; break;
+				case 0:
+					context.commandName = "givex";
+					break;
+				case 1:
+					context.commandName = "blockx";
+					break;
+				case 2:
+					context.commandName = "spawnx";
+					break;
 			}
 			// Generate a list of editable components based on itemType then make an ActionForm
 		},
-		text: "Submit"
+		text: "Submit",
 	},
 	title: "Get Started",
 });
@@ -196,28 +204,26 @@ const FormSelectSlotGivex: ModalFormArgs = {
 		{
 			items: ["Default"], // Add the rest based on itemType
 			label: "Default functions the same as the /give command.\nSlot Name:",
-			type: "dropdown"
+			type: "dropdown",
 		},
 		{
 			label: "Slot Id:",
+			placeHolderText: "0 or higher",
 			type: "textField",
-			placeHolderText: "0 or higher"
 		},
 		{
 			label: "Keep Old Item in Slot:",
-			type: "toggle",
 			options: {
+				defaultValue: false,
 				tooltip: "Gives previous item in slot back to entity",
-				defaultValue: false
-			}
-		}
+			},
+			type: "toggle",
+		},
 	],
 	submitButton: {
 		addStyling: true,
-		callback: async (viewer, formValues, context) => {
-
-		},
-		text: "Submit"
+		callback: async (viewer, formValues, context) => {},
+		text: "Submit",
 	},
-	title: "Get Started"
-}
+	title: "Get Started",
+};

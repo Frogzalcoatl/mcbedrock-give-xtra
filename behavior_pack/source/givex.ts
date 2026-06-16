@@ -172,22 +172,6 @@ function givexGiveItemType(context: GivexContext): CustomCommandResult {
 	return givexGiveItemStack(context, itemStack, undefined, undefined);
 }
 
-function givexGetSpecialIdentifier(itemData: ItemData): string | undefined {
-	let specialIdentifier: string = "";
-	if (itemData.potionType) {
-		specialIdentifier = itemData.potionType;
-	} else if (itemData.arrowType) {
-		specialIdentifier = itemData.arrowType;
-	} else if (itemData.bedColor) {
-		specialIdentifier = itemData.bedColor;
-	} else {
-		return undefined;
-	}
-	specialIdentifier = prettyTypeId(specialIdentifier);
-	specialIdentifier = `${specialIdentifier.slice(0, 128)}${specialIdentifier.length > 128 ? "..." : ""}`;
-	return specialIdentifier;
-}
-
 function givexPrepareItemData(context: GivexContext): {
 	result: CustomCommandResult;
 	itemData: ItemData | undefined;
@@ -270,6 +254,22 @@ function getLocationOfSomeReciever(context: GivexContext): DimensionLocation | u
 		}
 	}
 	return undefined;
+}
+
+function givexGetSpecialIdentifier(itemData: ItemData): string | undefined {
+	let specialIdentifier: string = "";
+	if (itemData.potionType) {
+		specialIdentifier = itemData.potionType;
+	} else if (itemData.arrowType) {
+		specialIdentifier = itemData.arrowType;
+	} else if (itemData.bedColor) {
+		specialIdentifier = itemData.bedColor;
+	} else {
+		return undefined;
+	}
+	specialIdentifier = prettyTypeId(specialIdentifier);
+	specialIdentifier = `${specialIdentifier.slice(0, 128)}${specialIdentifier.length > 128 ? "..." : ""}`;
+	return specialIdentifier;
 }
 
 // Automatically runs givex, blockx, or spawnx based on type of context.recievers
