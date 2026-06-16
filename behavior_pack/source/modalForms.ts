@@ -114,7 +114,9 @@ export const GetStartedArgs: ModalFormArgs = {
 				const GetStarted = new ModalForm(GetStartedArgs);
 				GetStarted.show(viewer);
 			} else {
-				const newComponents: ModalFormComponent[] = [...GetStartedArgs.components];
+				const newComponents: ModalFormComponent[] = JSON.parse(
+					JSON.stringify(GetStartedArgs.components),
+				);
 				const textFieldComponent = newComponents[0];
 				if (textFieldComponent === undefined || textFieldComponent.type !== "textField") {
 					viewer.sendMessage("§cFailed to get text field component in next form.");
