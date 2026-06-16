@@ -30,6 +30,9 @@ export function getMcNamespace(typeId: string): string | undefined {
 }
 
 export function getRecieverName(reciever: Entity | Block): string {
+	if (!reciever.isValid) {
+		return "Unknown reciever";
+	}
 	if (reciever instanceof Block) {
 		return prettyTypeId(reciever.typeId);
 	} else if (reciever instanceof Player) {

@@ -48,12 +48,11 @@ export enum SlotName {
 
 export interface SlotData {
 	name: SlotName;
-	id: number;
+	id?: number;
 	keepOldItem: boolean;
 }
 export const SlotDataKeys = ["name", "id", "keepOldItem"];
 export const SlotDataKeepOldItemDefault: boolean = false;
-export const SlotDataIdDefault: number = 0;
 export const SlotDataNameDefault: SlotName = SlotName.Inventory;
 
 // As of MC v26.21, there's no official way to access tipped arrows besides item data values
@@ -167,8 +166,6 @@ export const ItemDataKeys = [
 	"canPlaceOn",
 	"canDestroy",
 ];
-export const ItemDataKeyCountMax: number = ItemDataKeys.length;
-export const ItemDataKeyCountMin: number = 2;
 export const ItemDataDefaultAmount: number = 1;
 // Matches max amount in vanilla /give
 export const ItemDataMaxAmount: number = 32767;
@@ -184,7 +181,7 @@ export interface GivexContext {
 	selectorName: string;
 	itemType: ItemType;
 	itemAmount: number;
-	json: string | undefined;
+	json?: string;
 }
 
 export interface FormTextComponent {

@@ -19,26 +19,30 @@ import {
 	EnchantDataKeys,
 	type ItemData,
 	ItemDataDefaultAmount,
-	ItemDataKeyCountMax,
 	ItemDataKeys,
 	ItemDataMaxAmount,
 	type ItemDurability,
 	MaxNameTagLength,
 	type SlotData,
-	SlotDataIdDefault,
 	SlotDataKeepOldItemDefault,
 	SlotDataKeys,
 	SlotDataNameDefault,
 	SlotName,
 } from "./types";
 
-function getInvalidKeyMessage(objKeys: string[], validKeys: string[]): string {
+function validateKeys(objKeys: string[], validKeys: string[]): BooleanWithMessage {
 	for (const key of objKeys) {
 		if (!validKeys.includes(key)) {
-			return `Invalid key "${key}". Valid options include:\n${validKeys.join(", ")}`;
+			return {
+				bool: false,
+				message: `Invalid key "${key}. Valid options include:\n${validKeys.join(", ")}"`,
+			};
 		}
 	}
-	return `Invalid key found. Valid options include:\n${validKeys.join(", ")}`;
+	return {
+		bool: true,
+		message: "Valid keys",
+	};
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: Type is validated through the function. Any is required here.
@@ -58,8 +62,9 @@ function isEnchantData(obj: any): obj is EnchantData {
 	if (typeof obj.level !== "number") {
 		throw new Error(`${obj.id} enchant.level must be a number`);
 	}
-	if (Object.keys(obj).length !== EnchantDataKeys.length) {
-		throw new Error(getInvalidKeyMessage(Object.keys(obj), EnchantDataKeys));
+	const keyValidationResult: BooleanWithMessage = validateKeys(Object.keys(obj), EnchantDataKeys);
+	if (!keyValidationResult.bool) {
+		throw new Error(keyValidationResult.message);
 	}
 	return true;
 }
@@ -88,11 +93,6 @@ function isSlotData(obj: any): obj is SlotData {
 	} else if (typeof obj.keepOldItem !== "boolean") {
 		throw new Error("slot.keepOldItem must be a boolean");
 	}
-	if (obj.id === undefined) {
-		obj.id = SlotDataIdDefault;
-	} else if (typeof obj.id !== "number") {
-		throw new Error("slot.id must be a number");
-	}
 	if (obj.name === undefined) {
 		obj.name = SlotDataNameDefault;
 	} else if (!Object.values(SlotName).includes(obj.name)) {
@@ -100,9 +100,13 @@ function isSlotData(obj: any): obj is SlotData {
 			`Invalid slot.name "${obj.name}". Valid values include:\n${Object.values(SlotName).join(", ")}`,
 		);
 	}
-	const objKeys = Object.keys(obj);
-	if (objKeys.length !== SlotDataKeys.length) {
-		throw new Error(getInvalidKeyMessage(objKeys, SlotDataKeys));
+	// Optional keys
+	if (obj.id !== undefined && typeof obj.id !== "number") {
+		throw new Error("slot.id must be a number");
+	}
+	const keyValidationResult: BooleanWithMessage = validateKeys(Object.keys(obj), SlotDataKeys);
+	if (!keyValidationResult.bool) {
+		throw new Error(keyValidationResult.message);
 	}
 	return true;
 }
@@ -128,7 +132,6 @@ function isItemData(obj: any): obj is ItemData {
 		throw new Error("itemData must be an Object");
 	}
 	// Keys with default values
-	let validKeysFound: number = 0;
 	if (obj.amount === undefined) {
 		obj.amount = ItemDataDefaultAmount;
 	} else if (typeof obj.amount !== "number") {
@@ -138,11 +141,6 @@ function isItemData(obj: any): obj is ItemData {
 			`The number you have entered (${obj.amount}) is too big, it must be at most ${ItemDataMaxAmount}`,
 		);
 	}
-	validKeysFound++;
-	const objKeys = Object.keys(obj);
-	if (objKeys.length > ItemDataKeyCountMax) {
-		throw new Error(getInvalidKeyMessage(objKeys, ItemDataKeys));
-	}
 	// Mandatory keys
 	if (obj.typeId === undefined) {
 		throw new Error(`ItemData requires "typeId"`);
@@ -150,7 +148,6 @@ function isItemData(obj: any): obj is ItemData {
 	if (typeof obj.typeId !== "string") {
 		throw new Error("typeId must be a string");
 	}
-	validKeysFound++;
 	// Optional keys
 	if (obj.lockMode !== undefined) {
 		if (!Object.values(ItemLockMode).includes(obj.lockMode)) {
@@ -158,13 +155,11 @@ function isItemData(obj: any): obj is ItemData {
 				`lockMode must be one of the following: ${Object.values(ItemLockMode)}`,
 			);
 		}
-		validKeysFound++;
 	}
 	if (obj.nameTag !== undefined) {
 		if (typeof obj.nameTag !== "string") {
 			throw new Error("nameTag must be a string");
 		}
-		validKeysFound++;
 	}
 	if (obj.durability !== undefined) {
 		if (
@@ -173,13 +168,11 @@ function isItemData(obj: any): obj is ItemData {
 		) {
 			throw new Error('Durability must be a number or the string "unbreakable"');
 		}
-		validKeysFound++;
 	}
 	if (obj.enchants !== undefined) {
 		if (!isEnchantDataArr(obj.enchants)) {
 			throw new Error("enchants must be an array of object EnchantData");
 		}
-		validKeysFound++;
 	}
 	if (obj.slot !== undefined) {
 		if (!isSlotData(obj.slot)) {
@@ -187,46 +180,40 @@ function isItemData(obj: any): obj is ItemData {
 				"slot must be an object containing name, id and optionally keepOldItem",
 			);
 		}
-		validKeysFound++;
 	}
 	if (obj.potionType !== undefined) {
 		if (typeof obj.potionType !== "string") {
 			throw new Error("potionType must be a string");
 		}
-		validKeysFound++;
 	}
 	if (obj.arrowType !== undefined) {
 		if (typeof obj.arrowType !== "string") {
 			throw new Error("arrowType must be a string");
 		}
-		validKeysFound++;
 	}
 	if (obj.bedColor !== undefined) {
 		if (typeof obj.bedColor !== "string") {
 			throw new Error("bedColor must be a string");
 		}
-		validKeysFound++;
 	}
 	if (obj.keepOnDeath !== undefined) {
 		if (typeof obj.keepOnDeath !== "boolean") {
 			throw new Error("keepOnDeath must be a boolean");
 		}
-		validKeysFound++;
 	}
 	if (obj.canPlaceOn !== undefined) {
 		if (!isStringArray(obj.canPlaceOn, "canPlaceOn")) {
 			throw new Error("canPlaceOn must be an array of strings");
 		}
-		validKeysFound++;
 	}
 	if (obj.canDestroy !== undefined) {
 		if (!isStringArray(obj.canDestroy, "canDestroy")) {
 			throw new Error("canDestroy must be an array of strings");
 		}
-		validKeysFound++;
 	}
-	if (objKeys.length !== validKeysFound) {
-		throw new Error(getInvalidKeyMessage(objKeys, ItemDataKeys));
+	const keyValidationResult: BooleanWithMessage = validateKeys(Object.keys(obj), ItemDataKeys);
+	if (!keyValidationResult.bool) {
+		throw new Error(keyValidationResult.message);
 	}
 	return true;
 }
@@ -440,7 +427,7 @@ export const ItemDataValidation = {
 			};
 		}
 		// Skipping max slot.id. Container size varies.
-		if (!Number.isInteger(value.id) || value.id < 0) {
+		if (value.id !== undefined && (!Number.isInteger(value.id) || value.id < 0)) {
 			return {
 				bool: false,
 				message: `Slot id must be an integer greater than or equal to 0`,

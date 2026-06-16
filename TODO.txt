@@ -1,5 +1,3 @@
 Look in to slot.armor.body
 
-Change behavior of slotdata when id is not given. Give to first empty slot within range of slotname.
-
 Help command (server-ui)

@@ -64,7 +64,8 @@ function givexFormatMessage(
 	context: GivexContext,
 	successCount: number,
 	errors: string,
-	specialIdentifier: string | undefined,
+	specialIdentifier?: string,
+	slot?: SlotData,
 ): string {
 	let message: string = "";
 	let itemName: string = prettyTypeId(context.itemType.id);
@@ -75,20 +76,26 @@ function givexFormatMessage(
 	let actionWordPresentTense: string = "";
 	let wordBeforeSelectorName: string = "";
 	if (context.commandName === "givex" || context.commandName === "blockx") {
-		actionWordPastTense = "Gave";
-		actionWordPresentTense = "give";
-		wordBeforeSelectorName = "to";
+		if (slot === undefined || slot.name === undefined) {
+			actionWordPastTense = "Gave";
+			actionWordPresentTense = "give";
+			wordBeforeSelectorName = "to";
+		} else {
+			actionWordPastTense = "Set";
+			actionWordPresentTense = "set";
+			wordBeforeSelectorName = `in ${slot.name} for`;
+		}
 	} else if (context.commandName === "spawnx") {
 		actionWordPastTense = "Spawned";
 		actionWordPresentTense = "spawn";
 		wordBeforeSelectorName = "at";
 	}
 	if (successCount === context.recievers.length) {
-		message = `${actionWordPastTense} ${itemName}§r * ${context.itemAmount} ${wordBeforeSelectorName} ${context.selectorName}§r`;
+		message = `${actionWordPastTense} ${itemName} * ${context.itemAmount} ${wordBeforeSelectorName} ${context.selectorName}§r`;
 	} else if (successCount > 0) {
-		message = `${actionWordPastTense} ${itemName}§r * ${context.itemAmount} ${wordBeforeSelectorName} ${context.selectorName}§r\n§6However, failed to ${actionWordPresentTense} ${wordBeforeSelectorName} ${context.recievers.length - successCount}/${context.recievers.length}`;
+		message = `${actionWordPastTense} ${itemName} * ${context.itemAmount} ${wordBeforeSelectorName} ${context.selectorName}§r\n§6However, this failed for ${context.recievers.length - successCount}/${context.recievers.length} selectors`;
 	} else {
-		message = `§cUnable to ${actionWordPresentTense} ${itemName}§r§c ${wordBeforeSelectorName} ${context.selectorName}§r§c`;
+		message = `§cUnable to ${actionWordPresentTense} ${itemName} ${wordBeforeSelectorName} ${context.selectorName}§r`;
 	}
 	if (errors) {
 		message += `\n§cError(s):\n${errors.slice(0, 1024)}${errors.length > 1024 ? "...\n" : ""}`;
@@ -151,7 +158,7 @@ function givexGiveItemStack(
 		}
 	}
 	return {
-		message: givexFormatMessage(context, successCount, errors, specialIdentifier),
+		message: givexFormatMessage(context, successCount, errors, specialIdentifier, slot),
 		status: successCount > 0 ? CustomCommandStatus.Success : CustomCommandStatus.Failure,
 	};
 }
@@ -164,6 +171,7 @@ function givexGiveItemType(context: GivexContext): CustomCommandResult {
 				context,
 				0,
 				`Amount ${context.itemAmount} exceeds the maximum of ${itemStack.maxAmount} for ${prettyTypeId(itemStack.typeId)}`,
+				undefined,
 				undefined,
 			),
 			status: CustomCommandStatus.Failure,
@@ -190,7 +198,13 @@ function givexPrepareItemData(context: GivexContext): {
 		return {
 			itemData: undefined,
 			result: {
-				message: givexFormatMessage(context, 0, `Invalid item type "Air"`, undefined),
+				message: givexFormatMessage(
+					context,
+					0,
+					`Invalid item type "Air"`,
+					undefined,
+					undefined,
+				),
 				status: CustomCommandStatus.Failure,
 			},
 		};
@@ -213,6 +227,7 @@ function givexPrepareItemData(context: GivexContext): {
 					0,
 					itemDataResult.syntaxError ?? "Unknown error in your json. (sorry)",
 					undefined,
+					undefined,
 				),
 				status: CustomCommandStatus.Failure,
 			},
@@ -224,7 +239,13 @@ function givexPrepareItemData(context: GivexContext): {
 		return {
 			itemData: undefined,
 			result: {
-				message: givexFormatMessage(context, 0, validationResult.message, undefined),
+				message: givexFormatMessage(
+					context,
+					0,
+					validationResult.message,
+					undefined,
+					itemData.slot,
+				),
 				status: CustomCommandStatus.Failure,
 			},
 		};
@@ -384,7 +405,7 @@ export function blockxGetBlock(
 		return {
 			block: undefined,
 			result: {
-				message: givexFormatMessage(context, 0, blockErrorMessage, undefined),
+				message: givexFormatMessage(context, 0, blockErrorMessage, undefined, undefined),
 				status: CustomCommandStatus.Failure,
 			},
 		};
