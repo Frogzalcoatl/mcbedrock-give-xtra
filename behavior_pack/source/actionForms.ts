@@ -1,6 +1,6 @@
 import { type Player, type RawMessage, system } from "@minecraft/server";
 import { ActionFormData } from "@minecraft/server-ui";
-import { GetStartedArgs, ModalForm } from "./modalForms";
+import { FormGetStartedArgs, ModalForm } from "./modalForms";
 import type { ActionFormButton, ActionFormComponent } from "./types";
 
 export function styleButtonText(text: string): string {
@@ -79,13 +79,13 @@ export class ActionForm {
 	}
 }
 
-export const HelpForm = new ActionForm({
+export const FormHelp = new ActionForm({
 	body: "Expansion of Minecraft Bedrock's /give command including item names, enchantments, and more.",
 	components: [
 		{
 			addStyling: true,
 			callback: async (viewer: Player) => {
-				const GetStarted = new ModalForm(GetStartedArgs);
+				const GetStarted = new ModalForm(FormGetStartedArgs);
 				GetStarted.show(viewer);
 			},
 			text: "Get Started",
@@ -97,7 +97,7 @@ export const HelpForm = new ActionForm({
 		{
 			addStyling: true,
 			callback: async (viewer: Player) => {
-				WikiForm.show(viewer);
+				FormWiki.show(viewer);
 			},
 			text: "Wiki",
 			type: "button",
@@ -105,7 +105,7 @@ export const HelpForm = new ActionForm({
 		{
 			addStyling: true,
 			callback: async (viewer: Player) => {
-				CreditsForm.show(viewer);
+				FormCredits.show(viewer);
 			},
 			text: "Credits",
 			type: "button",
@@ -114,14 +114,14 @@ export const HelpForm = new ActionForm({
 	title: "Givex Help",
 });
 
-const CreditsForm = new ActionForm({
+const FormCredits = new ActionForm({
 	// \n for spacing
 	body: "Programming: §eFrogzalcoatl\n§rProject Setup: §eSunnyTheFennec\n\n\n\n\n\n\n\n\n\n§r",
 	components: [
 		{
 			addStyling: true,
 			callback: async (viewer: Player) => {
-				HelpForm.show(viewer);
+				FormHelp.show(viewer);
 			},
 			text: "Back",
 			type: "button",
@@ -130,12 +130,12 @@ const CreditsForm = new ActionForm({
 	title: "Credits",
 });
 
-const WikiForm = new ActionForm({
+const FormWiki = new ActionForm({
 	components: [
 		{
 			addStyling: true,
 			callback: async (viewer: Player) => {
-				HelpForm.show(viewer);
+				FormHelp.show(viewer);
 			},
 			text: "Back",
 			type: "button",

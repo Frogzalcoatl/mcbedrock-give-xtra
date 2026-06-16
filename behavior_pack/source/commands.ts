@@ -13,10 +13,11 @@ import {
 	system,
 	type Vector3,
 } from "@minecraft/server";
-import { HelpForm } from "./actionForms";
+import { FormHelp } from "./actionForms";
 import { blockxGetBlock, getDimensionFromOrigin, givexRun } from "./givex";
 import { getRecieverName, prettyTypeId, vector3ToString } from "./prettyTypeId";
 import type { GivexContext } from "./types";
+import { FormGetStartedArgs, getTemplateItemDataContext, ModalForm } from "./modalForms";
 
 const NAMESPACE: string = "givex";
 
@@ -226,11 +227,28 @@ export function helpCommandCallback(
 			status: CustomCommandStatus.Failure,
 		};
 	}
-	system.run(async () => {
-		viewer.playSound("random.pop", { pitch: 0.5, volume: 0.3 });
-		HelpForm.show(viewer);
-	});
-	return {
-		status: CustomCommandStatus.Success,
-	};
+	if (itemType === undefined) {
+		system.run(async () => {
+			viewer.playSound("random.pop", { pitch: 0.5, volume: 0.3 });
+			FormHelp.show(viewer);
+		});
+		return {
+			status: CustomCommandStatus.Success,
+		};
+	} else if (itemType.id === "minecraft:air") {
+		// Accessing an itemStack with type air crashes the world
+		return {
+			message: 'Invalid itemType "air"',
+			status: CustomCommandStatus.Failure
+		}
+	} else {
+		system.run(async () => {
+			viewer.playSound("random.pop", { pitch: 0.5, volume: 0.3 });
+			const FormGetStarted = new ModalForm(FormGetStartedArgs);
+			FormGetStarted.submitButton.callback(viewer, [itemType.id], getTemplateItemDataContext());
+		})
+		return {
+			status: CustomCommandStatus.Success,
+		};
+	}
 }

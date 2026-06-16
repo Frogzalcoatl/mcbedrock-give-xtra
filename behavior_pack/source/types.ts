@@ -175,8 +175,10 @@ export const ItemDataMaxAmount: number = 32767;
 // 255 is the max item nametag length as stated in index.d.ts. Going by 253 since I automatically add §r to the start of nametag to avoid italicization.
 export const MaxNameTagLength: number = 253;
 
+type CommandName = "givex" | "blockx" | "spawnx"
+
 export interface GivexContext {
-	commandName: "givex" | "blockx" | "spawnx";
+	commandName: CommandName;
 	origin: CustomCommandOrigin;
 	recievers: Entity[] | Block[] | DimensionLocation[];
 	selectorName: string;
@@ -209,6 +211,7 @@ export interface ModalFormButton extends FormButton {
 	callback: (
 		viewer: Player,
 		formValues: (boolean | number | string | undefined)[],
+		context: ItemDataCreationContext,
 	) => Promise<void>;
 }
 
@@ -249,3 +252,15 @@ export type ModalFormComponent =
 	| ModalFormSliderComponent
 	| ModalFormTextFieldComponent
 	| ModalFormToggleComponent;
+
+interface CommandVector3 {
+	x: number | "~";
+	y: number | "~";
+	z: number | "~";
+}
+
+export interface ItemDataCreationContext {
+	data: ItemData;
+	commandName: CommandName;
+	location: CommandVector3;
+}
