@@ -1,19 +1,19 @@
-import { type Player, type RawMessage, system } from "@minecraft/server";
+import { type Player, type RawMessage, RawMessageError, system } from "@minecraft/server";
 import { ModalFormData } from "@minecraft/server-ui";
 import { styleButtonText } from "./actionForms";
 import { ItemDataValidation } from "./itemData";
 import type { ModalFormButton, ModalFormComponent } from "./types";
 
 export interface ModalFormArgs {
-	readonly title: RawMessage | string;
-	readonly submitButton: ModalFormButton;
 	readonly components: ModalFormComponent[];
+	readonly submitButton: ModalFormButton;
+	readonly title: RawMessage | string;
 }
 
 export class ModalForm {
-	public title: RawMessage | string;
-	public submitButton: ModalFormButton;
 	public components: ModalFormComponent[];
+	public submitButton: ModalFormButton;
+	public title: RawMessage | string;
 	constructor(args: ModalFormArgs) {
 		this.title = args.title;
 		this.components = args.components;
@@ -93,7 +93,7 @@ export class ModalForm {
 export const GetStartedArgs: ModalFormArgs = {
 	components: [
 		{
-			label: "§lWhat item would you like to give?§r\n\nEnter type ID:",
+			label: "§lWhat item would you like to use?§r\n\nEnter type ID:",
 			type: "textField",
 		},
 		{
@@ -122,7 +122,7 @@ export const GetStartedArgs: ModalFormArgs = {
 					viewer.sendMessage("§cFailed to get text field component in next form.");
 					return;
 				}
-				textFieldComponent.label = `§lWhat item would you like to give?§r\n\n§cInvalid type ID: "${typeId}"§r\nEnter type ID:`;
+				textFieldComponent.label = `§lWhat item would you like to use?§r\n\n§cInvalid type ID: "${typeId}"§r\nEnter type ID:`;
 				textFieldComponent.options = {
 					defaultValue: `${typeId}`,
 				};
@@ -137,7 +137,27 @@ export const GetStartedArgs: ModalFormArgs = {
 			}
 		},
 		text: "Submit",
-		type: "button",
 	},
 	title: "Get Started",
 };
+
+const SelectCommandType = new ModalForm({
+	components: [
+		{
+			label: "What would you like to do with the item?",
+			type: "dropdown",
+			items: ["Give to Player", "Give to Block (e.g: Chest), Spawn as Item Entity"]
+		}
+	],
+	submitButton: {
+		addStyling: true,
+		callback: async (viewer, formValues) => {
+			const selection = formValues[0];
+			if (selection === undefined) {
+				return;
+			}
+		},
+		text: "Submit"
+	},
+	title: "Select Command Type",
+});

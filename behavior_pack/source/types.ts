@@ -197,12 +197,12 @@ export interface FormDividerComponent {
 export interface FormButton {
 	addStyling: boolean;
 	text: RawMessage | string;
-	type: "button";
 }
 
 export interface ActionFormButton extends FormButton {
 	callback: (viewer: Player) => Promise<void>;
 	iconPath?: string;
+	type: "button";
 }
 
 export interface ModalFormButton extends FormButton {
