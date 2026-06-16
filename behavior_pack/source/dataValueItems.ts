@@ -1,132 +1,38 @@
 import {
-	Block,
-	type CommandResult,
-	type Container,
+	type Dimension,
+	type DimensionLocation,
 	type Entity,
+	EntityComponentTypes,
+	type EntityInventoryComponent,
 	ItemComponentTypes,
-	ItemLockMode,
 	type ItemStack,
-	Player,
+	type Vector3,
 } from "@minecraft/server";
-import { vector3ToString } from "./prettyTypeId";
-import {
-	ArrowEffectSartingDataValue,
-	ArrowEffectTypes,
-	BedColors,
-	type BooleanWithMessage,
-	SlotName,
-} from "./types";
+import type { BooleanWithMessage } from "./types";
 
-export function getItemCommandDataValue(typeId: string, dataId: string | undefined): number {
-	// npcs are the only spawn egg that still use data values. The rest have their own type id. Just redirect all references of the old spawn egg typeid to npc.
-	if (typeId === "minecraft:spawn_egg") {
-		return 51;
-	}
-	// The rest require a dataId: ex arrowType, bedColor
-	if (dataId === undefined) {
-		return 0;
-	}
-	if (typeId === "minecraft:arrow") {
-		const arrowEffectResult: number = ArrowEffectTypes.indexOf(dataId);
-		if (arrowEffectResult !== -1) {
-			return arrowEffectResult + ArrowEffectSartingDataValue;
-		}
-	} else if (typeId === "minecraft:bed") {
-		const bedColorResult = BedColors.indexOf(dataId);
-		if (bedColorResult !== -1) {
-			return bedColorResult;
-		}
-	}
-	return 0;
-}
+const CustomContainerEntityType = "givex:custom_container";
 
-// Inventory and hotbar are separated for replaceitem command, so id is handled differently than in @minecraft/server functions.
-function getCommandSlotData(slotId: number): { slotName: string; id: number } {
-	if (slotId <= 8) {
+function removeEntity(entity: Entity): BooleanWithMessage {
+	try {
+		entity.remove();
+	} catch (error) {
+		let message: string = "Unable to remove entity";
+		if (error instanceof Error) {
+			message += `: ${error.message}`;
+		}
 		return {
-			id: slotId,
-			slotName: SlotName.Hotbar,
-		};
-	} else {
-		return {
-			id: slotId - 9,
-			slotName: SlotName.Inventory,
+			bool: false,
+			message: message,
 		};
 	}
-}
-
-// Returns formatted can_destroy, item_lock, keep_on_death, and/or item_lock json for /give and /replaceitem
-function getCommandJson(item: ItemStack): string {
-	const canPlaceOn = item.getCanPlaceOn();
-	const canDestroy = item.getCanDestroy();
-	if (!item.keepOnDeath && canPlaceOn.length === 0 && canDestroy.length === 0) {
-		return "";
-	}
-	let str: string = "{";
-	if (item.keepOnDeath) {
-		// For some reason its an empty object instead of a boolean.
-		str += '"keep_on_death":{},';
-	}
-	if (canPlaceOn.length > 0) {
-		str += '"can_place_on":{"blocks":[';
-		for (const block of canPlaceOn) {
-			str += `"${block}",`;
-		}
-		// Remove final comma and add closing brackets
-		str = `${str.slice(0, str.length - 1)}]},`;
-	}
-	if (canDestroy.length > 0) {
-		str += '"can_destroy":{"blocks":[';
-		for (const block of canDestroy) {
-			str += `"${block}",`;
-		}
-		// Remove final comma and add closing brackets
-		str = `${str.slice(0, str.length - 1)}]},`;
-	}
-	if (item.lockMode !== ItemLockMode.none) {
-		str += `"item_lock":{"mode":"`;
-		if (item.lockMode === ItemLockMode.inventory) {
-			str += "lock_in_inventory";
-		} else {
-			str += "lock_in_slot";
-		}
-		str += `"},`;
-	}
-	// Remove final comma and add closing bracket
-	str = `${str.slice(0, str.length - 1)}}`;
-	// Final bracket is valid syntax despite the color being off on vscode
-	return str;
-}
-
-export function runReplaceItemCommand(
-	reciever: Entity | Block,
-	item: ItemStack,
-	slotName: string,
-	slotId: number,
-	dataValue: number,
-): boolean {
-	let commandResult: CommandResult;
-	if (reciever instanceof Block) {
-		commandResult = reciever.dimension.runCommand(
-			`/replaceitem block ${vector3ToString(reciever.location, 3)} slot.container ${slotId} ${item.typeId} ${item.amount} ${dataValue} ${getCommandJson(item)}`,
-		);
-	} else {
-		if (slotName === SlotName.Inventory) {
-			if (reciever instanceof Player) {
-				const result = getCommandSlotData(slotId);
-				slotId = result.id;
-				slotName = result.slotName;
-			}
-		}
-		commandResult = reciever.runCommand(
-			`/replaceitem entity @s ${slotName} ${slotId} ${item.typeId} ${item.amount} ${dataValue} ${getCommandJson(item)}`,
-		);
-	}
-	return commandResult.successCount > 0;
+	return {
+		bool: true,
+		message: "Removed entity",
+	};
 }
 
 // Only returns false when it fails to copy enchants
-export function copyItemStackProperties(from: ItemStack, to: ItemStack): BooleanWithMessage {
+function copyItemStackProperties(from: ItemStack, to: ItemStack): BooleanWithMessage {
 	to.lockMode = from.lockMode;
 	if (from.nameTag) {
 		to.nameTag = from.nameTag;
@@ -159,49 +65,91 @@ export function copyItemStackProperties(from: ItemStack, to: ItemStack): Boolean
 	};
 }
 
-// Returns itemStack of given item (with data value attached internally)
-export function setDataValueItemInContainer(
-	reciever: Entity | Block,
-	container: Container,
+// Cannot be run in restricted execution
+// Uses /give on a custom entity for data value, applies properties of itemstack, then returns new itemstack with data value attached internally.
+export function getDataValueItem(
 	item: ItemStack,
-	slotId: number,
 	dataValue: number,
-): { bool: boolean; message: string; itemStack: ItemStack | undefined } {
-	const replaceItemResult = runReplaceItemCommand(
-		reciever,
-		item,
-		SlotName.Inventory,
-		slotId,
-		dataValue,
+	locationForCustomEntity: DimensionLocation,
+): { item: ItemStack | undefined; message: string } {
+	if (dataValue === 0) {
+		return {
+			item: item,
+			message: "Returned same item stack with data value 0",
+		};
+	}
+	const dimension: Dimension = locationForCustomEntity.dimension;
+	const location: Vector3 = {
+		x: locationForCustomEntity.x,
+		y: locationForCustomEntity.y,
+		z: locationForCustomEntity.z,
+	};
+	let containerEntity: Entity;
+	try {
+		containerEntity = dimension.spawnEntity(CustomContainerEntityType, location);
+	} catch (error) {
+		let message: string = "Unable to spawn container entity";
+		if (error instanceof Error) {
+			message += `: ${error.message}`;
+		}
+		return {
+			item: undefined,
+			message: message,
+		};
+	}
+	const inventory: EntityInventoryComponent | undefined = containerEntity.getComponent(
+		EntityComponentTypes.Inventory,
 	);
-	if (!replaceItemResult) {
+	if (inventory === undefined || !inventory.isValid || !inventory.container.isValid) {
+		let message: string = "Unable to get valid inventory of container entity";
+		const removalResult: BooleanWithMessage = removeEntity(containerEntity);
+		if (!removalResult.bool) {
+			message += `\nAdditionally ${removalResult.message}`;
+		}
 		return {
-			bool: false,
-			itemStack: undefined,
-			message: `Failed to run replaceitem on ${item.typeId} with data value ${dataValue}`,
+			item: undefined,
+			message: message,
 		};
 	}
-	if (!container.isValid || slotId < 0 || slotId >= container.size) {
+	try {
+		containerEntity.runCommand(
+			`/replaceitem entity @s slot.inventory 0 ${item.typeId} ${item.amount} ${dataValue}`,
+		);
+	} catch (error) {
+		let message: string = "Unable to run /give command on container entity";
+		if (error instanceof Error) {
+			message += `: ${error.message}`;
+		}
+		const removalResult: BooleanWithMessage = removeEntity(containerEntity);
+		if (!removalResult.bool) {
+			message += `\nAdditionally ${removalResult.message}`;
+		}
 		return {
-			bool: false,
-			itemStack: undefined,
-			message: "Invalid container or slotId",
+			item: undefined,
+			message: message,
 		};
 	}
-	const givenItem = container.getItem(slotId);
-	if (givenItem === undefined) {
+	// Container only has a single slot, so this should be the data value item recieved by the /give command
+	const dataValueItem: ItemStack | undefined = inventory.container.getItem(0);
+	if (dataValueItem === undefined) {
+		let message: string = "Unable to retrieve data value itemstack from container entity";
+		const removalResult: BooleanWithMessage = removeEntity(containerEntity);
+		if (!removalResult.bool) {
+			message += `\nAdditionally ${removalResult.message}`;
+		}
 		return {
-			// Returning true since the item was still technically given, just doesn't have any special properties.
-			bool: true,
-			itemStack: undefined,
-			message: `Unable to get ${item.typeId} with data value ${dataValue} given by replaceitem`,
+			item: undefined,
+			message: message,
 		};
 	}
-	copyItemStackProperties(item, givenItem);
-	container.setItem(slotId, givenItem);
+	copyItemStackProperties(item, dataValueItem);
+	let message: string = "Successfully got data value item";
+	const removalResult: BooleanWithMessage = removeEntity(containerEntity);
+	if (!removalResult.bool) {
+		message += `\nHowever, ${removalResult.message}`;
+	}
 	return {
-		bool: true,
-		itemStack: givenItem,
-		message: `Gave ${givenItem.typeId} with data value ${dataValue}`,
+		item: dataValueItem,
+		message: message,
 	};
 }

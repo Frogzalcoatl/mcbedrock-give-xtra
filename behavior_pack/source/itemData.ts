@@ -11,6 +11,7 @@ import {
 } from "@minecraft/server";
 import { getMcNamespace } from "./prettyTypeId";
 import {
+	ArrowEffectSartingDataValue,
 	ArrowEffectTypes,
 	BedColors,
 	type BooleanWithMessage,
@@ -706,3 +707,22 @@ export const ItemDataValidation = {
 		};
 	},
 };
+
+// For arrowType, bedColor, etc
+export function getCommandDataValue(itemData: ItemData): number {
+	if (itemData.arrowType && itemData.typeId === "minecraft:arrow") {
+		const arrowEffectResult: number = ArrowEffectTypes.indexOf(itemData.arrowType);
+		if (arrowEffectResult !== -1) {
+			return arrowEffectResult + ArrowEffectSartingDataValue;
+		}
+	} else if (itemData.bedColor && itemData.typeId === "minecraft:bed") {
+		const bedColorResult = BedColors.indexOf(itemData.bedColor);
+		if (bedColorResult !== -1) {
+			return bedColorResult;
+		}
+	} else if (itemData.typeId === "minecraft:spawn_egg") {
+		// npcs are the only spawn egg that still use data values. The rest have their own type id. Just redirect all references of the old spawn egg typeid to npc.
+		return 51;
+	}
+	return 0;
+}

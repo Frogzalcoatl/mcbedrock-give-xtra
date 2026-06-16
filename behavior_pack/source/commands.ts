@@ -81,7 +81,7 @@ export function givexCommandCallback(
 		recievers: selectorResult,
 		selectorName: getSelectorName(selectorResult),
 	};
-	return givexRun(context, false);
+	return givexRun(context);
 }
 
 export const BLOCKX_COMMAND: CustomCommand = {
@@ -132,7 +132,7 @@ export function blockxCommandCallback(
 	}
 	context.recievers = [blockResult.block];
 	context.selectorName = getSelectorName(blockResult.block);
-	return givexRun(context, false);
+	return givexRun(context);
 }
 
 export const SPAWNX_COMMAND: CustomCommand = {
@@ -189,7 +189,7 @@ export function spawnxCommandCallback(
 			z: position.z,
 		},
 	];
-	return givexRun(context, true);
+	return givexRun(context);
 }
 
 // Use server ui to easily generate item data json

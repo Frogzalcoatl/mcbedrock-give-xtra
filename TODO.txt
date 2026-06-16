@@ -1,4 +1,3 @@
-itemdata handling for spawn item entity. Use this for the dataValueItem functions too if possible.
-	Add custom entity with inventory for data value itemstacks
+Code cleanup
 
 Help command (server-ui)

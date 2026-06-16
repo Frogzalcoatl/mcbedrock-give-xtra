@@ -1,4 +1,5 @@
 import {
+	type DimensionLocation,
 	type Enchantment,
 	EnchantmentLevelOutOfBoundsError,
 	EnchantmentTypeNotCompatibleError,
@@ -10,7 +11,8 @@ import {
 	ItemStack,
 	Potions,
 } from "@minecraft/server";
-import { ItemDataValidation, itemTypeToPotionDeliveryType } from "./itemData";
+import { getDataValueItem } from "./dataValueItems";
+import { getCommandDataValue, ItemDataValidation, itemTypeToPotionDeliveryType } from "./itemData";
 import type { BooleanWithMessage, EnchantData, ItemData, ItemDurability } from "./types";
 
 export function applyDurability(item: ItemStack, value: ItemDurability): BooleanWithMessage {
@@ -140,7 +142,11 @@ function createPotionItem(
 	};
 }
 
-export function dataToStack(data: ItemData): {
+// Cannot be run in restricted execution
+export function dataToStack(
+	data: ItemData,
+	locationOfReciever: DimensionLocation,
+): {
 	item: ItemStack | undefined;
 	warning: string | undefined;
 } {
@@ -254,6 +260,15 @@ export function dataToStack(data: ItemData): {
 			} else {
 				warning += "Unable to set canDestroy\n";
 			}
+		}
+	}
+	const dataValue: number = getCommandDataValue(data);
+	if (dataValue !== 0) {
+		const dataValueResult = getDataValueItem(itemStack, dataValue, locationOfReciever);
+		if (dataValueResult.item !== undefined) {
+			itemStack = dataValueResult.item;
+		} else {
+			warning += `Unable to apply data value ${dataValue} to item.\n${dataValueResult.message}\n`;
 		}
 	}
 	return {
