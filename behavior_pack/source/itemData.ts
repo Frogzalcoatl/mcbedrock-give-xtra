@@ -288,16 +288,19 @@ export function parseJsonArg(
 	};
 }
 
+const SlotsAlwaysEquippable: SlotName[] = [
+	SlotName.Inventory,
+	SlotName.MobChest,
+	SlotName.Mainhand,
+	SlotName.Hotbar,
+	SlotName.Saddle, // Surprisingly anything can go in the saddle slot. No point in limiting it to saddles
+	SlotName.Armor,
+	SlotName.Offhand, // No good way to check this with custom items
+	SlotName.EndChest,
+];
+
 function canEquipInSlot(itemStack: ItemStack, targetSlot: SlotName): boolean {
-	if (
-		targetSlot === SlotName.Inventory ||
-		targetSlot === SlotName.MobChest ||
-		targetSlot === SlotName.Mainhand ||
-		targetSlot === SlotName.Hotbar ||
-		targetSlot === SlotName.Saddle ||
-		targetSlot === SlotName.Armor ||
-		targetSlot === SlotName.Offhand // No good way to check this with custom items
-	) {
+	if (SlotsAlwaysEquippable.includes(targetSlot)) {
 		// All items can go inside the above SlotNames
 		return true;
 	}

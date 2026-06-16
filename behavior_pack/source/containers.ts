@@ -4,6 +4,7 @@ import {
 	type Container,
 	type Entity,
 	EntityComponentTypes,
+	type EntityEnderInventoryComponent,
 	EquipmentSlot,
 	type ItemStack,
 	Player,
@@ -278,6 +279,23 @@ function replaceItemEquippable(
 	};
 }
 
+function replaceItemEndChest(entity: Entity, item: ItemStack, slot: SlotData): BooleanWithMessage {
+	const enderInventory: EntityEnderInventoryComponent | undefined = entity.getComponent(
+		EntityComponentTypes.EnderInventory,
+	);
+	if (
+		enderInventory === undefined ||
+		!enderInventory.isValid ||
+		!enderInventory.container.isValid
+	) {
+		return {
+			bool: false,
+			message: `Unable to get valid ender inventory from ${getRecieverName(entity)}`,
+		};
+	}
+	return setItemInSlot(entity, enderInventory.container, item, slot.id, slot.keepOldItem);
+}
+
 // Cannot be run in restricted execution
 export function giveItemToEntity(
 	entity: Entity,
@@ -318,6 +336,8 @@ export function giveItemToEntity(
 		case SlotName.Mainhand:
 		case SlotName.Offhand:
 			return replaceItemEquippable(entity, item, slot);
+		case SlotName.EndChest:
+			return replaceItemEndChest(entity, item, slot);
 	}
 }
 

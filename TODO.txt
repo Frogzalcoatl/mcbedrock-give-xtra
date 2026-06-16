@@ -1,3 +1,5 @@
-Look in to the new EntityEnderInventoryComponent added in @minecraft/server v2.8.0
+Look in to slot.armor.body
+
+Change behavior of slotdata when id is not given. Give to first empty slot within range of slotname.
 
 Help command (server-ui)

@@ -29,7 +29,6 @@ export interface EnchantData {
 export const EnchantDataKeys: string[] = ["id", "level"];
 
 // Based on /replaceitem command slots.
-// Excluding slot.endchest. Cannot be accessed with scripting yet.
 // Excluding slot.armor.body. Used for wolf armor but cannot be accessed.
 // Excluding slot.equippable. I think its for custom items but I'm not sure how it works. Might come back to this.
 export enum SlotName {
@@ -44,6 +43,7 @@ export enum SlotName {
 	MobChest = "slot.chest", // Donkeys, Mules, Llamas
 	Armor = "slot.armor", // Used for horse armor
 	Saddle = "slot.saddle", // Used for horses, llamas (carpet), donkeys, etc.
+	EndChest = "slot.endchest",
 }
 
 export interface SlotData {
@@ -175,7 +175,7 @@ export const ItemDataMaxAmount: number = 32767;
 // 255 is the max item nametag length as stated in index.d.ts. Going by 253 since I automatically add §r to the start of nametag to avoid italicization.
 export const MaxNameTagLength: number = 253;
 
-type CommandName = "givex" | "blockx" | "spawnx"
+type CommandName = "givex" | "blockx" | "spawnx";
 
 export interface GivexContext {
 	commandName: CommandName;
