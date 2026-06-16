@@ -1,2 +1,6 @@
 allowBuilds:
   esbuild: true
+minimumReleaseAgeExclude:
+  - '@minecraft/server@2.8.0'
+  - '@minecraft/server-ui@2.1.0'
+  - '@minecraft/vanilla-data@1.26.30'
