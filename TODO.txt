@@ -1,1 +1,3 @@
+Look in to the new EntityEnderInventoryComponent added in @minecraft/server v2.8.0
+
 Help command (server-ui)
