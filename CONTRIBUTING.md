@@ -15,7 +15,7 @@ You need the following utilities installed: [pnpm](https://pnpm.io/), [node LTS]
 ## Setup
 1. Clone the repository.
 
-	Open a terminal in that directory and clone your repository.
+	Open a terminal and clone this repository.
 	```sh
 	git clone https://github.com/Frogzalcoatl/mcbedrock-give-xtra.git
 	cd mcbedrock-give-xtra
@@ -46,7 +46,7 @@ You need the following utilities installed: [pnpm](https://pnpm.io/), [node LTS]
 ## Commands
 - ``pnpm run watch`` Cleans the output directory and automatically recompiles scripts when files are modified. Use this while developing.
 - ``pnpm run build`` Performs a single production build.
-- ``pnpm run pack`` Builds code and packs all necessary files into a addon.mcpack.
+- ``pnpm run pack`` Builds code and packs all necessary files into a .mcaddon archive.
 - ``pnpm run clean`` Remotes temporary files.
 
 # Post-setup instructions.
