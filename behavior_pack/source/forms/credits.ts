@@ -1,8 +1,8 @@
 import { type Player, system } from "@minecraft/server";
-import { ActionForm } from "./actionForms";
 import { FormHelp } from "./help";
+import { ActionForm, showActionForm } from "./types";
 
-export const FormCredits = new ActionForm({
+export const FormCredits: ActionForm = {
 	// \n for spacing
 	body: "Programming: §eFrogzalcoatl\n§rProject Setup: §eSunnyTheFennec\n\n\n\n\n\n\n\n\n\n§r",
 	components: [
@@ -10,7 +10,7 @@ export const FormCredits = new ActionForm({
 			addStyling: true,
 			async callback(player: Player): Promise<void> {
 				system.run(async () => {
-					FormHelp.show(player);
+					showActionForm(FormHelp, player);
 				});
 			},
 			text: "Back",
@@ -18,4 +18,4 @@ export const FormCredits = new ActionForm({
 		},
 	],
 	title: "Credits",
-});
+};

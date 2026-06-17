@@ -5,15 +5,7 @@ import type {
 	Entity,
 	ItemLockMode,
 	ItemType,
-	Player,
-	RawMessage,
 } from "@minecraft/server";
-import type {
-	ModalFormDataDropdownOptions,
-	ModalFormDataSliderOptions,
-	ModalFormDataTextFieldOptions,
-	ModalFormDataToggleOptions,
-} from "@minecraft/server-ui";
 
 export interface BooleanWithMessage {
 	bool: boolean;
@@ -183,71 +175,5 @@ export interface GivexContext {
 	itemAmount: number;
 	json: string | undefined;
 }
-
-export interface FormTextComponent {
-	type: "header" | "label";
-	text: RawMessage | string;
-}
-
-export interface FormDividerComponent {
-	type: "divider";
-}
-
-export interface FormButton {
-	addStyling: boolean;
-	text: RawMessage | string;
-	callback?: (player: Player) => Promise<void>;
-}
-
-export interface ActionFormButton extends FormButton {
-	iconPath?: string;
-	type: "button";
-}
-
-export type ActionFormComponent = ActionFormButton | FormTextComponent | FormDividerComponent;
-
-export interface ModalFormDropdownComponent {
-	type: "dropdown";
-	label: RawMessage | string;
-	items: (RawMessage | string)[];
-	options?: ModalFormDataDropdownOptions;
-}
-
-export interface ModalFormSliderComponent {
-	type: "slider";
-	label: RawMessage | string;
-	minimumValue: number;
-	maximumValue: number;
-	options?: ModalFormDataSliderOptions;
-}
-
-export interface ModalFormTextFieldComponent {
-	type: "textField";
-	label: RawMessage | string;
-	placeHolderText?: RawMessage | string;
-	options?: ModalFormDataTextFieldOptions;
-}
-
-export interface ModalFormToggleComponent {
-	type: "toggle";
-	label: RawMessage | string;
-	options?: ModalFormDataToggleOptions;
-}
-
-export type ModalFormComponent =
-	| FormDividerComponent
-	| FormTextComponent
-	| ModalFormDropdownComponent
-	| ModalFormSliderComponent
-	| ModalFormTextFieldComponent
-	| ModalFormToggleComponent;
-
-export interface CommandVector3 {
-	x: number | "~";
-	y: number | "~";
-	z: number | "~";
-}
-
-export type ModalFormReturnType = string | number | boolean | undefined;
 
 export const CommandNamespace: string = "givex";

@@ -1,39 +1,28 @@
-import {
-	ItemComponentTypes,
-	type ItemDurabilityComponent,
-	type ItemEnchantableComponent,
-	ItemStack,
-	type ItemType,
-	ItemTypes,
-	type Player,
-	system,
-	world,
-} from "@minecraft/server";
-import { ItemDataValidation, itemTypeToPotionDeliveryType } from "../itemData";
+import { Player, ItemStack, ItemDurabilityComponent, ItemComponentTypes, ItemEnchantableComponent, system, world, ItemTypes } from "@minecraft/server";
+import { itemTypeToPotionDeliveryType, ItemDataValidation } from "../itemData";
 import { camelToTitleCase, prettyTypeId } from "../prettyTypeId";
-import {
-	type ActionFormButton,
-	type CommandName,
-	CommandNamespace,
-	type CommandVector3,
-	type ItemData,
-	ItemDataKeys,
-	type ModalFormReturnType,
-	type ModalFormTextFieldComponent,
-	type ModalFormToggleComponent,
-} from "../types";
-import { ActionForm, type ActionFormArgs } from "./actionForms";
-import { ModalForm, type ModalFormArgs } from "./modalForms";
+import { ItemData, CommandName, ItemDataKeys, CommandNamespace } from "../types";
+import { ModalFormTextFieldComponent, ModalFormReturnType, ActionFormButton, ModalFormToggleComponent, ModalForm, showModalForm, ActionForm, showActionForm, MessageForm, showMessageForm } from "./types";
 
-const FormTitle: string = "Get Started";
+interface CommandVector3 {
+	x: number | "~";
+	y: number | "~";
+	z: number | "~";
+}
 
-export class ItemDataCreation {
-	public player: Player;
-	public data: ItemData;
-	public commandName: CommandName;
-	public location: CommandVector3;
-	public editableProperties: string[];
-	private constructor(creator: Player, itemTypeId?: string) {
+enum PropertiesPromptResult {
+	Completed,
+	InProgress,
+	Cancelled
+}
+
+export class ItemDataCreator {
+	private player: Player;
+	private data: ItemData;
+	private commandName: CommandName;
+	private location: CommandVector3;
+	private editableProperties: string[];
+	constructor(creator: Player, itemTypeId?: string) {
 		this.player = creator;
 		// Just default values, can be changed by user later
 		this.data = {
@@ -47,9 +36,9 @@ export class ItemDataCreation {
 			z: "~",
 		};
 		this.editableProperties = [];
-		if (itemTypeId === undefined) {
-		}
 	}
+
+	private static readonly FormTitle: string = "Get Started";
 
 	private getEditableProperties(): string[] {
 		const startingEditableComponents: string[] = [ItemDataKeys.Amount, ItemDataKeys.NameTag]; // I want these two to always be at the top
@@ -90,14 +79,14 @@ export class ItemDataCreation {
 		return startingEditableComponents.concat(endingEditableComponents);
 	}
 
-	public async promptItemType(): Promise<string | undefined> {
+	private async promptTypeId(): Promise<string | undefined> {
 		const textFieldLabelPt1: string = "What item would you like to use?§r\n";
 		const textFieldLabelPt2: string = "\nEnter item type ID:";
 		const textField: ModalFormTextFieldComponent = {
 			label: textFieldLabelPt1 + textFieldLabelPt2,
 			type: "textField",
 		};
-		const formArgs: ModalFormArgs = {
+		const form: ModalForm = {
 			components: [
 				textField,
 				{
@@ -112,11 +101,10 @@ export class ItemDataCreation {
 				addStyling: true,
 				text: "Submit",
 			},
-			title: FormTitle,
+			title: ItemDataCreator.FormTitle,
 		};
-		const form = new ModalForm(formArgs);
 		let result: ModalFormReturnType[] | undefined;
-		let itemTypeId: ModalFormReturnType;
+		let itemTypeId: ModalFormReturnType = this.data.typeId;
 		while (typeof itemTypeId !== "string" || !ItemDataValidation.typeId(itemTypeId)) {
 			if (itemTypeId) {
 				textField.label = `${textFieldLabelPt1}\n§cInvalid item type ID "${itemTypeId}"§r${textFieldLabelPt2}`;
@@ -126,7 +114,7 @@ export class ItemDataCreation {
 			} else {
 				textField.label = textFieldLabelPt1 + textFieldLabelPt2;
 			}
-			result = await form.show(this.player);
+			result = await showModalForm(form, this.player);
 			if (result === undefined) {
 				return;
 			}
@@ -135,38 +123,38 @@ export class ItemDataCreation {
 		return Promise.resolve(itemTypeId);
 	}
 
-	public async promptCommandName(): Promise<CommandName | undefined> {
-		const formArgs: ModalFormArgs = {
-			components: [
-				{
-					text: "What would you like to do with this item?",
-					type: "label",
-				},
-				{
-					items: [
-						"Give to Player/Mob",
-						"Give to Block (e.g: Chest)",
-						"Spawn as Dropped Item",
-					],
-					label: "Select Option:",
-					type: "dropdown",
-				},
-				{
-					type: "divider",
-				},
-				{
-					text: "§r",
-					type: "label",
-				},
-			],
-			submitButton: {
-				addStyling: true,
-				text: "Submit",
+	private static readonly commandNameForm: ModalForm = {
+		components: [
+			{
+				text: "What would you like to do with this item?",
+				type: "label",
 			},
-			title: FormTitle,
-		};
-		const form = new ModalForm(formArgs);
-		const result: ModalFormReturnType[] | undefined = await form.show(this.player);
+			{
+				items: [
+					"Give to Player/Mob",
+					"Give to Block (e.g: Chest)",
+					"Spawn as Dropped Item",
+				],
+				label: "Select Option:",
+				type: "dropdown",
+			},
+			{
+				type: "divider",
+			},
+			{
+				text: "§r",
+				type: "label",
+			},
+		],
+		submitButton: {
+			addStyling: true,
+			text: "Submit",
+		},
+		title: ItemDataCreator.FormTitle,
+	};
+
+	private async promptCommandName(): Promise<CommandName | undefined> {
+		const result: ModalFormReturnType[] | undefined = await showModalForm(ItemDataCreator.commandNameForm, this.player);
 		if (result === undefined) {
 			return;
 		}
@@ -187,10 +175,36 @@ export class ItemDataCreation {
 		}
 	}
 
-	// Create a class for the other form data type real quick and make a confirmation for this
-	public async propertiesBackConfirmation(): Promise<boolean> {}
+	private static readonly PropertiesBackConfirmation: MessageForm = {
+		body: "Are you sure you would like to go back? Any selected properties will be reset.",
+		button1: {
+			addStyling: false,
+			text: "Im Sure!"
+		},
+		button2: {
+			addStyling: false,
+			text: "Cancel"
+		},
+		title: ItemDataCreator.FormTitle
+	};
 
-	public async promptItemProperties(): Promise<ItemData | undefined> {
+	// Returns undefined if player is no longer valid
+	private async propertiesBackConfirmation(): Promise<boolean | undefined> {
+		let result = await showMessageForm(ItemDataCreator.PropertiesBackConfirmation, this.player);
+		// Treat closing this form as Cancel
+		if (result === undefined && this.player.isValid) {
+			result = 1;
+		}
+		if (result === 0) {
+			return Promise.resolve(true);
+		} else if (result === 1) {
+			return Promise.resolve(false);
+		} else {
+			return Promise.resolve(undefined);
+		}
+	}
+
+	private async promptItemProperties(): Promise<PropertiesPromptResult> {
 		this.editableProperties = this.getEditableProperties();
 		const buttons: ActionFormButton[] = [{ addStyling: true, text: "Back", type: "button" }];
 		const buttonsIndexOffset: number = -1;
@@ -201,24 +215,33 @@ export class ItemDataCreation {
 				type: "button",
 			});
 		}
-		const formArgs: ActionFormArgs = {
+		const form: ActionForm = {
 			body: `Select component to edit for item: §e${prettyTypeId(this.data.typeId)}`,
 			components: [{ type: "divider" }, ...buttons],
-			title: FormTitle,
+			title: ItemDataCreator.FormTitle,
 		};
-		const form = new ActionForm(formArgs);
-		const selection = await form.show(this.player);
-		if (selection === undefined) {
-			const player = this.player;
-			const itemTypeId = this.data.typeId;
-			system.run(async () => {
-				// replace this with confirmation when thats done
-				ItemDataCreation.run(this.player, this.data.typeId);
-			});
-			return;
-		}
-		// Back button
-		if (selection === 0) {
+		let selection = await showActionForm(form, this.player)
+		// Treat exiting the form and the back button the same.
+		if (selection === undefined || selection === 0) {
+			if (!this.player.isValid) {
+				return Promise.resolve(PropertiesPromptResult.Cancelled);
+			}
+			const confirmationResult: boolean | undefined = await this.propertiesBackConfirmation();
+			if (confirmationResult === true) {
+				system.run(async () => {
+					const creator = new ItemDataCreator(this.player, this.data.typeId);
+					creator.run();
+				})
+				return Promise.resolve(PropertiesPromptResult.Cancelled);
+			} else if (confirmationResult === false) {
+				return Promise.resolve(PropertiesPromptResult.InProgress);
+			} else {
+				return Promise.resolve(PropertiesPromptResult.Completed);
+			}
+		} else {
+			selection += buttonsIndexOffset;
+			// Forms based on property here.
+			return Promise.resolve(PropertiesPromptResult.InProgress);
 		}
 	}
 
@@ -240,7 +263,7 @@ export class ItemDataCreation {
 		return command;
 	}
 
-	public async showGeneratedCommand(): Promise<void> {
+	private async showGeneratedCommand(): Promise<void> {
 		const command: string = this.getCommand();
 		const textField: ModalFormTextFieldComponent = {
 			label: `\n§lCopy generated command below:`,
@@ -256,13 +279,13 @@ export class ItemDataCreation {
 			},
 			type: "toggle",
 		};
-		const formArgs: ModalFormArgs = {
+		const form: ModalForm = {
 			components: [textField, { type: "divider" }, sendInChatToggle],
 			submitButton: {
 				addStyling: true,
 				text: "Done",
 			},
-			title: FormTitle,
+			title: ItemDataCreator.FormTitle,
 		};
 		// text field default value characters start to distort at a certain length
 		if (textField.options !== undefined) {
@@ -274,11 +297,10 @@ export class ItemDataCreation {
 				textField.options.tooltip +=
 					"\nAlso command is too long to safely send in chat. Option removed.";
 				// Remove send in chat toggle component
-				formArgs.components.pop();
+				form.components.pop();
 			}
 		}
-		const form = new ModalForm(formArgs);
-		const result: ModalFormReturnType[] | undefined = await form.show(this.player);
+		const result: ModalFormReturnType[] | undefined = await showModalForm(form, this.player);
 		if (result === undefined) {
 			return;
 		}
@@ -288,36 +310,34 @@ export class ItemDataCreation {
 		}
 	}
 
-	public static async run(player: Player, itemTypeId?: string): Promise<void> {
-		const creator = new ItemDataCreation(player);
-		if (itemTypeId === undefined || !ItemDataValidation.typeId(itemTypeId)) {
-			itemTypeId = await creator.promptItemType();
-			if (itemTypeId === undefined) {
-				return;
-			}
+	public async run(): Promise<void> {
+		const typeIdResult: string | undefined = await this.promptTypeId();
+		if (typeIdResult === undefined) {
+			return;
 		}
-		const itemType: ItemType | undefined = ItemTypes.get(itemTypeId);
+		// Ensure values like "grass" are converted to "minecraft:grass_block"
+		const itemType = ItemTypes.get(this.data.typeId);
 		if (itemType === undefined) {
 			return;
 		}
-		creator.data.typeId = itemType.id;
-		const commandNameResult: CommandName | undefined = await creator.promptCommandName();
+		this.data.typeId = itemType.id;
+		const commandNameResult: CommandName | undefined = await this.promptCommandName();
 		if (commandNameResult === undefined) {
 			return;
 		}
-		creator.commandName = commandNameResult;
-		const itemPropertiesResult = await creator.promptItemProperties();
-		if (itemPropertiesResult === undefined) {
+		this.commandName = commandNameResult;
+		const itemPropertiesResult = await this.promptItemProperties();
+		if (!itemPropertiesResult) {
 			return;
 		}
 		system.run(async () => {
-			creator.showGeneratedCommand();
+			this.showGeneratedCommand();
 		});
 	}
 }
 
 /*
-export const FormSelectSlotGivex: ModalFormArgs = {
+export const FormSelectSlotGivex: ModalForm = {
 	components: [
 		{
 			items: ["Default"], // Add the rest based on itemType
@@ -342,6 +362,6 @@ export const FormSelectSlotGivex: ModalFormArgs = {
 		addStyling: true,
 		text: "Submit",
 	},
-	title: FormTitle,
+	title: ItemDataCreator.FormTitle,
 };
 */

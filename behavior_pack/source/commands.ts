@@ -14,10 +14,11 @@ import {
 	type Vector3,
 } from "@minecraft/server";
 import { FormHelp } from "./forms/help";
-import { ItemDataCreation } from "./forms/itemDataCreation";
+import { ItemDataCreator } from "./forms/itemDataCreation";
 import { blockxGetBlock, getDimensionFromOrigin, givexRun } from "./givex";
 import { getRecieverName, prettyTypeId, vector3ToString } from "./prettyTypeId";
 import { CommandNamespace, type GivexContext } from "./types";
+import { showActionForm } from "./forms/types";
 
 function getSelectorName(recievers: Entity[] | Block): string {
 	if (recievers instanceof Block) {
@@ -228,7 +229,7 @@ export function helpCommandCallback(
 	if (itemType === undefined) {
 		system.run(async () => {
 			viewer.playSound("random.pop", { pitch: 0.5, volume: 0.3 });
-			FormHelp.show(viewer);
+			showActionForm(FormHelp, viewer);
 		});
 		return {
 			status: CustomCommandStatus.Success,
@@ -242,7 +243,8 @@ export function helpCommandCallback(
 	} else {
 		system.run(async () => {
 			viewer.playSound("random.pop", { pitch: 0.5, volume: 0.3 });
-			ItemDataCreation.run(viewer, itemType.id);
+			const creator = new ItemDataCreator(viewer, itemType.id);
+			creator.run();
 		});
 		return {
 			status: CustomCommandStatus.Success,

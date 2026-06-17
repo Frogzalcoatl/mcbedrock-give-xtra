@@ -1,14 +1,14 @@
 import { system } from "@minecraft/server";
-import { ActionForm } from "./actionForms";
 import { FormHelp } from "./help";
+import { ActionForm, showActionForm } from "./types";
 
-export const FormWiki = new ActionForm({
+export const FormWiki: ActionForm = {
 	components: [
 		{
 			addStyling: true,
 			async callback(player): Promise<void> {
 				system.run(() => {
-					FormHelp.show(player);
+					showActionForm(FormHelp, player);
 				});
 			},
 			text: "Back",
@@ -16,4 +16,4 @@ export const FormWiki = new ActionForm({
 		},
 	],
 	title: "Wiki",
-});
+};

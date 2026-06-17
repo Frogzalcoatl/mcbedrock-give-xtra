@@ -1,17 +1,18 @@
 import { type Player, system } from "@minecraft/server";
-import { ActionForm } from "./actionForms";
 import { FormCredits } from "./credits";
-import { ItemDataCreation } from "./itemDataCreation";
+import { ItemDataCreator } from "./itemDataCreation";
 import { FormWiki } from "./wiki";
+import { ActionForm, showActionForm } from "./types";
 
-export const FormHelp = new ActionForm({
+export const FormHelp: ActionForm = {
 	body: "Expansion of Minecraft Bedrock's /give command including item names, enchantments, and more.",
 	components: [
 		{
 			addStyling: true,
 			async callback(player: Player): Promise<void> {
 				system.run(async () => {
-					ItemDataCreation.run(player);
+					const creator = new ItemDataCreator(player);
+					creator.run();
 				});
 			},
 			text: "Get Started",
@@ -24,7 +25,7 @@ export const FormHelp = new ActionForm({
 			addStyling: true,
 			async callback(player: Player): Promise<void> {
 				system.run(async () => {
-					FormWiki.show(player);
+					showActionForm(FormWiki, player);
 				});
 			},
 			text: "Wiki",
@@ -34,7 +35,7 @@ export const FormHelp = new ActionForm({
 			addStyling: true,
 			async callback(player: Player): Promise<void> {
 				system.run(async () => {
-					FormCredits.show(player);
+					showActionForm(FormCredits, player);
 				});
 			},
 			text: "Credits",
@@ -42,4 +43,4 @@ export const FormHelp = new ActionForm({
 		},
 	],
 	title: "Givex Help",
-});
+};
