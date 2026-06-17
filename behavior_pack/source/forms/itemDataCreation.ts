@@ -326,13 +326,17 @@ export class ItemDataCreator {
 			return;
 		}
 		this.commandName = commandNameResult;
-		const itemPropertiesResult = await this.promptItemProperties();
-		if (!itemPropertiesResult) {
+		let propertiesResult = PropertiesPromptResult.InProgress;
+		while (propertiesResult === PropertiesPromptResult.InProgress) {
+			propertiesResult = await this.promptItemProperties();
+		}
+		if (propertiesResult === PropertiesPromptResult.Completed) {
+			system.run(async () => {
+				this.showGeneratedCommand();
+			});
+		} else {
 			return;
 		}
-		system.run(async () => {
-			this.showGeneratedCommand();
-		});
 	}
 }
 
