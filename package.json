@@ -16,7 +16,7 @@
 	"packageManager": "pnpm@11.4.0",
 	"scripts": {
 		"build": "pnpm run clean && node tools/esbuild.cjs",
-		"clean": "rimraf scripts _temp_mcpack_directory addon.mcpack",
+		"clean": "rimraf scripts _temp_mcaddon_directory mcbedrock-give-xtra.mcaddon",
 		"pack": "pnpm run build && node tools/pack.cjs",
 		"watch": "pnpm run clean && node tools/esbuild.cjs --watch"
 	},
