@@ -49,7 +49,7 @@ You need the following utilities installed: [pnpm](https://pnpm.io/), [node LTS]
 - ``pnpm run pack`` Builds code and packs all necessary files into a .mcaddon archive.
 - ``pnpm run clean`` Removes temporary files.
 
-# Post-setup instructions.
+## Post-setup instructions.
 If you want to compress your code for mcaddon builds, set minify: true in tools/esbuild.cjs.
 
 ## Beta API
