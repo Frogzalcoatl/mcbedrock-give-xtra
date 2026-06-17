@@ -22,6 +22,10 @@
 				"private": true,
 				"restrict_to_owner": true
 			},
+			"minecraft:nameable": {
+				"allow_name_tag_renaming": false,
+				"always_show": true
+			},
 			"minecraft:physics": {
 				"has_collision": false,
 				"has_gravity": false
