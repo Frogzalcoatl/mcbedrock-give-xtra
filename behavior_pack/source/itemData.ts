@@ -211,7 +211,10 @@ function isItemData(obj: any): obj is ItemData {
 			throw new Error("canDestroy must be an array of strings");
 		}
 	}
-	const keyValidationResult: BooleanWithMessage = validateKeys(Object.keys(obj), ItemDataKeys);
+	const keyValidationResult: BooleanWithMessage = validateKeys(
+		Object.keys(obj),
+		Object.values(ItemDataKeys),
+	);
 	if (!keyValidationResult.bool) {
 		throw new Error(keyValidationResult.message);
 	}
@@ -339,7 +342,8 @@ export function itemTypeToPotionDeliveryType(typeId: string): string | undefined
 // biome-ignore assist/source/useSortedKeys: Want to keep it in the same order as declared in the ItemData interface.
 export const ItemDataValidation = {
 	typeId(value: string): boolean {
-		return ItemTypes.get(value) !== undefined;
+		const itemType = ItemTypes.get(value);
+		return itemType !== undefined && itemType.id !== "minecraft:air";
 	},
 	amount(value: number): boolean {
 		return value > 0 && Number.isInteger(value) && value < ItemDataMaxAmount;

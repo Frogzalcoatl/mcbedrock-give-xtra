@@ -1,3 +1,1 @@
-Look in to slot.armor.body
-
 Help command (server-ui)

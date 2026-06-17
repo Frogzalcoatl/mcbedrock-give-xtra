@@ -13,13 +13,11 @@ import {
 	system,
 	type Vector3,
 } from "@minecraft/server";
-import { FormHelp } from "./actionForms";
+import { FormHelp } from "./forms/help";
+import { ItemDataCreation } from "./forms/itemDataCreation";
 import { blockxGetBlock, getDimensionFromOrigin, givexRun } from "./givex";
-import { FormGetStartedArgs, getTemplateItemDataContext, ModalForm } from "./modalForms";
 import { getRecieverName, prettyTypeId, vector3ToString } from "./prettyTypeId";
-import type { GivexContext } from "./types";
-
-const NAMESPACE: string = "givex";
+import { CommandNamespace, type GivexContext } from "./types";
 
 function getSelectorName(recievers: Entity[] | Block): string {
 	if (recievers instanceof Block) {
@@ -51,7 +49,7 @@ export const GIVEX_COMMAND: CustomCommand = {
 			type: CustomCommandParamType.ItemType,
 		},
 	],
-	name: `${NAMESPACE}:givex`,
+	name: `${CommandNamespace}:givex`,
 	optionalParameters: [
 		{
 			name: "amount",
@@ -97,7 +95,7 @@ export const BLOCKX_COMMAND: CustomCommand = {
 			type: CustomCommandParamType.ItemType,
 		},
 	],
-	name: `${NAMESPACE}:blockx`,
+	name: `${CommandNamespace}:blockx`,
 	optionalParameters: [
 		{
 			name: "amount",
@@ -137,7 +135,7 @@ export function blockxCommandCallback(
 }
 
 export const SPAWNX_COMMAND: CustomCommand = {
-	description: "Spawn items with givex json.",
+	description: "Spawn items with specific properties.",
 	mandatoryParameters: [
 		{
 			name: "position",
@@ -148,7 +146,7 @@ export const SPAWNX_COMMAND: CustomCommand = {
 			type: CustomCommandParamType.ItemType,
 		},
 	],
-	name: `${NAMESPACE}:spawnx`,
+	name: `${CommandNamespace}:spawnx`,
 	optionalParameters: [
 		{
 			name: "amount",
@@ -196,7 +194,7 @@ export function spawnxCommandCallback(
 // Use server ui to easily generate item data json
 export const HELP_COMMAND: CustomCommand = {
 	description: "Easily generate givex json.",
-	name: `${NAMESPACE}:help`,
+	name: `${CommandNamespace}:help`,
 	optionalParameters: [
 		{
 			name: "itemName",
@@ -244,12 +242,7 @@ export function helpCommandCallback(
 	} else {
 		system.run(async () => {
 			viewer.playSound("random.pop", { pitch: 0.5, volume: 0.3 });
-			const FormGetStarted = new ModalForm(FormGetStartedArgs);
-			FormGetStarted.submitButton.callback(
-				viewer,
-				[itemType.id],
-				getTemplateItemDataContext(),
-			);
+			ItemDataCreation.run(viewer, itemType.id);
 		});
 		return {
 			status: CustomCommandStatus.Success,

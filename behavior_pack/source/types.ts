@@ -151,28 +151,28 @@ export interface ItemData {
 	canPlaceOn?: string[];
 	canDestroy?: string[];
 }
-export const ItemDataKeys = [
-	"typeId",
-	"amount",
-	"lockMode",
-	"nameTag",
-	"durability",
-	"enchants",
-	"slot",
-	"potionType",
-	"arrowType",
-	"bedColor",
-	"keepOnDeath",
-	"canPlaceOn",
-	"canDestroy",
-];
+export enum ItemDataKeys {
+	TypeId = "typeId",
+	Amount = "amount",
+	LockMode = "lockMode",
+	NameTag = "nameTag",
+	Durability = "durability",
+	Enchants = "enchants",
+	Slot = "slot",
+	PotionType = "potionType",
+	ArrowType = "arrowType",
+	BedColor = "bedColor",
+	KeepOnDeath = "keepOnDeath",
+	CanPlaceOn = "canPlaceOn",
+	CanDestroy = "canDestroy",
+}
 export const ItemDataDefaultAmount: number = 1;
 // Matches max amount in vanilla /give
 export const ItemDataMaxAmount: number = 32767;
 // 255 is the max item nametag length as stated in index.d.ts. Going by 253 since I automatically add §r to the start of nametag to avoid italicization.
 export const MaxNameTagLength: number = 253;
 
-type CommandName = "givex" | "blockx" | "spawnx";
+export type CommandName = "givex" | "blockx" | "spawnx";
 
 export interface GivexContext {
 	commandName: CommandName;
@@ -181,7 +181,7 @@ export interface GivexContext {
 	selectorName: string;
 	itemType: ItemType;
 	itemAmount: number;
-	json?: string;
+	json: string | undefined;
 }
 
 export interface FormTextComponent {
@@ -196,20 +196,12 @@ export interface FormDividerComponent {
 export interface FormButton {
 	addStyling: boolean;
 	text: RawMessage | string;
+	callback?: (player: Player) => Promise<void>;
 }
 
 export interface ActionFormButton extends FormButton {
-	callback: (viewer: Player) => Promise<void>;
 	iconPath?: string;
 	type: "button";
-}
-
-export interface ModalFormButton extends FormButton {
-	callback: (
-		viewer: Player,
-		formValues: (boolean | number | string | undefined)[],
-		context: ItemDataCreationContext,
-	) => Promise<void>;
 }
 
 export type ActionFormComponent = ActionFormButton | FormTextComponent | FormDividerComponent;
@@ -250,14 +242,12 @@ export type ModalFormComponent =
 	| ModalFormTextFieldComponent
 	| ModalFormToggleComponent;
 
-interface CommandVector3 {
+export interface CommandVector3 {
 	x: number | "~";
 	y: number | "~";
 	z: number | "~";
 }
 
-export interface ItemDataCreationContext {
-	data: ItemData;
-	commandName: CommandName;
-	location: CommandVector3;
-}
+export type ModalFormReturnType = string | number | boolean | undefined;
+
+export const CommandNamespace: string = "givex";

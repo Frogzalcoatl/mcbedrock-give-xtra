@@ -59,3 +59,24 @@ function truncTo(num: number, decimalPlaces: number) {
 export function vector3ToString(vector: Vector3, decimalPlaces: number): string {
 	return `${truncTo(vector.x, decimalPlaces)} ${truncTo(vector.y, decimalPlaces)} ${truncTo(vector.z, decimalPlaces)}`;
 }
+
+export function camelToTitleCase(str: string): string {
+	const splitStr = str.split("");
+	const firstChar = splitStr[0];
+	if (firstChar !== undefined) {
+		splitStr[0] = firstChar.toUpperCase();
+	}
+	for (let i = 1; i < splitStr.length; i++) {
+		const currentChar = splitStr[i];
+		if (!currentChar) {
+			continue;
+		}
+		if (
+			currentChar.toUpperCase() === currentChar &&
+			currentChar.toLowerCase() !== currentChar
+		) {
+			splitStr[i] = ` ${currentChar.toUpperCase()}`;
+		}
+	}
+	return splitStr.join("");
+}
