@@ -226,28 +226,16 @@ export function helpCommandCallback(
 			status: CustomCommandStatus.Failure,
 		};
 	}
-	if (itemType === undefined) {
-		system.run(async () => {
-			viewer.playSound("random.pop", { pitch: 0.5, volume: 0.3 });
+	system.run(async () => {
+		viewer.playSound("random.pop", { pitch: 0.5, volume: 0.3 });
+		if (itemType === undefined) {
 			showActionForm(FormHelp, viewer);
-		});
-		return {
-			status: CustomCommandStatus.Success,
-		};
-	} else if (itemType.id === "minecraft:air") {
-		// Accessing an itemStack with type air crashes the world
-		return {
-			message: 'Invalid itemType "air"',
-			status: CustomCommandStatus.Failure,
-		};
-	} else {
-		system.run(async () => {
-			viewer.playSound("random.pop", { pitch: 0.5, volume: 0.3 });
+		} else {
 			const creator = new ItemDataCreator(viewer, itemType.id);
 			creator.run();
-		});
-		return {
-			status: CustomCommandStatus.Success,
-		};
-	}
+		}
+	});
+	return {
+		status: CustomCommandStatus.Success,
+	};
 }
