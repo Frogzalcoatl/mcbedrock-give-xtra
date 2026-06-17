@@ -47,7 +47,7 @@ You need the following utilities installed: [pnpm](https://pnpm.io/), [node LTS]
 - ``pnpm run watch`` Cleans the output directory and automatically recompiles scripts when files are modified. Use this while developing.
 - ``pnpm run build`` Performs a single production build.
 - ``pnpm run pack`` Builds code and packs all necessary files into a .mcaddon archive.
-- ``pnpm run clean`` Remotes temporary files.
+- ``pnpm run clean`` Removes temporary files.
 
 # Post-setup instructions.
 If you want to compress your code for mcaddon builds, set minify: true in tools/esbuild.cjs.
