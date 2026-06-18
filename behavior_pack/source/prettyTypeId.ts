@@ -1,4 +1,5 @@
 import { Block, type Entity, Player, type Vector3 } from "@minecraft/server";
+import type { CommandVector3 } from "./forms/types";
 
 export function prettyTypeId(typeId: string): string {
 	const namespaceColonIndex: number = typeId.indexOf(":");
@@ -56,8 +57,17 @@ function truncTo(num: number, decimalPlaces: number) {
 	return Math.trunc(num * 10 ** decimalPlaces) / 10 ** decimalPlaces;
 }
 
-export function vector3ToString(vector: Vector3, decimalPlaces: number): string {
-	return `${truncTo(vector.x, decimalPlaces)} ${truncTo(vector.y, decimalPlaces)} ${truncTo(vector.z, decimalPlaces)}`;
+export function vector3ToString(vector: Vector3 | CommandVector3, decimalPlaces: number): string {
+	let str = "";
+	for (const value of Object.values(vector)) {
+		str += " ";
+		if (typeof value === "string") {
+			str += value;
+		} else if (typeof value === "number") {
+			str += `${truncTo(value, decimalPlaces)}`;
+		}
+	}
+	return str.trimStart();
 }
 
 export function camelToTitleCase(str: string): string {

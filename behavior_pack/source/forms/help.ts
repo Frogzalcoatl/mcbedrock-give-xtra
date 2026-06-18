@@ -1,8 +1,8 @@
 import { type Player, system } from "@minecraft/server";
 import { FormCredits } from "./credits";
-import { ItemDataCreator } from "./itemDataCreation";
+import { ItemDataCreator } from "./itemDataCreator";
+import { type ActionForm, showActionForm } from "./types";
 import { FormWiki } from "./wiki";
-import { ActionForm, showActionForm } from "./types";
 
 export const FormHelp: ActionForm = {
 	body: "Expansion of Minecraft Bedrock's /give command including item names, enchantments, and more.",
@@ -11,7 +11,7 @@ export const FormHelp: ActionForm = {
 			addStyling: true,
 			async callback(player: Player): Promise<void> {
 				system.run(async () => {
-					const creator = new ItemDataCreator(player);
+					const creator = new ItemDataCreator(player, true);
 					creator.run();
 				});
 			},

@@ -1,5 +1,13 @@
-import { RawMessage, Player, system } from "@minecraft/server";
-import { ActionFormData, MessageFormData, ModalFormData, ModalFormDataDropdownOptions, ModalFormDataSliderOptions, ModalFormDataTextFieldOptions, ModalFormDataToggleOptions } from "@minecraft/server-ui";
+import { type Player, type RawMessage, system } from "@minecraft/server";
+import {
+	ActionFormData,
+	MessageFormData,
+	ModalFormData,
+	type ModalFormDataDropdownOptions,
+	type ModalFormDataSliderOptions,
+	type ModalFormDataTextFieldOptions,
+	type ModalFormDataToggleOptions,
+} from "@minecraft/server-ui";
 
 export interface FormTextComponent {
 	type: "header" | "label";
@@ -106,7 +114,13 @@ function actionDataAddComponent(component: ActionFormComponent, formData: Action
 	}
 }
 
-export async function showActionForm(form: ActionForm, viewer: Player): Promise<number | undefined> {
+export async function showActionForm(
+	form: ActionForm,
+	viewer: Player,
+): Promise<number | undefined> {
+	if (!viewer.isValid) {
+		return Promise.resolve(undefined);
+	}
 	const formData = new ActionFormData();
 	formData.title(`§0${form.title}`);
 	if (form.body) {
@@ -180,7 +194,13 @@ function modalDataAddComponent(component: ModalFormComponent, formData: ModalFor
 	}
 }
 
-export async function showModalForm(form: ModalForm, viewer: Player): Promise<ModalFormReturnType[] | undefined> {
+export async function showModalForm(
+	form: ModalForm,
+	viewer: Player,
+): Promise<ModalFormReturnType[] | undefined> {
+	if (!viewer.isValid) {
+		return Promise.resolve(undefined);
+	}
 	const formData = new ModalFormData();
 	formData.title(`§0${form.title}`);
 	let text = form.submitButton.text;
@@ -208,14 +228,20 @@ export interface MessageForm {
 	title: RawMessage | string;
 }
 
-export async function showMessageForm(form: MessageForm, viewer: Player): Promise<number | undefined> {
+export async function showMessageForm(
+	form: MessageForm,
+	viewer: Player,
+): Promise<number | undefined> {
+	if (!viewer.isValid) {
+		return Promise.resolve(undefined);
+	}
 	const formData = new MessageFormData();
 	formData.title(`§0${form.title}`);
 	let text1 = form.button1.text;
 	if (form.button1.addStyling && typeof text1 === "string") {
 		text1 = styleButtonText(text1);
 	}
-	let text2 = form.button1.text;
+	let text2 = form.button2.text;
 	if (form.button2.addStyling && typeof text2 === "string") {
 		text2 = styleButtonText(text2);
 	}
@@ -235,8 +261,14 @@ export async function showMessageForm(form: MessageForm, viewer: Player): Promis
 			const callback = form.button2.callback;
 			system.run(() => {
 				callback(viewer);
-			})
+			});
 		}
 	}
 	return Promise.resolve(result.selection);
+}
+
+export interface CommandVector3 {
+	x: number | "~";
+	y: number | "~";
+	z: number | "~";
 }

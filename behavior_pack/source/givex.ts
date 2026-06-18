@@ -75,7 +75,7 @@ function givexFormatMessage(
 	let actionWordPastTense: string = "";
 	let actionWordPresentTense: string = "";
 	let wordBeforeSelectorName: string = "";
-	if (context.commandName === "givex" || context.commandName === "blockx") {
+	if (context.commandType === "givex" || context.commandType === "blockx") {
 		if (slot === undefined || slot.name === undefined) {
 			actionWordPastTense = "Gave";
 			actionWordPresentTense = "give";
@@ -85,7 +85,7 @@ function givexFormatMessage(
 			actionWordPresentTense = "set";
 			wordBeforeSelectorName = `in ${slot.name} for`;
 		}
-	} else if (context.commandName === "spawnx") {
+	} else if (context.commandType === "spawnx") {
 		actionWordPastTense = "Spawned";
 		actionWordPresentTense = "spawn";
 		wordBeforeSelectorName = "at";
@@ -165,7 +165,7 @@ function givexGiveItemStack(
 
 function givexGiveItemType(context: GivexContext): CustomCommandResult {
 	const itemStack: ItemStack = new ItemStack(context.itemType);
-	if (context.commandName === "spawnx" && context.itemAmount > itemStack.maxAmount) {
+	if (context.commandType === "spawnx" && context.itemAmount > itemStack.maxAmount) {
 		return {
 			message: givexFormatMessage(
 				context,

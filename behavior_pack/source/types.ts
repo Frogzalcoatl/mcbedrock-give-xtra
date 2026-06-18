@@ -164,10 +164,10 @@ export const ItemDataMaxAmount: number = 32767;
 // 255 is the max item nametag length as stated in index.d.ts. Going by 253 since I automatically add §r to the start of nametag to avoid italicization.
 export const MaxNameTagLength: number = 253;
 
-export type CommandName = "givex" | "blockx" | "spawnx";
+export type CommandType = "givex" | "blockx" | "spawnx";
 
 export interface GivexContext {
-	commandName: CommandName;
+	commandType: CommandType;
 	origin: CustomCommandOrigin;
 	recievers: Entity[] | Block[] | DimensionLocation[];
 	selectorName: string;

@@ -14,27 +14,32 @@ import {
 	type Vector3,
 } from "@minecraft/server";
 import { FormHelp } from "./forms/help";
-import { ItemDataCreator } from "./forms/itemDataCreation";
+import { ItemDataCreator } from "./forms/itemDataCreator";
+import { showActionForm } from "./forms/types";
 import { blockxGetBlock, getDimensionFromOrigin, givexRun } from "./givex";
 import { getRecieverName, prettyTypeId, vector3ToString } from "./prettyTypeId";
 import { CommandNamespace, type GivexContext } from "./types";
-import { showActionForm } from "./forms/types";
 
-function getSelectorName(recievers: Entity[] | Block): string {
+function getSelectorName(recievers: Entity[] | Block | Vector3): string {
 	if (recievers instanceof Block) {
 		return prettyTypeId(recievers.typeId);
-	}
-	if (recievers.length > 1) {
-		return "selectors";
-	} else if (recievers.length === 1) {
-		const entity: Entity | undefined = recievers[0];
-		if (entity) {
-			return getRecieverName(entity);
+	} else if (Array.isArray(recievers)) {
+		// Entities
+		if (recievers.length <= 0) {
+			return "unknown selector";
+		} else if (recievers.length === 1) {
+			const entity: Entity | undefined = recievers[0];
+			if (entity) {
+				return getRecieverName(entity);
+			} else {
+				return "selector";
+			}
 		} else {
-			return "selector";
+			return "selectors";
 		}
 	} else {
-		return "unknown selector";
+		// Vector3
+		return `location ${vector3ToString(recievers, 0)}`;
 	}
 }
 
@@ -73,7 +78,7 @@ export function givexCommandCallback(
 	json?: string,
 ): CustomCommandResult {
 	const context: GivexContext = {
-		commandName: "givex",
+		commandType: "givex",
 		itemAmount: amount,
 		itemType: itemType,
 		json: json,
@@ -118,7 +123,7 @@ export function blockxCommandCallback(
 	json?: string,
 ): CustomCommandResult {
 	const context: GivexContext = {
-		commandName: "blockx",
+		commandType: "blockx",
 		itemAmount: amount,
 		itemType: itemType,
 		json: json,
@@ -169,13 +174,13 @@ export function spawnxCommandCallback(
 	json?: string,
 ): CustomCommandResult {
 	const context: GivexContext = {
-		commandName: "spawnx",
+		commandType: "spawnx",
 		itemAmount: amount,
 		itemType: itemType,
 		json: json,
 		origin: origin,
 		recievers: [],
-		selectorName: `location ${vector3ToString(position, 0)}`,
+		selectorName: getSelectorName(position),
 	};
 	const dimensionResult = getDimensionFromOrigin(origin);
 	if (dimensionResult.dimension === undefined) {
@@ -231,7 +236,7 @@ export function helpCommandCallback(
 		if (itemType === undefined) {
 			showActionForm(FormHelp, viewer);
 		} else {
-			const creator = new ItemDataCreator(viewer, itemType.id);
+			const creator = new ItemDataCreator(viewer, false, itemType.id);
 			creator.run();
 		}
 	});

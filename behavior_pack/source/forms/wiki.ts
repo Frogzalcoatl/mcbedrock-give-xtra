@@ -1,6 +1,6 @@
 import { system } from "@minecraft/server";
 import { FormHelp } from "./help";
-import { ActionForm, showActionForm } from "./types";
+import { type ActionForm, showActionForm } from "./types";
 
 export const FormWiki: ActionForm = {
 	components: [

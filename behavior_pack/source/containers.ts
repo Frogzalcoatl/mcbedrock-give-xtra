@@ -120,7 +120,7 @@ function setItemInContainerSlot(
 		oldItemGiveResult = addItemsToContainer(reciever, container, oldItem, oldItem.amount);
 	}
 	let message: string = `Replaced item in slot ${slot.id}`;
-	if (oldItemGiveResult && !oldItemGiveResult.bool) {
+	if (oldItemGiveResult !== undefined && !oldItemGiveResult.bool) {
 		message += `\nHowever, ${oldItemGiveResult.message}`;
 	}
 	return {
