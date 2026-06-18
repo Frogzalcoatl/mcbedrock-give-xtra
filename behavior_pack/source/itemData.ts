@@ -11,7 +11,6 @@ import {
 } from "@minecraft/server";
 import { getMcNamespace } from "./prettyTypeId";
 import {
-	ArrowEffectSartingDataValue,
 	ArrowEffectTypes,
 	BedColors,
 	type BooleanWithMessage,
@@ -30,7 +29,7 @@ import {
 	SlotName,
 } from "./types";
 
-function validateKeys(objKeys: string[], validKeys: string[]): BooleanWithMessage {
+export function validateKeys(objKeys: string[], validKeys: string[]): BooleanWithMessage {
 	for (const key of objKeys) {
 		if (!validKeys.includes(key)) {
 			return {
@@ -339,20 +338,60 @@ export function itemTypeToPotionDeliveryType(typeId: string): string | undefined
 	}
 }
 
+export function getMaxStackSize(itemTypeId: string): number | undefined {
+	const itemType = ItemTypes.get(itemTypeId);
+	if (itemType === undefined) {
+		return undefined;
+	}
+	const itemStack = new ItemStack(itemType);
+	return itemStack.maxAmount;
+}
+
+export function getMaxItemDataAmount(data: ItemData): number {
+	if (data.slot !== undefined && data.slot.id !== undefined) {
+		const maxStackSize: number | undefined = getMaxStackSize(data.typeId);
+		if (maxStackSize !== undefined) {
+			return maxStackSize;
+		}
+	}
+	return ItemDataMaxAmount;
+}
+
 // biome-ignore assist/source/useSortedKeys: Want to keep it in the same order as declared in the ItemData interface.
 export const ItemDataValidation = {
-	typeId(value: string): boolean {
+	typeId(value: string): BooleanWithMessage {
 		const itemType = ItemTypes.get(value);
-		return itemType !== undefined && itemType.id !== "minecraft:air";
+		const result: boolean = itemType !== undefined && itemType.id !== "minecraft:air";
+		return {
+			bool: result,
+			message: result ? "Valid Type ID" : `Invalid Type ID "${value}"`,
+		};
 	},
-	amount(value: number): boolean {
-		return value > 0 && Number.isInteger(value) && value < ItemDataMaxAmount;
+	amount(value: number, data: ItemData): BooleanWithMessage {
+		const result: boolean =
+			value > 0 && Number.isInteger(value) && value < getMaxItemDataAmount(data);
+		return {
+			bool: result,
+			message: result ? "Valid Amount" : `Invalid Amount "${value}"`,
+		};
 	},
-	lockMode(value: ItemLockMode): boolean {
-		return Object.values(ItemLockMode).includes(value);
+	lockMode(value: string): BooleanWithMessage {
+		const result: boolean = Object.values(ItemLockMode).includes(value as ItemLockMode);
+		return {
+			bool: result,
+			message: result
+				? "Valid Lock Mode"
+				: `Invalid Lock Mode "${value}". Valid options include:\n${Object.values(ItemLockMode).join(", ")}`,
+		};
 	},
-	nameTag(value: string): boolean {
-		return value.length <= MaxNameTagLength;
+	nameTag(value: string): BooleanWithMessage {
+		const result: boolean = value.length <= MaxNameTagLength;
+		return {
+			bool: result,
+			message: result
+				? "Valid Name Tag"
+				: `Invalid Name Tag "${value}". Name Tag must be within 1-${MaxNameTagLength} characters`,
+		};
 	},
 	durability(durability: ItemDurability, itemStack: ItemStack): BooleanWithMessage {
 		const durabilityComponent = itemStack.getComponent(ItemComponentTypes.Durability);
@@ -546,40 +585,28 @@ export const ItemDataValidation = {
 		}
 	},
 	complete(data: ItemData): BooleanWithMessage {
-		const typeIdResult: boolean = ItemDataValidation.typeId(data.typeId);
-		if (!typeIdResult) {
-			return {
-				bool: false,
-				message: `Invalid typeId "${data.typeId}"`,
-			};
+		let messageResult: BooleanWithMessage;
+		messageResult = ItemDataValidation.typeId(data.typeId);
+		if (!messageResult.bool) {
+			return messageResult;
 		}
-		const amountResult: boolean = ItemDataValidation.amount(data.amount);
-		if (!amountResult) {
-			return {
-				bool: false,
-				message: `Invalid amount "${data.amount}"`,
-			};
+		messageResult = ItemDataValidation.amount(data.amount, data);
+		if (!messageResult.bool) {
+			return messageResult;
 		}
 		if (data.lockMode) {
-			const lockModeResult: boolean = ItemDataValidation.lockMode(data.lockMode);
-			if (!lockModeResult) {
-				return {
-					bool: false,
-					message: `Invalid lockMode "${data.lockMode}". Valid options include:\n${Object.values(ItemLockMode).join(", ")}`,
-				};
+			messageResult = ItemDataValidation.lockMode(data.lockMode);
+			if (!messageResult.bool) {
+				return messageResult;
 			}
 		}
 		if (data.nameTag) {
-			const nameTagResult: boolean = ItemDataValidation.nameTag(data.nameTag);
-			if (!nameTagResult) {
-				return {
-					bool: false,
-					message: `nameTag must be within 1-${MaxNameTagLength} characters`,
-				};
+			messageResult = ItemDataValidation.nameTag(data.nameTag);
+			if (!messageResult.bool) {
+				return messageResult;
 			}
 		}
 		const itemStack = new ItemStack(data.typeId);
-		let messageResult: BooleanWithMessage;
 		if (data.durability) {
 			messageResult = ItemDataValidation.durability(data.durability, itemStack);
 			if (!messageResult.bool) {
@@ -641,22 +668,3 @@ export const ItemDataValidation = {
 		};
 	},
 };
-
-// For arrowType, bedColor, etc
-export function getCommandDataValue(itemData: ItemData): number {
-	if (itemData.arrowType && itemData.typeId === "minecraft:arrow") {
-		const arrowEffectResult: number = ArrowEffectTypes.indexOf(itemData.arrowType);
-		if (arrowEffectResult !== -1) {
-			return arrowEffectResult + ArrowEffectSartingDataValue;
-		}
-	} else if (itemData.bedColor && itemData.typeId === "minecraft:bed") {
-		const bedColorResult = BedColors.indexOf(itemData.bedColor);
-		if (bedColorResult !== -1) {
-			return bedColorResult;
-		}
-	} else if (itemData.typeId === "minecraft:spawn_egg") {
-		// npcs are the only spawn egg that still use data values. The rest have their own type id. Just redirect all references of the old spawn egg typeid to npc.
-		return 51;
-	}
-	return 0;
-}

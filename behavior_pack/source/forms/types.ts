@@ -1,4 +1,4 @@
-import { type Player, type RawMessage, system } from "@minecraft/server";
+import { type Player, system } from "@minecraft/server";
 import {
 	ActionFormData,
 	MessageFormData,
@@ -11,7 +11,7 @@ import {
 
 export interface FormTextComponent {
 	type: "header" | "label";
-	text: RawMessage | string;
+	text: string;
 }
 
 export interface FormDividerComponent {
@@ -20,7 +20,7 @@ export interface FormDividerComponent {
 
 export interface FormButton {
 	addStyling: boolean;
-	text: RawMessage | string;
+	text: string;
 	callback?: (player: Player) => Promise<void>;
 }
 
@@ -33,14 +33,14 @@ export type ActionFormComponent = ActionFormButton | FormTextComponent | FormDiv
 
 export interface ModalFormDropdownComponent {
 	type: "dropdown";
-	label: RawMessage | string;
-	items: (RawMessage | string)[];
+	label: string;
+	items: string[];
 	options?: ModalFormDataDropdownOptions;
 }
 
 export interface ModalFormSliderComponent {
 	type: "slider";
-	label: RawMessage | string;
+	label: string;
 	minimumValue: number;
 	maximumValue: number;
 	options?: ModalFormDataSliderOptions;
@@ -48,14 +48,14 @@ export interface ModalFormSliderComponent {
 
 export interface ModalFormTextFieldComponent {
 	type: "textField";
-	label: RawMessage | string;
-	placeHolderText?: RawMessage | string;
+	label: string;
+	placeHolderText?: string;
 	options?: ModalFormDataTextFieldOptions;
 }
 
 export interface ModalFormToggleComponent {
 	type: "toggle";
-	label: RawMessage | string;
+	label: string;
 	options?: ModalFormDataToggleOptions;
 }
 
@@ -70,15 +70,15 @@ export type ModalFormComponent =
 export type ModalFormReturnType = string | number | boolean | undefined;
 
 export interface ActionForm {
-	body?: RawMessage | string;
+	body?: string;
 	components: ActionFormComponent[];
-	title: RawMessage | string;
+	title: string;
 }
 
 export interface ModalForm {
 	components: ModalFormComponent[];
 	submitButton: FormButton;
-	title: RawMessage | string;
+	title: string;
 }
 
 export function styleButtonText(text: string): string {
@@ -90,7 +90,7 @@ function actionDataAddComponent(component: ActionFormComponent, formData: Action
 		case "button":
 			{
 				let text = component.text;
-				if (component.addStyling && typeof text === "string") {
+				if (component.addStyling) {
 					text = styleButtonText(text);
 				}
 				formData.button(text, component.iconPath);
@@ -204,7 +204,7 @@ export async function showModalForm(
 	const formData = new ModalFormData();
 	formData.title(`§0${form.title}`);
 	let text = form.submitButton.text;
-	if (form.submitButton.addStyling && typeof text === "string") {
+	if (form.submitButton.addStyling) {
 		text = styleButtonText(text);
 	}
 	formData.submitButton(text);
@@ -222,10 +222,10 @@ export async function showModalForm(
 }
 
 export interface MessageForm {
-	body: RawMessage | string;
+	body: string;
 	button1: FormButton;
 	button2: FormButton;
-	title: RawMessage | string;
+	title: string;
 }
 
 export async function showMessageForm(
@@ -238,11 +238,11 @@ export async function showMessageForm(
 	const formData = new MessageFormData();
 	formData.title(`§0${form.title}`);
 	let text1 = form.button1.text;
-	if (form.button1.addStyling && typeof text1 === "string") {
+	if (form.button1.addStyling) {
 		text1 = styleButtonText(text1);
 	}
 	let text2 = form.button2.text;
-	if (form.button2.addStyling && typeof text2 === "string") {
+	if (form.button2.addStyling) {
 		text2 = styleButtonText(text2);
 	}
 	formData.button1(text1);
@@ -265,10 +265,4 @@ export async function showMessageForm(
 		}
 	}
 	return Promise.resolve(result.selection);
-}
-
-export interface CommandVector3 {
-	x: number | "~";
-	y: number | "~";
-	z: number | "~";
 }

@@ -10,8 +10,8 @@ import {
 	ItemStack,
 	Potions,
 } from "@minecraft/server";
-import { getDataValueItem } from "./dataValueItems";
-import { getCommandDataValue, ItemDataValidation, itemTypeToPotionDeliveryType } from "./itemData";
+import { getCommandDataValue, getDataValueItem } from "./dataValueItems";
+import { ItemDataValidation, itemTypeToPotionDeliveryType } from "./itemData";
 import type { BooleanWithMessage, EnchantData, ItemData, ItemDurability } from "./types";
 
 export function applyDurability(item: ItemStack, value: ItemDurability): BooleanWithMessage {

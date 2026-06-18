@@ -8,7 +8,13 @@ import {
 	type ItemStack,
 	type Vector3,
 } from "@minecraft/server";
-import type { BooleanWithMessage } from "./types";
+import {
+	ArrowEffectSartingDataValue,
+	ArrowEffectTypes,
+	BedColors,
+	type BooleanWithMessage,
+	type ItemData,
+} from "./types";
 
 const CustomContainerEntityType = "givex:custom_container";
 
@@ -32,7 +38,7 @@ function removeEntity(entity: Entity): BooleanWithMessage {
 }
 
 // Only returns false when it fails to copy enchants
-function copyItemStackProperties(from: ItemStack, to: ItemStack): BooleanWithMessage {
+function copyItemStackComponents(from: ItemStack, to: ItemStack): BooleanWithMessage {
 	to.lockMode = from.lockMode;
 	if (from.nameTag) {
 		to.nameTag = from.nameTag;
@@ -64,12 +70,12 @@ function copyItemStackProperties(from: ItemStack, to: ItemStack): BooleanWithMes
 	}
 	return {
 		bool: true,
-		message: "Copied itemstack properties",
+		message: "Copied itemstack components",
 	};
 }
 
 // Cannot be run in restricted execution
-// Uses /give on a custom entity for data value, applies properties of itemstack, then returns new itemstack with data value attached internally.
+// Uses /give on a custom entity for data value, applies components of itemstack, then returns new itemstack with data value attached internally.
 export function getDataValueItem(
 	item: ItemStack,
 	dataValue: number,
@@ -145,7 +151,7 @@ export function getDataValueItem(
 			message: message,
 		};
 	}
-	copyItemStackProperties(item, dataValueItem);
+	copyItemStackComponents(item, dataValueItem);
 	let message: string = "Successfully got data value item";
 	const removalResult: BooleanWithMessage = removeEntity(containerEntity);
 	if (!removalResult.bool) {
@@ -155,4 +161,23 @@ export function getDataValueItem(
 		item: dataValueItem,
 		message: message,
 	};
+}
+
+// For arrowType, bedColor, etc
+export function getCommandDataValue(itemData: ItemData): number {
+	if (itemData.arrowType && itemData.typeId === "minecraft:arrow") {
+		const arrowEffectResult: number = ArrowEffectTypes.indexOf(itemData.arrowType);
+		if (arrowEffectResult !== -1) {
+			return arrowEffectResult + ArrowEffectSartingDataValue;
+		}
+	} else if (itemData.bedColor && itemData.typeId === "minecraft:bed") {
+		const bedColorResult = BedColors.indexOf(itemData.bedColor);
+		if (bedColorResult !== -1) {
+			return bedColorResult;
+		}
+	} else if (itemData.typeId === "minecraft:spawn_egg") {
+		// npcs are the only spawn egg that still use data values. The rest have their own type id. Just redirect all references of the old spawn egg typeid to npc.
+		return 51;
+	}
+	return 0;
 }

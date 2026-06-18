@@ -44,7 +44,7 @@ function getSelectorName(recievers: Entity[] | Block | Vector3): string {
 }
 
 export const GIVEX_COMMAND: CustomCommand = {
-	description: "Give items with specific properties to entities.",
+	description: "Give items with special components to entities.",
 	mandatoryParameters: [
 		{
 			name: "target",
@@ -90,7 +90,7 @@ export function givexCommandCallback(
 }
 
 export const BLOCKX_COMMAND: CustomCommand = {
-	description: "Give items with specific properties to blocks.",
+	description: "Give items with special components to blocks.",
 	mandatoryParameters: [
 		{
 			name: "position",
@@ -141,7 +141,7 @@ export function blockxCommandCallback(
 }
 
 export const SPAWNX_COMMAND: CustomCommand = {
-	description: "Spawn items with specific properties.",
+	description: "Spawn items with special components.",
 	mandatoryParameters: [
 		{
 			name: "position",

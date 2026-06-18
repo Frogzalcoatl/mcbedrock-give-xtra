@@ -1,5 +1,4 @@
 import { Block, type Entity, Player, type Vector3 } from "@minecraft/server";
-import type { CommandVector3 } from "./forms/types";
 
 export function prettyTypeId(typeId: string): string {
 	const namespaceColonIndex: number = typeId.indexOf(":");
@@ -50,14 +49,14 @@ export function appendColorAfterResets(str: string, colorCode: string): string {
 	return str.replaceAll("§r", `§r${colorCode}`);
 }
 
-function truncTo(num: number, decimalPlaces: number) {
+export function truncTo(num: number, decimalPlaces: number) {
 	if (decimalPlaces < 0) {
 		return num;
 	}
 	return Math.trunc(num * 10 ** decimalPlaces) / 10 ** decimalPlaces;
 }
 
-export function vector3ToString(vector: Vector3 | CommandVector3, decimalPlaces: number): string {
+export function vector3ToString(vector: Vector3, decimalPlaces: number): string {
 	let str = "";
 	for (const value of Object.values(vector)) {
 		str += " ";
@@ -89,4 +88,18 @@ export function camelToTitleCase(str: string): string {
 		}
 	}
 	return splitStr.join("");
+}
+
+export function stringToNumber(str: string): number | undefined {
+	const trimmed = str.trim();
+	// Number() would return zero for an empty string, or a string with only white space
+	if (trimmed === "") {
+		return undefined;
+	}
+	const num = Number(trimmed);
+	// NaN === NaN -> false for whatever reason
+	if (Number.isNaN(num)) {
+		return undefined;
+	}
+	return num;
 }

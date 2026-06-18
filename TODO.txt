@@ -1,4 +1,3 @@
 Help command (server-ui)
 	Match bed color and arrow type icons with currently selected type
-	Remove RawMessage
 	Come up with a better way to generate prompt edit ui
