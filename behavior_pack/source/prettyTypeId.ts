@@ -6,12 +6,12 @@ export function prettyTypeId(typeId: string): string {
 		typeId = typeId.slice(namespaceColonIndex + 1);
 	}
 	const words: string[] = typeId.split("_");
-	for (let i = 0; i < words.length; i++) {
-		const word = words[i];
+	for (let i: number = 0; i < words.length; i++) {
+		const word: string | undefined = words[i];
 		if (!word) {
 			continue;
 		}
-		const firstLetter = word[0];
+		const firstLetter: string | undefined = word[0];
 		if (!firstLetter) {
 			continue;
 		}
@@ -57,7 +57,7 @@ export function truncTo(num: number, decimalPlaces: number) {
 }
 
 export function vector3ToString(vector: Vector3, decimalPlaces: number): string {
-	let str = "";
+	let str: string = "";
 	for (const value of Object.values(vector)) {
 		str += " ";
 		if (typeof value === "string") {
@@ -70,13 +70,13 @@ export function vector3ToString(vector: Vector3, decimalPlaces: number): string 
 }
 
 export function camelToTitleCase(str: string): string {
-	const splitStr = str.split("");
-	const firstChar = splitStr[0];
+	const splitStr: string[] = str.split("");
+	const firstChar: string | undefined = splitStr[0];
 	if (firstChar !== undefined) {
 		splitStr[0] = firstChar.toUpperCase();
 	}
-	for (let i = 1; i < splitStr.length; i++) {
-		const currentChar = splitStr[i];
+	for (let i: number = 1; i < splitStr.length; i++) {
+		const currentChar: string | undefined = splitStr[i];
 		if (!currentChar) {
 			continue;
 		}
@@ -91,12 +91,12 @@ export function camelToTitleCase(str: string): string {
 }
 
 export function stringToNumber(str: string): number | undefined {
-	const trimmed = str.trim();
+	const trimmed: string = str.trim();
 	// Number() would return zero for an empty string, or a string with only white space
 	if (trimmed === "") {
 		return undefined;
 	}
-	const num = Number(trimmed);
+	const num: number = Number(trimmed);
 	// NaN === NaN -> false for whatever reason
 	if (Number.isNaN(num)) {
 		return undefined;

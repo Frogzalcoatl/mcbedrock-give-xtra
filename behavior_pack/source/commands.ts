@@ -14,9 +14,15 @@ import {
 	type Vector3,
 } from "@minecraft/server";
 import { FormHelp } from "./forms/help";
-import { ItemPropertiesGenerator } from "./forms/itemPropertiesGenerator";
+import { ItemPropertiesForm } from "./forms/itemPropertiesForm";
 import { showActionForm } from "./forms/types";
-import { blockxGetBlock, getDimensionFromOrigin, givexRun } from "./givex";
+import {
+	type BlockxGetBlockResult,
+	blockxGetBlock,
+	type GetDimensionFromOriginResult,
+	getDimensionFromOrigin,
+	givexRun,
+} from "./givex";
 import { getRecieverName, prettyTypeId, vector3ToString } from "./prettyTypeId";
 import { CommandNamespace, type GivexContext } from "./types";
 
@@ -131,7 +137,7 @@ export function blockxCommandCallback(
 		recievers: [],
 		selectorName: "block",
 	};
-	const blockResult = blockxGetBlock(context, location);
+	const blockResult: BlockxGetBlockResult = blockxGetBlock(context, location);
 	if (blockResult.block === undefined) {
 		return blockResult.result;
 	}
@@ -182,7 +188,7 @@ export function spawnxCommandCallback(
 		recievers: [],
 		selectorName: getSelectorName(position),
 	};
-	const dimensionResult = getDimensionFromOrigin(origin);
+	const dimensionResult: GetDimensionFromOriginResult = getDimensionFromOrigin(origin);
 	if (dimensionResult.dimension === undefined) {
 		return dimensionResult.result;
 	}
@@ -236,8 +242,8 @@ export function helpCommandCallback(
 		if (itemType === undefined) {
 			showActionForm(FormHelp, viewer);
 		} else {
-			const creator = new ItemPropertiesGenerator(viewer, false, itemType.id);
-			creator.run();
+			const propertiesForm = new ItemPropertiesForm(viewer, false, itemType.id);
+			propertiesForm.run();
 		}
 	});
 	return {

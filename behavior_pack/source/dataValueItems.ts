@@ -5,6 +5,8 @@ import {
 	EntityComponentTypes,
 	type EntityInventoryComponent,
 	ItemComponentTypes,
+	type ItemDurabilityComponent,
+	type ItemEnchantableComponent,
 	type ItemStack,
 	type Vector3,
 } from "@minecraft/server";
@@ -16,7 +18,7 @@ import {
 	type ItemProperties,
 } from "./types";
 
-const CustomContainerEntityType = "givex:custom_container";
+const CustomContainerEntityType: string = "givex:custom_container";
 
 function removeEntity(entity: Entity): BooleanWithMessage {
 	try {
@@ -43,8 +45,12 @@ function copyItemStackComponents(from: ItemStack, to: ItemStack): BooleanWithMes
 	if (from.nameTag) {
 		to.nameTag = from.nameTag;
 	}
-	const fromDurability = from.getComponent(ItemComponentTypes.Durability);
-	const toDurability = to.getComponent(ItemComponentTypes.Durability);
+	const fromDurability: ItemDurabilityComponent | undefined = from.getComponent(
+		ItemComponentTypes.Durability,
+	);
+	const toDurability: ItemDurabilityComponent | undefined = to.getComponent(
+		ItemComponentTypes.Durability,
+	);
 	if (fromDurability && toDurability) {
 		toDurability.damage = fromDurability.damage;
 		toDurability.unbreakable = fromDurability.unbreakable;
@@ -52,8 +58,12 @@ function copyItemStackComponents(from: ItemStack, to: ItemStack): BooleanWithMes
 	to.keepOnDeath = from.keepOnDeath;
 	to.setCanPlaceOn(from.getCanPlaceOn());
 	to.setCanDestroy(from.getCanDestroy());
-	const templateEnchantable = from.getComponent(ItemComponentTypes.Enchantable);
-	const givenItemEnchantable = to.getComponent(ItemComponentTypes.Enchantable);
+	const templateEnchantable: ItemEnchantableComponent | undefined = from.getComponent(
+		ItemComponentTypes.Enchantable,
+	);
+	const givenItemEnchantable: ItemEnchantableComponent | undefined = to.getComponent(
+		ItemComponentTypes.Enchantable,
+	);
 	if (templateEnchantable && givenItemEnchantable) {
 		try {
 			givenItemEnchantable.addEnchantments(templateEnchantable.getEnchantments());
@@ -74,13 +84,17 @@ function copyItemStackComponents(from: ItemStack, to: ItemStack): BooleanWithMes
 	};
 }
 
+export interface GetDataValueItemResult {
+	item: ItemStack | undefined;
+	message: string;
+}
 // Cannot be run in restricted execution
 // Uses /give on a custom entity for command data value, applies components of itemstack, then returns new itemstack with data value attached internally.
 export function getDataValueItem(
 	item: ItemStack,
 	dataValue: number,
 	locationForCustomEntity: DimensionLocation,
-): { item: ItemStack | undefined; message: string } {
+): GetDataValueItemResult {
 	if (dataValue === 0) {
 		return {
 			item: item,
@@ -171,7 +185,7 @@ export function getCommandDataValue(properties: ItemProperties): number {
 			return arrowEffectResult + ArrowTypeStartingDataValue;
 		}
 	} else if (properties.bedColor && properties.typeId === "minecraft:bed") {
-		const bedColorResult = BedColors.indexOf(properties.bedColor);
+		const bedColorResult: number = BedColors.indexOf(properties.bedColor);
 		if (bedColorResult !== -1) {
 			return bedColorResult;
 		}

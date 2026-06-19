@@ -2,20 +2,28 @@ import {
 	type DimensionLocation,
 	type Enchantment,
 	EnchantmentLevelOutOfBoundsError,
+	type EnchantmentType,
 	EnchantmentTypeNotCompatibleError,
 	EnchantmentTypes,
 	EnchantmentTypeUnknownIdError,
 	ItemComponentTypes,
+	type ItemDurabilityComponent,
 	type ItemEnchantableComponent,
 	ItemStack,
 	Potions,
 } from "@minecraft/server";
-import { getCommandDataValue, getDataValueItem } from "./dataValueItems";
+import {
+	type GetDataValueItemResult,
+	getCommandDataValue,
+	getDataValueItem,
+} from "./dataValueItems";
 import { ItemPropertiesValidation, itemTypeToPotionDeliveryType } from "./itemProperties";
 import type { BooleanWithMessage, EnchantData, ItemDurability, ItemProperties } from "./types";
 
 export function applyDurability(item: ItemStack, value: ItemDurability): BooleanWithMessage {
-	const durabilityComponent = item.getComponent(ItemComponentTypes.Durability);
+	const durabilityComponent: ItemDurabilityComponent | undefined = item.getComponent(
+		ItemComponentTypes.Durability,
+	);
 	if (durabilityComponent === undefined || !durabilityComponent.isValid) {
 		return {
 			bool: false,
@@ -42,29 +50,11 @@ export function applyDurability(item: ItemStack, value: ItemDurability): Boolean
 	};
 }
 
-/* Will add back once mojang fixes dyeable component (Bug tracker MCPE-237577 and MCPE-232617)
-
-function applyDye(item: ItemStack, color: RGB): BooleanWithMessage {
-	const dyeableComponent = item.getComponent(ItemComponentTypes.Dyeable);
-	if (dyeableComponent === undefined || !dyeableComponent.isValid) {
-		return {
-			bool: false,
-			message: "Unable to apply dye to this item",
-		};
-	}
-	dyeableComponent.color = color;
-	return {
-		bool: true,
-		message: "Set dye on item",
-	};
-}
-*/
-
 export function applyEnchantData(
 	enchantableComponent: ItemEnchantableComponent,
 	data: EnchantData,
 ): BooleanWithMessage {
-	const enchantType = EnchantmentTypes.get(data.id);
+	const enchantType: EnchantmentType | undefined = EnchantmentTypes.get(data.id);
 	if (enchantType === undefined) {
 		return {
 			bool: false,
@@ -97,14 +87,12 @@ export function applyEnchantData(
 	};
 }
 
-function createPotionItem(
-	potionType: string,
-	itemTypeId: string,
-): {
+interface CreatePotionItemResult {
 	item: ItemStack | undefined;
 	message: string;
-} {
-	const deliveryType = itemTypeToPotionDeliveryType(itemTypeId);
+}
+function createPotionItem(potionType: string, itemTypeId: string): CreatePotionItemResult {
+	const deliveryType: string | undefined = itemTypeToPotionDeliveryType(itemTypeId);
 	if (deliveryType === undefined) {
 		return {
 			item: undefined,
@@ -130,20 +118,24 @@ function createPotionItem(
 	};
 }
 
+export interface PropertiesToItemStackResult {
+	item: ItemStack | undefined;
+	warnings: string | undefined;
+}
 // Cannot be run in restricted execution
 export function propertiesToItemStack(
 	properties: ItemProperties,
 	locationOfReciever: DimensionLocation,
-): {
-	item: ItemStack | undefined;
-	warnings: string | undefined;
-} {
+): PropertiesToItemStackResult {
 	let itemStack: ItemStack;
 	try {
 		if (!properties.potionType) {
 			itemStack = new ItemStack(properties.typeId);
 		} else {
-			const potionItemResult = createPotionItem(properties.potionType, properties.typeId);
+			const potionItemResult: CreatePotionItemResult = createPotionItem(
+				properties.potionType,
+				properties.typeId,
+			);
 			if (potionItemResult.item) {
 				itemStack = potionItemResult.item;
 			} else {
@@ -182,7 +174,9 @@ export function propertiesToItemStack(
 		}
 	}
 	if (properties.nameTag !== undefined) {
-		const nameTagResult = ItemPropertiesValidation.nameTag(properties.nameTag);
+		const nameTagResult: BooleanWithMessage = ItemPropertiesValidation.nameTag(
+			properties.nameTag,
+		);
 		if (nameTagResult) {
 			// Add §r to reset auto italicization
 			itemStack.nameTag = `§r${properties.nameTag}`;
@@ -191,18 +185,20 @@ export function propertiesToItemStack(
 		}
 	}
 	if (properties.durability !== undefined) {
-		const result = applyDurability(itemStack, properties.durability);
+		const result: BooleanWithMessage = applyDurability(itemStack, properties.durability);
 		if (!result.bool) {
 			warning += `${result.message}.\n`;
 		}
 	}
 	if (properties.enchants !== undefined) {
-		const enchantableComponent = itemStack.getComponent(ItemComponentTypes.Enchantable);
+		const enchantableComponent: ItemEnchantableComponent | undefined = itemStack.getComponent(
+			ItemComponentTypes.Enchantable,
+		);
 		if (enchantableComponent === undefined || !enchantableComponent.isValid) {
 			warning += `Unable to apply enchantments to ${itemStack.typeId}. Skipping\n`;
 		} else {
 			for (const enchant of properties.enchants) {
-				const result = applyEnchantData(enchantableComponent, enchant);
+				const result: BooleanWithMessage = applyEnchantData(enchantableComponent, enchant);
 				if (!result.bool) {
 					warning += `${result.message}.\n`;
 				}
@@ -236,7 +232,11 @@ export function propertiesToItemStack(
 	}
 	const dataValue: number = getCommandDataValue(properties);
 	if (dataValue !== 0) {
-		const dataValueResult = getDataValueItem(itemStack, dataValue, locationOfReciever);
+		const dataValueResult: GetDataValueItemResult = getDataValueItem(
+			itemStack,
+			dataValue,
+			locationOfReciever,
+		);
 		if (dataValueResult.item !== undefined) {
 			itemStack = dataValueResult.item;
 		} else {

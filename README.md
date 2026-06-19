@@ -16,7 +16,7 @@ Select item properties to generate and copy givex commands. Additionally contain
 
 **Parameters:**
 
-`itemName?:` Open givex command generator UI with an item type ID filled in. Useful for tab autocompletion.
+`itemName?:` Open item properties UI with an item type ID filled in. Useful for tab autocompletion.
 
 **Example:**
 

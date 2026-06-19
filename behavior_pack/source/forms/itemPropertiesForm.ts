@@ -152,7 +152,7 @@ enum PromptResult {
 	Closed,
 }
 
-export class ItemPropertiesGenerator {
+export class ItemPropertiesForm {
 	public player: Player;
 	public properties: ItemProperties;
 	public commandType: CommandType;
@@ -365,7 +365,7 @@ export class ItemPropertiesGenerator {
 				addStyling: true,
 				text: "Submit",
 			},
-			title: ItemPropertiesGenerator.FORM_TITLE,
+			title: ItemPropertiesForm.FORM_TITLE,
 		};
 	}
 
@@ -477,7 +477,7 @@ export class ItemPropertiesGenerator {
 	};
 
 	private async propertiesBackConfirmation(): Promise<boolean> {
-		let result = await showMessageForm(ItemPropertiesGenerator.BACK_CONFIRMATION, this.player);
+		let result = await showMessageForm(ItemPropertiesForm.BACK_CONFIRMATION, this.player);
 		// Treat closing this form as "Im Sure!"
 		if (result === undefined) {
 			result = 0;
@@ -663,7 +663,7 @@ export class ItemPropertiesGenerator {
 				},
 				{ text: `Selected Components:\n${this.getPropertiesDisplay()}`, type: "label" },
 			],
-			title: ItemPropertiesGenerator.FORM_TITLE,
+			title: ItemPropertiesForm.FORM_TITLE,
 		};
 		const backButtonIndex: number = 0;
 		const submitButtonIndex: number = itemPropertyButtons.length + 1;
@@ -675,13 +675,13 @@ export class ItemPropertiesGenerator {
 				await this.propertiesBackConfirmation();
 			if (BackConfirmationResult) {
 				system.run(async () => {
-					const creator = new ItemPropertiesGenerator(
+					const newInstance = new ItemPropertiesForm(
 						this.player,
 						this.openedFromHelp,
 						this.properties.typeId,
 					);
-					creator.commandType = this.commandType;
-					creator.run(true);
+					newInstance.commandType = this.commandType;
+					newInstance.run(true);
 				});
 				return Promise.resolve({ message: "", promptResult: PromptResult.Closed });
 			} else {
@@ -746,7 +746,7 @@ export class ItemPropertiesGenerator {
 				addStyling: true,
 				text: "Done",
 			},
-			title: ItemPropertiesGenerator.FORM_TITLE,
+			title: ItemPropertiesForm.FORM_TITLE,
 		};
 		// text field default value characters start to distort at a certain length
 		if (textField.options !== undefined) {

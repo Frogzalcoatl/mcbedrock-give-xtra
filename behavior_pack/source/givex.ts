@@ -14,8 +14,12 @@ import {
 	world,
 } from "@minecraft/server";
 import { giveItemToBlock, giveItemToEntity } from "./containers";
-import { ItemPropertiesValidation, parseCommandJson } from "./itemProperties";
-import { propertiesToItemStack } from "./itemStack";
+import {
+	ItemPropertiesValidation,
+	type ParseCommandJsonResult,
+	parseCommandJson,
+} from "./itemProperties";
+import { type PropertiesToItemStackResult, propertiesToItemStack } from "./itemStack";
 import { appendColorAfterResets, prettyTypeId, vector3ToString } from "./prettyTypeId";
 import type { BooleanWithMessage, GivexContext, ItemProperties, SlotData } from "./types";
 
@@ -180,10 +184,11 @@ function givexGiveItemType(context: GivexContext): CustomCommandResult {
 	return givexGiveItemStack(context, itemStack, undefined, undefined);
 }
 
-function givexPrepareItemProperties(context: GivexContext): {
+interface GivexPrepareItemPropertiesResult {
 	result: CustomCommandResult;
 	properties: ItemProperties | undefined;
-} {
+}
+function givexPrepareItemProperties(context: GivexContext): GivexPrepareItemPropertiesResult {
 	if (context.recievers.length === 0) {
 		return {
 			properties: undefined,
@@ -217,7 +222,7 @@ function givexPrepareItemProperties(context: GivexContext): {
 			},
 		};
 	}
-	const propertiesResult = parseCommandJson(
+	const propertiesResult: ParseCommandJsonResult = parseCommandJson(
 		context.json,
 		context.itemType.id,
 		context.itemAmount,
@@ -238,7 +243,7 @@ function givexPrepareItemProperties(context: GivexContext): {
 		};
 	}
 	const properties: ItemProperties = propertiesResult.properties;
-	const validationResult = ItemPropertiesValidation.complete(properties);
+	const validationResult: BooleanWithMessage = ItemPropertiesValidation.complete(properties);
 	if (!validationResult.bool) {
 		return {
 			properties: undefined,
@@ -299,7 +304,7 @@ function givexGetSpecialIdentifier(properties: ItemProperties): string | undefin
 
 // Automatically runs givex, blockx, or spawnx based on type of context.recievers
 export function givexRun(context: GivexContext): CustomCommandResult {
-	const propertiesResult = givexPrepareItemProperties(context);
+	const propertiesResult: GivexPrepareItemPropertiesResult = givexPrepareItemProperties(context);
 	if (propertiesResult.result.status === CustomCommandStatus.Failure) {
 		commandBlockOutputMessage(context.origin, propertiesResult.result);
 		return propertiesResult.result;
@@ -331,7 +336,10 @@ export function givexRun(context: GivexContext): CustomCommandResult {
 			});
 			return;
 		}
-		const itemStackResult = propertiesToItemStack(properties, aRecieverLocation);
+		const itemStackResult: PropertiesToItemStackResult = propertiesToItemStack(
+			properties,
+			aRecieverLocation,
+		);
 		if (itemStackResult.item === undefined) {
 			afterTickCommandResultHandler(context.origin, {
 				message: itemStackResult.warnings ?? "Failed to create item stack",
@@ -339,7 +347,7 @@ export function givexRun(context: GivexContext): CustomCommandResult {
 			});
 			return;
 		}
-		const givexResult = givexGiveItemStack(
+		const givexResult: CustomCommandResult = givexGiveItemStack(
 			context,
 			itemStackResult.item,
 			properties.slot,
@@ -356,10 +364,11 @@ export function givexRun(context: GivexContext): CustomCommandResult {
 	};
 }
 
-export function getDimensionFromOrigin(origin: CustomCommandOrigin): {
+export interface GetDimensionFromOriginResult {
 	dimension: Dimension | undefined;
 	result: CustomCommandResult;
-} {
+}
+export function getDimensionFromOrigin(origin: CustomCommandOrigin): GetDimensionFromOriginResult {
 	let dimension: Dimension | undefined;
 	if (origin.sourceEntity?.isValid) {
 		dimension = origin.sourceEntity.dimension;
@@ -384,18 +393,19 @@ export function getDimensionFromOrigin(origin: CustomCommandOrigin): {
 	};
 }
 
-export function blockxGetBlock(
-	context: GivexContext,
-	location: Vector3,
-): { block: Block | undefined; result: CustomCommandResult } {
-	const dimensionResult = getDimensionFromOrigin(context.origin);
+export interface BlockxGetBlockResult {
+	block: Block | undefined;
+	result: CustomCommandResult;
+}
+export function blockxGetBlock(context: GivexContext, location: Vector3): BlockxGetBlockResult {
+	const dimensionResult: GetDimensionFromOriginResult = getDimensionFromOrigin(context.origin);
 	if (dimensionResult.dimension === undefined) {
 		return {
 			block: undefined,
 			result: dimensionResult.result,
 		};
 	}
-	const dimension = dimensionResult.dimension;
+	const dimension: Dimension = dimensionResult.dimension;
 	let block: Block | undefined;
 	let blockErrorMessage: string = `Unable to get block at location ${vector3ToString(location, 0)}`;
 	try {

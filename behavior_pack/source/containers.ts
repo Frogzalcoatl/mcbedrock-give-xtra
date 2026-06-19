@@ -1,10 +1,14 @@
 import {
 	type Block,
 	BlockComponentTypes,
+	type BlockInventoryComponent,
 	type Container,
 	type Entity,
 	EntityComponentTypes,
 	type EntityEnderInventoryComponent,
+	type EntityEquippableComponent,
+	type EntityInventoryComponent,
+	type EntityIsTamedComponent,
 	EquipmentSlot,
 	type ItemStack,
 	Player,
@@ -131,7 +135,9 @@ function setItemInContainerSlot(
 
 // Cannot be run in restricted execution
 function giveItemInventory(entity: Entity, item: ItemStack, slot: SlotData): BooleanWithMessage {
-	const inventory = entity.getComponent(EntityComponentTypes.Inventory);
+	const inventory: EntityInventoryComponent | undefined = entity.getComponent(
+		EntityComponentTypes.Inventory,
+	);
 	if (inventory === undefined || !inventory.isValid) {
 		return {
 			bool: false,
@@ -164,8 +170,12 @@ const MobChestEntityTypes: string[] = ["minecraft:llama", "minecraft:donkey", "m
 // Includes SlotName.Saddle, SlotName.Armor, and SlotName.MobChest
 // Cannot be run in restricted execution
 function giveItemTameable(entity: Entity, item: ItemStack, slot: SlotData): BooleanWithMessage {
-	const inventory = entity.getComponent(EntityComponentTypes.Inventory);
-	const isTamed = entity.getComponent(EntityComponentTypes.IsTamed);
+	const inventory: EntityInventoryComponent | undefined = entity.getComponent(
+		EntityComponentTypes.Inventory,
+	);
+	const isTamed: EntityIsTamedComponent | undefined = entity.getComponent(
+		EntityComponentTypes.IsTamed,
+	);
 	if (
 		inventory === undefined ||
 		!inventory.isValid ||
@@ -197,7 +207,12 @@ function giveItemTameable(entity: Entity, item: ItemStack, slot: SlotData): Bool
 		// Horse Armor is inventory slot 1 on tameable mobs.
 		slot.id = 1;
 	}
-	const result = setItemInContainerSlot(entity, inventory.container, item, slot);
+	const result: BooleanWithMessage = setItemInContainerSlot(
+		entity,
+		inventory.container,
+		item,
+		slot,
+	);
 	return {
 		bool: result.bool,
 		message: result.bool
@@ -227,7 +242,9 @@ function slotNameToEquipmentSlot(name: SlotName): EquipmentSlot | undefined {
 
 // Cannot be run in restricted execution
 function giveItemEquippable(entity: Entity, item: ItemStack, slot: SlotData): BooleanWithMessage {
-	const equippable = entity.getComponent(EntityComponentTypes.Equippable);
+	const equippable: EntityEquippableComponent | undefined = entity.getComponent(
+		EntityComponentTypes.Equippable,
+	);
 	if (equippable === undefined) {
 		return {
 			bool: false,
@@ -254,7 +271,9 @@ function giveItemEquippable(entity: Entity, item: ItemStack, slot: SlotData): Bo
 	}
 	let oldItemGiveResult: BooleanWithMessage | undefined;
 	if (oldItem) {
-		const inventory = entity.getComponent(EntityComponentTypes.Inventory);
+		const inventory: EntityInventoryComponent | undefined = entity.getComponent(
+			EntityComponentTypes.Inventory,
+		);
 		let addItemsResult: BooleanWithMessage | undefined;
 		if (inventory?.isValid && inventory.container.isValid) {
 			addItemsResult = addItemsToContainer(entity, inventory.container, item, item.amount);
@@ -318,7 +337,9 @@ export function giveItemToEntity(
 	}
 	// Just add item to free slots in inventory
 	if (slot === undefined) {
-		const inventory = entity.getComponent(EntityComponentTypes.Inventory);
+		const inventory: EntityInventoryComponent | undefined = entity.getComponent(
+			EntityComponentTypes.Inventory,
+		);
 		if (inventory === undefined || !inventory.isValid) {
 			return {
 				bool: false,
@@ -361,7 +382,9 @@ export function giveItemToBlock(
 			message: `Block at location ${vector3ToString(block.location, 0)} is invalid.`,
 		};
 	}
-	const inventory = block.getComponent(BlockComponentTypes.Inventory);
+	const inventory: BlockInventoryComponent | undefined = block.getComponent(
+		BlockComponentTypes.Inventory,
+	);
 	if (inventory === undefined || !inventory.isValid || inventory.container === undefined) {
 		return {
 			bool: false,

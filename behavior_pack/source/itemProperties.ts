@@ -1,10 +1,14 @@
 import {
 	BlockTypes,
 	EnchantmentSlot,
+	type EnchantmentType,
 	EnchantmentTypes,
 	ItemComponentTypes,
+	type ItemDurabilityComponent,
+	type ItemEnchantableComponent,
 	ItemLockMode,
 	ItemStack,
+	type ItemType,
 	ItemTypes,
 	type PotionEffectType,
 	Potions,
@@ -220,14 +224,15 @@ function isItemProperties(obj: any): obj is ItemProperties {
 	return true;
 }
 
+export interface ParseCommandJsonResult {
+	properties: ItemProperties | undefined;
+	syntaxError: string | undefined;
+}
 export function parseCommandJson(
 	strJson: string,
 	itemTypeId: string,
 	amount: number,
-): {
-	properties: ItemProperties | undefined;
-	syntaxError: string | undefined;
-} {
+): ParseCommandJsonResult {
 	// biome-ignore lint/suspicious/noExplicitAny: any is required here for JSON.parse. Type will be assigned later.
 	let parsedData: any;
 	try {
@@ -293,18 +298,20 @@ function canEquipInSlot(itemStack: ItemStack, targetSlot: SlotName): boolean {
 		// All items can go inside the above SlotNames
 		return true;
 	}
-	const itemNamespace = getMcNamespace(itemStack.typeId) ?? "minecraft";
+	const itemNamespace: string | undefined = getMcNamespace(itemStack.typeId) ?? "minecraft";
 	if (itemNamespace !== "minecraft") {
 		// Don't trust custom items to have enchantable slots set up in the same way as vanilla items.
 		return true;
 	}
 	// Only armor slots remain.
-	const enchantable = itemStack.getComponent(ItemComponentTypes.Enchantable);
+	const enchantable: ItemEnchantableComponent | undefined = itemStack.getComponent(
+		ItemComponentTypes.Enchantable,
+	);
 	if (!enchantable || enchantable.slots.length === 0) {
 		// All vanilla items in armor slots seem to have enchantable slots set up, even if theyre not enchantable.
 		return false;
 	}
-	const itemEnchantSlots = enchantable.slots;
+	const itemEnchantSlots: EnchantmentSlot[] = enchantable.slots;
 	switch (targetSlot) {
 		case SlotName.Head:
 			return (
@@ -339,11 +346,11 @@ export function itemTypeToPotionDeliveryType(typeId: string): string | undefined
 }
 
 export function getMaxStackSize(itemTypeId: string): number | undefined {
-	const itemType = ItemTypes.get(itemTypeId);
+	const itemType: ItemType | undefined = ItemTypes.get(itemTypeId);
 	if (itemType === undefined) {
 		return undefined;
 	}
-	const itemStack = new ItemStack(itemType);
+	const itemStack: ItemStack = new ItemStack(itemType);
 	return itemStack.maxAmount;
 }
 
@@ -360,7 +367,7 @@ export function getMaxItemPropertiesAmount(properties: ItemProperties): number {
 // biome-ignore assist/source/useSortedKeys: Want to keep it in the same order as declared in the ItemProperties interface.
 export const ItemPropertiesValidation = {
 	typeId(value: string): BooleanWithMessage {
-		const itemType = ItemTypes.get(value);
+		const itemType: ItemType | undefined = ItemTypes.get(value);
 		const result: boolean = itemType !== undefined && itemType.id !== "minecraft:air";
 		return {
 			bool: result,
@@ -394,7 +401,9 @@ export const ItemPropertiesValidation = {
 		};
 	},
 	durability(durability: ItemDurability, itemStack: ItemStack): BooleanWithMessage {
-		const durabilityComponent = itemStack.getComponent(ItemComponentTypes.Durability);
+		const durabilityComponent: ItemDurabilityComponent | undefined = itemStack.getComponent(
+			ItemComponentTypes.Durability,
+		);
 		if (durabilityComponent === undefined) {
 			return {
 				bool: false,
@@ -425,7 +434,9 @@ export const ItemPropertiesValidation = {
 		};
 	},
 	enchants(value: EnchantData[], itemStack: ItemStack): BooleanWithMessage {
-		const enchantableComonent = itemStack.getComponent(ItemComponentTypes.Enchantable);
+		const enchantableComonent: ItemEnchantableComponent | undefined = itemStack.getComponent(
+			ItemComponentTypes.Enchantable,
+		);
 		if (enchantableComonent === undefined) {
 			return {
 				bool: false,
@@ -433,7 +444,7 @@ export const ItemPropertiesValidation = {
 			};
 		}
 		for (const enchant of value) {
-			const type = EnchantmentTypes.get(enchant.id);
+			const type: EnchantmentType | undefined = EnchantmentTypes.get(enchant.id);
 			if (type === undefined) {
 				return {
 					bool: false,
@@ -518,7 +529,7 @@ export const ItemPropertiesValidation = {
 				message: "Cannot have both arrowType and potionType",
 			};
 		}
-		const deliveryType = itemTypeToPotionDeliveryType(properties.typeId);
+		const deliveryType: string | undefined = itemTypeToPotionDeliveryType(properties.typeId);
 		if (deliveryType === undefined) {
 			let message: string = `${properties.typeId} is not compatible with potionType`;
 			// In case user gets confused and tries to use potionType for tipped arrows
@@ -530,7 +541,7 @@ export const ItemPropertiesValidation = {
 				message: message,
 			};
 		}
-		const effectTypeNamespace = getMcNamespace(properties.potionType);
+		const effectTypeNamespace: string | undefined = getMcNamespace(properties.potionType);
 		if (effectTypeNamespace === undefined) {
 			properties.potionType = `minecraft:${properties.potionType}`;
 		}
