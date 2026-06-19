@@ -1,5 +1,5 @@
 # mcbedrock-gametest-starter
-A template repository for getting started with scripting gametest modules for Minecraft: Bedrock Edition.
+A template repository for getting started with scripting gametest modules for Minecraft: Bedrock Edition. This template has been edited for addon development. To view the original, click [here](https://github.com/sunshinekitsune/mcbedrock-gametest-starter).
 
 ## Features
 * Typescript configured for ES2023.
@@ -28,7 +28,7 @@ You need the following utilities installed: [pnpm](https://pnpm.io/), [node LTS]
 	pnpm install
 	```
 
-3. Link this project to the com.mojang folder. (Added by Frogzalcoatl)
+3. Link this project to the com.mojang folder.
 
 	Open `deploy-pack.bat` and enter "y" to create symlinks in the com.mojang folder.
 
