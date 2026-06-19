@@ -6,6 +6,7 @@ import {
 	CustomCommandParamType,
 	type CustomCommandResult,
 	CustomCommandStatus,
+	type Dimension,
 	type Entity,
 	type ItemType,
 	Player,
@@ -16,15 +17,9 @@ import {
 import { FormHelp } from "./forms/help";
 import { ItemPropertiesForm } from "./forms/itemPropertiesForm";
 import { showActionForm } from "./forms/types";
-import {
-	type BlockxGetBlockResult,
-	blockxGetBlock,
-	type GetDimensionFromOriginResult,
-	getDimensionFromOrigin,
-	givexRun,
-} from "./givex";
+import { GivexCommand } from "./givex";
 import { getRecieverName, prettyTypeId, vector3ToString } from "./prettyTypeId";
-import { CommandNamespace, type GivexContext } from "./types";
+import { CommandNamespace } from "./types";
 
 function getSelectorName(recievers: Entity[] | Block | Vector3): string {
 	if (recievers instanceof Block) {
@@ -83,16 +78,84 @@ export function givexCommandCallback(
 	amount: number = 1,
 	json?: string,
 ): CustomCommandResult {
-	const context: GivexContext = {
-		commandType: "givex",
-		itemAmount: amount,
-		itemType: itemType,
-		json: json,
-		origin: origin,
-		recievers: selectorResult,
-		selectorName: getSelectorName(selectorResult),
+	const command = new GivexCommand(
+		"givex",
+		origin,
+		selectorResult,
+		getSelectorName(selectorResult),
+		itemType,
+		amount,
+		json,
+	);
+	return command.run();
+}
+
+interface GetDimensionFromOriginResult {
+	dimension: Dimension | undefined;
+	result: CustomCommandResult;
+}
+function getDimensionFromOrigin(origin: CustomCommandOrigin): GetDimensionFromOriginResult {
+	let dimension: Dimension | undefined;
+	if (origin.sourceEntity?.isValid) {
+		dimension = origin.sourceEntity.dimension;
+	} else if (origin.initiator?.isValid) {
+		dimension = origin.initiator.dimension;
+	} else if (origin.sourceBlock?.isValid) {
+		dimension = origin.sourceBlock.dimension;
+	} else {
+		return {
+			dimension: undefined,
+			result: {
+				message: "Unable to get valid dimension from command origin",
+				status: CustomCommandStatus.Failure,
+			},
+		};
+	}
+	return {
+		dimension: dimension,
+		result: {
+			status: CustomCommandStatus.Success,
+		},
 	};
-	return givexRun(context);
+}
+
+interface BlockxGetBlockResult {
+	block: Block | undefined;
+	result: CustomCommandResult;
+}
+function blockxGetBlock(command: GivexCommand, location: Vector3): BlockxGetBlockResult {
+	const dimensionResult: GetDimensionFromOriginResult = getDimensionFromOrigin(command.origin);
+	if (dimensionResult.dimension === undefined) {
+		return {
+			block: undefined,
+			result: dimensionResult.result,
+		};
+	}
+	const dimension: Dimension = dimensionResult.dimension;
+	let block: Block | undefined;
+	let blockErrorMessage: string = `Unable to get block at location ${vector3ToString(location, 0)}`;
+	try {
+		block = dimension.getBlock(location);
+	} catch (error) {
+		if (error instanceof Error) {
+			blockErrorMessage += `: ${error.message}`;
+		}
+	}
+	if (block === undefined) {
+		return {
+			block: undefined,
+			result: {
+				message: command.formatMessage(0, blockErrorMessage),
+				status: CustomCommandStatus.Failure,
+			},
+		};
+	}
+	return {
+		block: block,
+		result: {
+			status: CustomCommandStatus.Success,
+		},
+	};
 }
 
 export const BLOCKX_COMMAND: CustomCommand = {
@@ -128,22 +191,22 @@ export function blockxCommandCallback(
 	amount: number = 1,
 	json?: string,
 ): CustomCommandResult {
-	const context: GivexContext = {
-		commandType: "blockx",
-		itemAmount: amount,
-		itemType: itemType,
-		json: json,
-		origin: origin,
-		recievers: [],
-		selectorName: "block",
-	};
-	const blockResult: BlockxGetBlockResult = blockxGetBlock(context, location);
+	const command = new GivexCommand(
+		"blockx",
+		origin,
+		[],
+		"selectorName placeholder",
+		itemType,
+		amount,
+		json,
+	);
+	const blockResult: BlockxGetBlockResult = blockxGetBlock(command, location);
 	if (blockResult.block === undefined) {
 		return blockResult.result;
 	}
-	context.recievers = [blockResult.block];
-	context.selectorName = getSelectorName(blockResult.block);
-	return givexRun(context);
+	command.recievers = [blockResult.block];
+	command.selectorName = getSelectorName(blockResult.block);
+	return command.run();
 }
 
 export const SPAWNX_COMMAND: CustomCommand = {
@@ -179,20 +242,20 @@ export function spawnxCommandCallback(
 	amount: number = 1,
 	json?: string,
 ): CustomCommandResult {
-	const context: GivexContext = {
-		commandType: "spawnx",
-		itemAmount: amount,
-		itemType: itemType,
-		json: json,
-		origin: origin,
-		recievers: [],
-		selectorName: getSelectorName(position),
-	};
+	const command = new GivexCommand(
+		"spawnx",
+		origin,
+		[],
+		getSelectorName(position),
+		itemType,
+		amount,
+		json,
+	);
 	const dimensionResult: GetDimensionFromOriginResult = getDimensionFromOrigin(origin);
 	if (dimensionResult.dimension === undefined) {
 		return dimensionResult.result;
 	}
-	context.recievers = [
+	command.recievers = [
 		{
 			dimension: dimensionResult.dimension,
 			x: position.x,
@@ -200,7 +263,7 @@ export function spawnxCommandCallback(
 			z: position.z,
 		},
 	];
-	return givexRun(context);
+	return command.run();
 }
 
 // Use server ui to easily generate item properties json

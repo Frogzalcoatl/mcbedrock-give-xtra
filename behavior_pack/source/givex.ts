@@ -4,31 +4,30 @@ import {
 	type CustomCommandResult,
 	CustomCommandSource,
 	CustomCommandStatus,
-	type Dimension,
 	type DimensionLocation,
 	Entity,
 	ItemStack,
+	type ItemType,
 	Player,
 	system,
-	type Vector3,
 	world,
 } from "@minecraft/server";
-import { giveItemToBlock, giveItemToEntity } from "./containers";
+import { giveItemToBlock, giveItemToEntity, spawnItemAtDimensionLocation } from "./containers";
 import {
 	ItemPropertiesValidation,
 	type ParseCommandJsonResult,
 	parseCommandJson,
 } from "./itemProperties";
 import { type PropertiesToItemStackResult, propertiesToItemStack } from "./itemStack";
-import { appendColorAfterResets, prettyTypeId, vector3ToString } from "./prettyTypeId";
-import type { BooleanWithMessage, GivexContext, ItemProperties, SlotData } from "./types";
+import { appendColorAfterResets, prettyTypeId } from "./prettyTypeId";
+import type { BooleanWithMessage, CommandType, ItemProperties } from "./types";
 
 // Errors are often too long to fit in the command block ui, so send them in chat if commandblockoutput is enabled.
 function commandBlockOutputMessage(origin: CustomCommandOrigin, result: CustomCommandResult): void {
 	if (
+		result.message &&
 		origin.sourceType === CustomCommandSource.Block &&
-		world.gameRules.commandBlockOutput &&
-		result.message
+		world.gameRules.commandBlockOutput
 	) {
 		// §7 makes text gray, §o italicizes, §r resets formatting
 		// Using same format as commandblockoutput in game
@@ -64,370 +63,251 @@ function afterTickCommandResultHandler(
 	commandBlockOutputMessage(origin, result);
 }
 
-function givexFormatMessage(
-	context: GivexContext,
-	successCount: number,
-	errors: string,
-	specialIdentifier?: string,
-	slot?: SlotData,
-): string {
-	let message: string = "";
-	let itemName: string = prettyTypeId(context.itemType.id);
-	if (specialIdentifier) {
-		itemName = `${specialIdentifier} ${itemName}`;
-	}
-	let actionWordPastTense: string = "";
-	let actionWordPresentTense: string = "";
-	let wordBeforeSelectorName: string = "";
-	if (context.commandType === "givex" || context.commandType === "blockx") {
-		if (slot === undefined || slot.name === undefined) {
-			actionWordPastTense = "Gave";
-			actionWordPresentTense = "give";
-			wordBeforeSelectorName = "to";
-		} else {
-			actionWordPastTense = "Set";
-			actionWordPresentTense = "set";
-			wordBeforeSelectorName = `in ${slot.name} for`;
-		}
-	} else if (context.commandType === "spawnx") {
-		actionWordPastTense = "Spawned";
-		actionWordPresentTense = "spawn";
-		wordBeforeSelectorName = "at";
-	}
-	if (successCount === context.recievers.length) {
-		message = `${actionWordPastTense} ${itemName} * ${context.itemAmount} ${wordBeforeSelectorName} ${context.selectorName}§r`;
-	} else if (successCount > 0) {
-		message = `${actionWordPastTense} ${itemName} * ${context.itemAmount} ${wordBeforeSelectorName} ${context.selectorName}§r\n§6However, this failed for ${context.recievers.length - successCount}/${context.recievers.length} selectors`;
-	} else {
-		message = `§cUnable to ${actionWordPresentTense} ${itemName} ${wordBeforeSelectorName} ${context.selectorName}§r`;
-	}
-	if (errors) {
-		message += `\n§cError(s):\n${errors.slice(0, 1024)}${errors.length > 1024 ? "...\n" : ""}`;
-		message = appendColorAfterResets(message, "§c");
-	}
-	return message;
-}
-
-function givexSpawnItem(
-	context: GivexContext,
-	itemStack: ItemStack,
-	reciever: DimensionLocation,
-): BooleanWithMessage {
-	// DimensionLocation
-	try {
-		itemStack.amount = context.itemAmount;
-		reciever.dimension.spawnItem(itemStack, {
-			x: reciever.x,
-			y: reciever.y,
-			z: reciever.z,
-		});
-	} catch (error) {
-		let message: string = "Unable to spawn item";
-		if (error instanceof Error) {
-			message += `: ${error.message}`;
-		}
-		return {
-			bool: false,
-			message: message,
+export class GivexCommand {
+	private itemProperties: ItemProperties;
+	public specialIdentifier: string | undefined;
+	constructor(
+		public commandType: CommandType,
+		public origin: CustomCommandOrigin,
+		public recievers: Entity[] | Block[] | DimensionLocation[],
+		public selectorName: string,
+		itemType: ItemType,
+		itemAmount: number,
+		public json: string | undefined,
+	) {
+		this.itemProperties = {
+			amount: itemAmount,
+			typeId: itemType.id,
 		};
 	}
-	return {
-		bool: true,
-		message: "",
-	};
-}
 
-// Cannot be run in restricted execution
-function givexGiveItemStack(
-	context: GivexContext,
-	itemStack: ItemStack,
-	slot: SlotData | undefined,
-	specialIdentifier: string | undefined, // For potions, tipped arrows, bed colors
-): CustomCommandResult {
-	let errors: string = "";
-	let successCount: number = 0;
-	for (const reciever of context.recievers) {
-		let result: BooleanWithMessage;
-		if (reciever instanceof Entity) {
-			result = giveItemToEntity(reciever, itemStack, context.itemAmount, slot);
-		} else if (reciever instanceof Block) {
-			result = giveItemToBlock(reciever, itemStack, context.itemAmount, slot);
-		} else {
-			result = givexSpawnItem(context, itemStack, reciever);
+	public formatMessage(successCount: number, errors: string): string {
+		let message: string = "";
+		let itemName: string = prettyTypeId(this.itemProperties.typeId);
+		if (this.specialIdentifier) {
+			itemName = `${this.specialIdentifier} ${itemName}`;
 		}
-		if (result.bool) {
-			successCount++;
-		} else {
-			errors += `-${result.message}\n`;
+		let actionWordPastTense: string = "";
+		let actionWordPresentTense: string = "";
+		let wordBeforeSelectorName: string = "";
+		if (this.commandType === "givex" || this.commandType === "blockx") {
+			if (
+				this.itemProperties.slot === undefined ||
+				this.itemProperties.slot.name === undefined
+			) {
+				actionWordPastTense = "Gave";
+				actionWordPresentTense = "give";
+				wordBeforeSelectorName = "to";
+			} else {
+				actionWordPastTense = "Set";
+				actionWordPresentTense = "set";
+				wordBeforeSelectorName = `in ${this.itemProperties.slot.name} for`;
+			}
+		} else if (this.commandType === "spawnx") {
+			actionWordPastTense = "Spawned";
+			actionWordPresentTense = "spawn";
+			wordBeforeSelectorName = "at";
 		}
+		if (successCount === this.recievers.length) {
+			message = `${actionWordPastTense} ${itemName} * ${this.itemProperties.amount} ${wordBeforeSelectorName} ${this.selectorName}§r`;
+		} else if (successCount > 0) {
+			message = `${actionWordPastTense} ${itemName} * ${this.itemProperties.amount} ${wordBeforeSelectorName} ${this.selectorName}§r`;
+			message += `\n§6However, this failed for ${this.recievers.length - successCount}/${this.recievers.length} selectors`;
+		} else {
+			message = `§cUnable to ${actionWordPresentTense} ${itemName} ${wordBeforeSelectorName} ${this.selectorName}§r`;
+		}
+		if (errors) {
+			message += `\n§cError(s):\n${errors.slice(0, 1024)}${errors.length > 1024 ? "...\n" : ""}`;
+			message = appendColorAfterResets(message, "§c");
+		}
+		return message;
 	}
-	return {
-		message: givexFormatMessage(context, successCount, errors, specialIdentifier, slot),
-		status: successCount > 0 ? CustomCommandStatus.Success : CustomCommandStatus.Failure,
-	};
-}
 
-function givexGiveItemType(context: GivexContext): CustomCommandResult {
-	const itemStack: ItemStack = new ItemStack(context.itemType);
-	if (context.commandType === "spawnx" && context.itemAmount > itemStack.maxAmount) {
-		return {
-			message: givexFormatMessage(
-				context,
-				0,
-				`Amount ${context.itemAmount} exceeds the maximum of ${itemStack.maxAmount} for ${prettyTypeId(itemStack.typeId)}`,
-				undefined,
-				undefined,
-			),
-			status: CustomCommandStatus.Failure,
-		};
+	// Updates identifier to place before item name in return messages, ex: "Poison Potion" instead of just "Potion"
+	private updateSpecialIdentifier(): void {
+		let specialIdentifier: string = "";
+		const properties: ItemProperties = this.itemProperties;
+		if (properties.potionType) {
+			specialIdentifier = properties.potionType;
+		} else if (properties.arrowType) {
+			specialIdentifier = properties.arrowType;
+		} else if (properties.bedColor) {
+			specialIdentifier = properties.bedColor;
+		} else {
+			return;
+		}
+		specialIdentifier = prettyTypeId(specialIdentifier);
+		specialIdentifier = `${specialIdentifier.slice(0, 128)}${specialIdentifier.length > 128 ? "..." : ""}`;
+		this.specialIdentifier = specialIdentifier;
 	}
-	return givexGiveItemStack(context, itemStack, undefined, undefined);
-}
 
-interface GivexPrepareItemPropertiesResult {
-	result: CustomCommandResult;
-	properties: ItemProperties | undefined;
-}
-function givexPrepareItemProperties(context: GivexContext): GivexPrepareItemPropertiesResult {
-	if (context.recievers.length === 0) {
-		return {
-			properties: undefined,
-			result: {
+	private prepareItemProperties(): CustomCommandResult {
+		if (this.recievers.length === 0) {
+			return {
 				message: "No valid selector",
 				status: CustomCommandStatus.Failure,
-			},
-		};
-	}
-	// Trying to access an itemstack created using minecraft:air crashes the world
-	if (context.itemType.id === "minecraft:air") {
-		return {
-			properties: undefined,
-			result: {
-				message: givexFormatMessage(
-					context,
-					0,
-					`Invalid item type "Air"`,
-					undefined,
-					undefined,
-				),
+			};
+		}
+		// Trying to access an itemstack created using minecraft:air crashes the world
+		if (this.itemProperties.typeId === "minecraft:air") {
+			return {
+				message: this.formatMessage(0, `Invalid item type "Air"`),
 				status: CustomCommandStatus.Failure,
-			},
-		};
-	}
-	if (context.json === undefined) {
-		return {
-			properties: undefined,
-			result: {
+			};
+		}
+		if (this.json === undefined) {
+			return {
 				status: CustomCommandStatus.Success,
-			},
-		};
-	}
-	const propertiesResult: ParseCommandJsonResult = parseCommandJson(
-		context.json,
-		context.itemType.id,
-		context.itemAmount,
-	);
-	if (propertiesResult.properties === undefined) {
-		return {
-			properties: undefined,
-			result: {
-				message: givexFormatMessage(
-					context,
+			};
+		}
+		const propertiesResult: ParseCommandJsonResult = parseCommandJson(
+			this.json,
+			this.itemProperties.typeId,
+			this.itemProperties.amount,
+		);
+		if (propertiesResult.properties === undefined) {
+			return {
+				message: this.formatMessage(
 					0,
 					propertiesResult.syntaxError ?? "Unknown error in your json. (sorry)",
-					undefined,
-					undefined,
 				),
 				status: CustomCommandStatus.Failure,
-			},
-		};
-	}
-	const properties: ItemProperties = propertiesResult.properties;
-	const validationResult: BooleanWithMessage = ItemPropertiesValidation.complete(properties);
-	if (!validationResult.bool) {
-		return {
-			properties: undefined,
-			result: {
-				message: givexFormatMessage(
-					context,
-					0,
-					validationResult.message,
-					undefined,
-					properties.slot,
-				),
-				status: CustomCommandStatus.Failure,
-			},
-		};
-	}
-	return {
-		properties: properties,
-		result: {
-			status: CustomCommandStatus.Success,
-		},
-	};
-}
-
-function getLocationOfSomeReciever(context: GivexContext): DimensionLocation | undefined {
-	for (const reciever of context.recievers) {
-		if (reciever instanceof Entity || reciever instanceof Block) {
-			if (!reciever.isValid) {
-				continue;
-			}
-			return {
-				dimension: reciever.dimension,
-				x: reciever.location.x,
-				y: reciever.location.y,
-				z: reciever.location.z,
 			};
-		} else {
-			return reciever;
 		}
+		this.itemProperties = propertiesResult.properties;
+		const validationResult: BooleanWithMessage = ItemPropertiesValidation.full(
+			this.itemProperties,
+			this.commandType,
+		);
+		if (!validationResult.bool) {
+			return {
+				message: this.formatMessage(0, validationResult.message),
+				status: CustomCommandStatus.Failure,
+			};
+		}
+		this.updateSpecialIdentifier();
+		return {
+			status: CustomCommandStatus.Success,
+		};
 	}
-	return undefined;
-}
 
-function givexGetSpecialIdentifier(properties: ItemProperties): string | undefined {
-	let specialIdentifier: string = "";
-	if (properties.potionType) {
-		specialIdentifier = properties.potionType;
-	} else if (properties.arrowType) {
-		specialIdentifier = properties.arrowType;
-	} else if (properties.bedColor) {
-		specialIdentifier = properties.bedColor;
-	} else {
+	private giveItemStack(itemStack: ItemStack): CustomCommandResult {
+		let errors: string = "";
+		let successCount: number = 0;
+		for (const reciever of this.recievers) {
+			let result: BooleanWithMessage;
+			if (reciever instanceof Entity) {
+				result = giveItemToEntity(
+					reciever,
+					itemStack,
+					this.itemProperties.amount,
+					this.itemProperties.slot,
+				);
+			} else if (reciever instanceof Block) {
+				result = giveItemToBlock(
+					reciever,
+					itemStack,
+					this.itemProperties.amount,
+					this.itemProperties.slot,
+				);
+			} else {
+				result = spawnItemAtDimensionLocation(
+					reciever,
+					itemStack,
+					this.itemProperties.amount,
+				);
+			}
+			if (result.bool) {
+				successCount++;
+			} else {
+				errors += `-${result.message}\n`;
+			}
+		}
+		return {
+			message: this.formatMessage(successCount, errors),
+			status: successCount > 0 ? CustomCommandStatus.Success : CustomCommandStatus.Failure,
+		};
+	}
+
+	private giveItemType(): CustomCommandResult {
+		const itemStack: ItemStack = new ItemStack(this.itemProperties.typeId);
+		const amountValidationResult: BooleanWithMessage = ItemPropertiesValidation.amount(
+			this.itemProperties,
+			this.commandType,
+		);
+		if (!amountValidationResult.bool) {
+			return {
+				message: this.formatMessage(0, amountValidationResult.message),
+				status: CustomCommandStatus.Failure,
+			};
+		}
+		return this.giveItemStack(itemStack);
+	}
+
+	private getLocationOfSomeReciever(): DimensionLocation | undefined {
+		for (const reciever of this.recievers) {
+			if (reciever instanceof Entity || reciever instanceof Block) {
+				if (!reciever.isValid) {
+					continue;
+				}
+				return {
+					dimension: reciever.dimension,
+					x: reciever.location.x,
+					y: reciever.location.y,
+					z: reciever.location.z,
+				};
+			} else {
+				return reciever;
+			}
+		}
 		return undefined;
 	}
-	specialIdentifier = prettyTypeId(specialIdentifier);
-	specialIdentifier = `${specialIdentifier.slice(0, 128)}${specialIdentifier.length > 128 ? "..." : ""}`;
-	return specialIdentifier;
-}
 
-// Automatically runs givex, blockx, or spawnx based on type of context.recievers
-export function givexRun(context: GivexContext): CustomCommandResult {
-	const propertiesResult: GivexPrepareItemPropertiesResult = givexPrepareItemProperties(context);
-	if (propertiesResult.result.status === CustomCommandStatus.Failure) {
-		commandBlockOutputMessage(context.origin, propertiesResult.result);
-		return propertiesResult.result;
-	}
-	if (context.json === undefined) {
+	public run(): CustomCommandResult {
+		const propertiesResult: CustomCommandResult = this.prepareItemProperties();
+		if (propertiesResult.status === CustomCommandStatus.Failure) {
+			commandBlockOutputMessage(this.origin, propertiesResult);
+			return propertiesResult;
+		}
+		if (this.json === undefined) {
+			// Give item with no special properties
+			system.run(() => {
+				const result: CustomCommandResult = this.giveItemType();
+				afterTickCommandResultHandler(this.origin, result);
+			});
+			return {
+				status: CustomCommandStatus.Success,
+			};
+		}
 		system.run(() => {
-			const result: CustomCommandResult = givexGiveItemType(context);
-			afterTickCommandResultHandler(context.origin, result);
+			const aRecieverLocation: DimensionLocation | undefined =
+				this.getLocationOfSomeReciever();
+			if (aRecieverLocation === undefined) {
+				afterTickCommandResultHandler(this.origin, {
+					message: "Unable to get location of any reciever",
+					status: CustomCommandStatus.Failure,
+				});
+				return;
+			}
+			const itemStackResult: PropertiesToItemStackResult = propertiesToItemStack(
+				this.itemProperties,
+				aRecieverLocation,
+			);
+			if (itemStackResult.item === undefined) {
+				afterTickCommandResultHandler(this.origin, {
+					message: itemStackResult.warnings ?? "Failed to create item stack",
+					status: CustomCommandStatus.Failure,
+				});
+				return;
+			}
+			const giveResult: CustomCommandResult = this.giveItemStack(itemStackResult.item);
+			if (itemStackResult.warnings) {
+				giveResult.message = `${giveResult.message ?? ""}\nWarning(s):\n${itemStackResult.warnings}`;
+			}
+			afterTickCommandResultHandler(this.origin, giveResult);
 		});
 		return {
 			status: CustomCommandStatus.Success,
 		};
 	}
-	// item properties should not be undefined beyond this point
-	if (propertiesResult.properties === undefined) {
-		commandBlockOutputMessage(context.origin, propertiesResult.result);
-		return {
-			message: propertiesResult.result.message ?? "",
-			status: CustomCommandStatus.Failure,
-		};
-	}
-	const properties: ItemProperties = propertiesResult.properties;
-	system.run(() => {
-		const aRecieverLocation: DimensionLocation | undefined = getLocationOfSomeReciever(context);
-		if (aRecieverLocation === undefined) {
-			afterTickCommandResultHandler(context.origin, {
-				message: "Unable to get location of any reciever",
-				status: CustomCommandStatus.Failure,
-			});
-			return;
-		}
-		const itemStackResult: PropertiesToItemStackResult = propertiesToItemStack(
-			properties,
-			aRecieverLocation,
-		);
-		if (itemStackResult.item === undefined) {
-			afterTickCommandResultHandler(context.origin, {
-				message: itemStackResult.warnings ?? "Failed to create item stack",
-				status: CustomCommandStatus.Failure,
-			});
-			return;
-		}
-		const givexResult: CustomCommandResult = givexGiveItemStack(
-			context,
-			itemStackResult.item,
-			properties.slot,
-			givexGetSpecialIdentifier(properties),
-		);
-		// Append warnings if they exist
-		if (itemStackResult.warnings) {
-			givexResult.message = `${givexResult.message ?? ""}\nWarning(s):\n${itemStackResult.warnings}`;
-		}
-		afterTickCommandResultHandler(context.origin, givexResult);
-	});
-	return {
-		status: CustomCommandStatus.Success,
-	};
-}
-
-export interface GetDimensionFromOriginResult {
-	dimension: Dimension | undefined;
-	result: CustomCommandResult;
-}
-export function getDimensionFromOrigin(origin: CustomCommandOrigin): GetDimensionFromOriginResult {
-	let dimension: Dimension | undefined;
-	if (origin.sourceEntity?.isValid) {
-		dimension = origin.sourceEntity.dimension;
-	} else if (origin.initiator?.isValid) {
-		dimension = origin.initiator.dimension;
-	} else if (origin.sourceBlock?.isValid) {
-		dimension = origin.sourceBlock.dimension;
-	} else {
-		return {
-			dimension: undefined,
-			result: {
-				message: "Unable to get valid dimension from command origin",
-				status: CustomCommandStatus.Failure,
-			},
-		};
-	}
-	return {
-		dimension: dimension,
-		result: {
-			status: CustomCommandStatus.Success,
-		},
-	};
-}
-
-export interface BlockxGetBlockResult {
-	block: Block | undefined;
-	result: CustomCommandResult;
-}
-export function blockxGetBlock(context: GivexContext, location: Vector3): BlockxGetBlockResult {
-	const dimensionResult: GetDimensionFromOriginResult = getDimensionFromOrigin(context.origin);
-	if (dimensionResult.dimension === undefined) {
-		return {
-			block: undefined,
-			result: dimensionResult.result,
-		};
-	}
-	const dimension: Dimension = dimensionResult.dimension;
-	let block: Block | undefined;
-	let blockErrorMessage: string = `Unable to get block at location ${vector3ToString(location, 0)}`;
-	try {
-		block = dimension.getBlock(location);
-	} catch (error) {
-		if (error instanceof Error) {
-			blockErrorMessage += `: ${error.message}`;
-		}
-	}
-	if (block === undefined) {
-		return {
-			block: undefined,
-			result: {
-				message: givexFormatMessage(context, 0, blockErrorMessage, undefined, undefined),
-				status: CustomCommandStatus.Failure,
-			},
-		};
-	}
-	return {
-		block: block,
-		result: {
-			status: CustomCommandStatus.Success,
-		},
-	};
 }

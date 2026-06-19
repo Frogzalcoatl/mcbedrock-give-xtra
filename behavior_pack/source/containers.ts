@@ -3,6 +3,7 @@ import {
 	BlockComponentTypes,
 	type BlockInventoryComponent,
 	type Container,
+	type DimensionLocation,
 	type Entity,
 	EntityComponentTypes,
 	type EntityEnderInventoryComponent,
@@ -340,7 +341,7 @@ export function giveItemToEntity(
 		const inventory: EntityInventoryComponent | undefined = entity.getComponent(
 			EntityComponentTypes.Inventory,
 		);
-		if (inventory === undefined || !inventory.isValid) {
+		if (inventory === undefined || !inventory.isValid || !inventory.container.isValid) {
 			return {
 				bool: false,
 				message: `Unable to get ${entity.typeId} inventory`,
@@ -396,4 +397,32 @@ export function giveItemToBlock(
 	} else {
 		return addItemsToContainer(block, inventory.container, item, amount);
 	}
+}
+
+export function spawnItemAtDimensionLocation(
+	location: DimensionLocation,
+	itemStack: ItemStack,
+	itemAmount: number,
+): BooleanWithMessage {
+	try {
+		itemStack.amount = itemAmount;
+		location.dimension.spawnItem(itemStack, {
+			x: location.x,
+			y: location.y,
+			z: location.z,
+		});
+	} catch (error) {
+		let message: string = "Unable to spawn item";
+		if (error instanceof Error) {
+			message += `: ${error.message}`;
+		}
+		return {
+			bool: false,
+			message: message,
+		};
+	}
+	return {
+		bool: true,
+		message: "",
+	};
 }

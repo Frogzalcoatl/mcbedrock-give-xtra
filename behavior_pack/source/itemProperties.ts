@@ -18,6 +18,7 @@ import {
 	ArrowTypes,
 	BedColors,
 	type BooleanWithMessage,
+	type CommandType,
 	type EnchantData,
 	EnchantDataKeys,
 	type ItemDurability,
@@ -247,22 +248,26 @@ export function parseCommandJson(
 			syntaxError: syntaxError,
 		};
 	}
-	if (typeof parsedData === "object" && parsedData !== null) {
-		if (parsedData.typeId !== undefined) {
-			return {
-				properties: undefined,
-				syntaxError: `Remove json key "typeId", as you have already defined it in the command`,
-			};
-		}
-		if (parsedData.amount !== undefined) {
-			return {
-				properties: undefined,
-				syntaxError: `Remove json key "amount", as you have already defined it in the command`,
-			};
-		}
-		parsedData.typeId = itemTypeId;
-		parsedData.amount = amount;
+	if (typeof parsedData !== "object" || parsedData === null) {
+		return {
+			properties: undefined,
+			syntaxError: "Input should be an object",
+		};
 	}
+	if (parsedData.typeId !== undefined) {
+		return {
+			properties: undefined,
+			syntaxError: `Remove json key "typeId", as you have already defined it in the command`,
+		};
+	}
+	if (parsedData.amount !== undefined) {
+		return {
+			properties: undefined,
+			syntaxError: `Remove json key "amount", as you have already defined it in the command`,
+		};
+	}
+	parsedData.typeId = itemTypeId;
+	parsedData.amount = amount;
 	let syntaxError: string = "Object is not ItemProperties";
 	try {
 		if (isItemProperties(parsedData)) {
@@ -354,8 +359,14 @@ export function getMaxStackSize(itemTypeId: string): number | undefined {
 	return itemStack.maxAmount;
 }
 
-export function getMaxItemPropertiesAmount(properties: ItemProperties): number {
-	if (properties.slot !== undefined && properties.slot.id !== undefined) {
+export function getMaxItemPropertiesAmount(
+	properties: ItemProperties,
+	commandType: CommandType,
+): number {
+	if (
+		(properties.slot !== undefined && properties.slot.id !== undefined) ||
+		commandType === "spawnx"
+	) {
 		const maxStackSize: number | undefined = getMaxStackSize(properties.typeId);
 		if (maxStackSize !== undefined) {
 			return maxStackSize;
@@ -374,12 +385,14 @@ export const ItemPropertiesValidation = {
 			message: result ? "Valid Type ID" : `Invalid Type ID "${value}"`,
 		};
 	},
-	amount(value: number, properties: ItemProperties): BooleanWithMessage {
+	amount(properties: ItemProperties, commandType: CommandType): BooleanWithMessage {
 		const result: boolean =
-			value > 0 && Number.isInteger(value) && value < getMaxItemPropertiesAmount(properties);
+			properties.amount > 0 &&
+			Number.isInteger(properties.amount) &&
+			properties.amount < getMaxItemPropertiesAmount(properties, commandType);
 		return {
 			bool: result,
-			message: result ? "Valid Amount" : `Invalid Amount "${value}"`,
+			message: result ? "Valid Amount" : `Invalid Amount "${properties.amount}"`,
 		};
 	},
 	lockMode(value: string): BooleanWithMessage {
@@ -595,13 +608,13 @@ export const ItemPropertiesValidation = {
 			};
 		}
 	},
-	complete(properties: ItemProperties): BooleanWithMessage {
+	full(properties: ItemProperties, commandType: CommandType): BooleanWithMessage {
 		let messageResult: BooleanWithMessage;
 		messageResult = ItemPropertiesValidation.typeId(properties.typeId);
 		if (!messageResult.bool) {
 			return messageResult;
 		}
-		messageResult = ItemPropertiesValidation.amount(properties.amount, properties);
+		messageResult = ItemPropertiesValidation.amount(properties, commandType);
 		if (!messageResult.bool) {
 			return messageResult;
 		}

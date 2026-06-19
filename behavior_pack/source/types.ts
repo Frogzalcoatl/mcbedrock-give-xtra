@@ -1,11 +1,4 @@
-import type {
-	Block,
-	CustomCommandOrigin,
-	DimensionLocation,
-	Entity,
-	ItemLockMode,
-	ItemType,
-} from "@minecraft/server";
+import type { ItemLockMode } from "@minecraft/server";
 
 export interface BooleanWithMessage {
 	bool: boolean;
@@ -165,15 +158,5 @@ export const ItemPropertyMaxAmount: number = 32767;
 export const MaxNameTagLength: number = 253;
 
 export type CommandType = "givex" | "blockx" | "spawnx";
-
-export interface GivexContext {
-	commandType: CommandType;
-	origin: CustomCommandOrigin;
-	recievers: Entity[] | Block[] | DimensionLocation[];
-	selectorName: string;
-	itemType: ItemType;
-	itemAmount: number;
-	json: string | undefined;
-}
 
 export const CommandNamespace: string = "givex";
