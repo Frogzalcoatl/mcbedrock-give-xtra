@@ -9,17 +9,17 @@ import {
 	world,
 } from "@minecraft/server";
 import {
-	getMaxItemDataAmount,
+	getMaxItemPropertiesAmount,
 	getMaxStackSize,
-	ItemDataValidation,
+	ItemPropertiesValidation,
 	itemTypeToPotionDeliveryType,
-} from "../itemData";
+} from "../itemProperties";
 import { camelToTitleCase, prettyTypeId, stringToNumber, truncTo } from "../prettyTypeId";
 import {
 	CommandNamespace,
 	type CommandType,
-	type ItemData,
-	ItemDataKeys,
+	type ItemProperties,
+	ItemPropertyKeys,
 	SlotDataKeepOldItemDefault,
 	SlotName,
 } from "../types";
@@ -152,17 +152,17 @@ enum PromptResult {
 	Closed,
 }
 
-export class ItemDataCreator {
+export class ItemPropertiesGenerator {
 	public player: Player;
-	public data: ItemData;
+	public properties: ItemProperties;
 	public commandType: CommandType;
 	public location: CommandVector3;
-	private editableComponents: { text: string; iconPath: string }[];
+	private editableProperties: { text: string; iconPath: string }[];
 	private openedFromHelp: boolean;
 	constructor(creator: Player, openedFromHelp: boolean, itemTypeId?: string) {
 		this.player = creator;
 		// Just default values, can be changed by user later
-		this.data = {
+		this.properties = {
 			amount: 1,
 			typeId: itemTypeId ?? "",
 		};
@@ -178,163 +178,163 @@ export class ItemDataCreator {
 				includeSquiggly: true,
 			},
 		};
-		this.editableComponents = [];
+		this.editableProperties = [];
 		this.openedFromHelp = openedFromHelp;
 	}
 
 	private static readonly FORM_TITLE: string = "Get Started";
 
-	private updateEditableComponents(): void {
-		const editableComponents: { text: string; iconPath: string }[] = [];
-		const maxAmount: number = getMaxItemDataAmount(this.data);
+	private updateEditableProperties(): void {
+		const editableProperties: { text: string; iconPath: string }[] = [];
+		const maxAmount: number = getMaxItemPropertiesAmount(this.properties);
 		if (maxAmount > 1) {
-			editableComponents.push({
+			editableProperties.push({
 				iconPath: "textures/items/hopper.png",
-				text: ItemDataKeys.Amount,
+				text: ItemPropertyKeys.Amount,
 			});
 		}
 		if (this.commandType !== "givex") {
-			editableComponents.push({
+			editableProperties.push({
 				iconPath: "textures/items/map_filled.png",
 				text: "location",
 			});
 		}
 		if (this.commandType !== "spawnx") {
-			editableComponents.push({
+			editableProperties.push({
 				iconPath: "textures/blocks/chest_front.png",
-				text: ItemDataKeys.Slot,
+				text: ItemPropertyKeys.Slot,
 			});
 		}
-		const testItem = new ItemStack(this.data.typeId);
+		const testItem = new ItemStack(this.properties.typeId);
 		const durability: ItemDurabilityComponent | undefined = testItem.getComponent(
 			ItemComponentTypes.Durability,
 		);
 		if (durability !== undefined) {
-			editableComponents.push({
+			editableProperties.push({
 				iconPath: "textures/ui/anvil_icon.png",
-				text: ItemDataKeys.Durability,
+				text: ItemPropertyKeys.Durability,
 			});
 		}
 		const enchantable: ItemEnchantableComponent | undefined = testItem.getComponent(
 			ItemComponentTypes.Enchantable,
 		);
 		if (enchantable !== undefined) {
-			editableComponents.push({
+			editableProperties.push({
 				iconPath: "textures/items/book_enchanted.png",
-				text: ItemDataKeys.Enchants,
+				text: ItemPropertyKeys.Enchants,
 			});
 		}
-		if (itemTypeToPotionDeliveryType(this.data.typeId) !== undefined) {
-			editableComponents.push({
+		if (itemTypeToPotionDeliveryType(this.properties.typeId) !== undefined) {
+			editableProperties.push({
 				iconPath: "textures/items/potion_bottle_fireResistance.png",
-				text: ItemDataKeys.PotionType,
+				text: ItemPropertyKeys.PotionType,
 			});
 		}
-		if (this.data.typeId === "minecraft:arrow") {
-			editableComponents.push({
+		if (this.properties.typeId === "minecraft:arrow") {
+			editableProperties.push({
 				iconPath: "textures/items/tipped_arrow_poison.png",
-				text: ItemDataKeys.ArrowType,
+				text: ItemPropertyKeys.ArrowType,
 			});
 		}
-		if (this.data.typeId === "minecraft:bed") {
-			editableComponents.push({
+		if (this.properties.typeId === "minecraft:bed") {
+			editableProperties.push({
 				iconPath: "textures/items/bed_red.png",
-				text: ItemDataKeys.BedColor,
+				text: ItemPropertyKeys.BedColor,
 			});
 		}
-		// These components are always editable
-		editableComponents.push({
+		// These properties are always editable
+		editableProperties.push({
 			iconPath: "textures/items/name_tag.png",
-			text: ItemDataKeys.NameTag,
+			text: ItemPropertyKeys.NameTag,
 		});
-		editableComponents.push({
+		editableProperties.push({
 			iconPath: "textures/ui/accessibility_glyph_color.png",
-			text: ItemDataKeys.LockMode,
+			text: ItemPropertyKeys.LockMode,
 		});
-		editableComponents.push({
+		editableProperties.push({
 			iconPath: "textures/items/totem.png",
-			text: ItemDataKeys.KeepOnDeath,
+			text: ItemPropertyKeys.KeepOnDeath,
 		});
-		editableComponents.push({
+		editableProperties.push({
 			iconPath: "textures/blocks/target_side.png",
-			text: ItemDataKeys.CanPlaceOn,
+			text: ItemPropertyKeys.CanPlaceOn,
 		});
-		editableComponents.push({
+		editableProperties.push({
 			iconPath: "textures/items/iron_pickaxe.png",
-			text: ItemDataKeys.CanDestroy,
+			text: ItemPropertyKeys.CanDestroy,
 		});
-		for (const value of editableComponents) {
+		for (const value of editableProperties) {
 			value.text = camelToTitleCase(value.text);
 		}
-		this.editableComponents = editableComponents;
+		this.editableProperties = editableProperties;
 	}
 
-	private formatComponent(component: string, value: string | number | boolean): string {
-		return `§r\n${component}: §e${value}`;
+	private formatProperty(property: string, value: string | number | boolean): string {
+		return `§r\n${property}: §e${value}`;
 	}
 
-	private getComponentsDisplay(): string {
-		const data = this.data;
-		const formatComponent = this.formatComponent;
+	private getPropertiesDisplay(): string {
+		const data = this.properties;
+		const formatProperty = this.formatProperty;
 		// ^ Just to make things a little easier to look at
-		let str: string = formatComponent("Item Type", prettyTypeId(data.typeId));
-		str += formatComponent("Amount", data.amount);
-		str += formatComponent("Command Type", `/${this.commandType}`);
+		let str: string = formatProperty("Item Type", prettyTypeId(data.typeId));
+		str += formatProperty("Amount", data.amount);
+		str += formatProperty("Command Type", `/${this.commandType}`);
 		if (data.nameTag) {
-			str += formatComponent("Name Tag", data.nameTag);
+			str += formatProperty("Name Tag", data.nameTag);
 		}
 		if (this.commandType !== "givex") {
-			str += formatComponent("Location", commandVector3ToString(this.location));
+			str += formatProperty("Location", commandVector3ToString(this.location));
 		}
 		if (this.commandType !== "spawnx") {
 			if (data.slot === undefined) {
-				formatComponent("Slot", "Default");
+				formatProperty("Slot", "Default");
 			} else {
-				formatComponent("Slot", data.slot.name);
+				formatProperty("Slot", data.slot.name);
 				if (data.slot.id !== undefined) {
-					formatComponent("Slot Id", data.slot.id);
+					formatProperty("Slot Id", data.slot.id);
 				}
-				formatComponent("Keep Old Item in Slot", data.slot.keepOldItem);
+				formatProperty("Keep Old Item in Slot", data.slot.keepOldItem);
 			}
 		}
 		if (data.durability !== undefined) {
-			formatComponent("Durability", data.durability);
+			formatProperty("Durability", data.durability);
 		}
 		if (data.enchants !== undefined) {
 			let enchants: string = "";
 			for (const e of data.enchants) {
 				enchants += `\n-${prettyTypeId(e.id)} ${e.level}`;
 			}
-			str += formatComponent("Enchants", enchants);
+			str += formatProperty("Enchants", enchants);
 		}
 		if (data.potionType !== undefined) {
-			str += formatComponent("Potion Type", prettyTypeId(data.potionType));
+			str += formatProperty("Potion Type", prettyTypeId(data.potionType));
 		}
 		if (data.arrowType !== undefined) {
-			str += formatComponent("Arrow Type", prettyTypeId(data.arrowType));
+			str += formatProperty("Arrow Type", prettyTypeId(data.arrowType));
 		}
 		if (data.bedColor !== undefined) {
-			str += formatComponent("Bed Color", prettyTypeId(data.bedColor));
+			str += formatProperty("Bed Color", prettyTypeId(data.bedColor));
 		}
 		if (data.lockMode !== undefined) {
-			str += formatComponent("Item Lock Mode", prettyTypeId(data.lockMode));
+			str += formatProperty("Item Lock Mode", prettyTypeId(data.lockMode));
 		}
 		if (data.keepOnDeath !== undefined) {
-			str += formatComponent("Keep On Death", data.keepOnDeath);
+			str += formatProperty("Keep On Death", data.keepOnDeath);
 		}
 		if (data.canPlaceOn !== undefined) {
 			let canPlaceOn: string = "";
 			for (const value of data.canPlaceOn) {
 				canPlaceOn += `\n${prettyTypeId(value)}`;
 			}
-			formatComponent("Can Place On", canPlaceOn);
+			formatProperty("Can Place On", canPlaceOn);
 		}
 		if (data.canDestroy !== undefined) {
 			let canDestroy: string = "";
 			for (const value of data.canDestroy) {
 				canDestroy += `\n${prettyTypeId(value)}`;
 			}
-			formatComponent("Can Destroy", canDestroy);
+			formatProperty("Can Destroy", canDestroy);
 		}
 		return str;
 	}
@@ -365,7 +365,7 @@ export class ItemDataCreator {
 				addStyling: true,
 				text: "Submit",
 			},
-			title: ItemDataCreator.FORM_TITLE,
+			title: ItemPropertiesGenerator.FORM_TITLE,
 		};
 	}
 
@@ -384,7 +384,7 @@ export class ItemDataCreator {
 		const textField: ModalFormTextFieldComponent = {
 			label: this.formatInputLabel(question, statement, ""),
 			options: {
-				defaultValue: this.data.typeId,
+				defaultValue: this.properties.typeId,
 			},
 			type: "textField",
 		};
@@ -394,7 +394,7 @@ export class ItemDataCreator {
 		);
 		let result: ModalFormReturnType[] | undefined;
 		let input: ModalFormReturnType;
-		while (typeof input !== "string" || !ItemDataValidation.typeId(input).bool) {
+		while (typeof input !== "string" || !ItemPropertiesValidation.typeId(input).bool) {
 			let error: string = "";
 			if (input) {
 				error = `Invalid Type ID "${input}"`;
@@ -412,7 +412,7 @@ export class ItemDataCreator {
 		// Ensure values like "grass" are converted to "minecraft:grass_block"
 		const itemType = ItemTypes.get(input);
 		if (itemType !== undefined) {
-			this.data.typeId = itemType.id;
+			this.properties.typeId = itemType.id;
 			return Promise.resolve(PromptResult.Completed);
 		} else {
 			return Promise.resolve(PromptResult.Completed);
@@ -464,7 +464,7 @@ export class ItemDataCreator {
 	}
 
 	private static readonly BACK_CONFIRMATION: MessageForm = {
-		body: "Are you sure you would like to go back? Any selected item components will be reset.",
+		body: "Are you sure you would like to go back? Any selected item properties will be reset.",
 		button1: {
 			addStyling: false,
 			text: "Im Sure!",
@@ -476,8 +476,8 @@ export class ItemDataCreator {
 		title: "Go Back?",
 	};
 
-	private async componentsBackConfirmation(): Promise<boolean> {
-		let result = await showMessageForm(ItemDataCreator.BACK_CONFIRMATION, this.player);
+	private async propertiesBackConfirmation(): Promise<boolean> {
+		let result = await showMessageForm(ItemPropertiesGenerator.BACK_CONFIRMATION, this.player);
 		// Treat closing this form as "Im Sure!"
 		if (result === undefined) {
 			result = 0;
@@ -492,16 +492,16 @@ export class ItemDataCreator {
 	private async promptAmount(): Promise<string> {
 		let maxAmount: number = 0;
 		if (this.commandType === "spawnx") {
-			maxAmount = getMaxStackSize(this.data.typeId) ?? 64;
+			maxAmount = getMaxStackSize(this.properties.typeId) ?? 64;
 		} else {
-			maxAmount = getMaxItemDataAmount(this.data);
+			maxAmount = getMaxItemPropertiesAmount(this.properties);
 		}
 		const question: string = `How much of your item would you like to ${this.commandType === "spawnx" ? "spawn" : "give"}?`;
 		const statement: string = `Enter number within range 1-${maxAmount}:`;
 		const textField: ModalFormTextFieldComponent = {
 			label: this.formatInputLabel(question, statement, ""),
 			options: {
-				defaultValue: `${this.data.amount}`,
+				defaultValue: `${this.properties.amount}`,
 			},
 			type: "textField",
 		};
@@ -531,7 +531,7 @@ export class ItemDataCreator {
 			input = formResult[0];
 			amountResult = stringToNumber(input);
 		}
-		this.data.amount = amountResult;
+		this.properties.amount = amountResult;
 		return Promise.resolve(`Amount set to: §e${amountResult}`);
 	}
 
@@ -578,7 +578,7 @@ export class ItemDataCreator {
 		const slotNameStatement: string = "Select Slot:";
 		const slotNameItems: string[] = ["default"].concat(Object.values(SlotName));
 		let selectedSlotNameIndex: number = slotNameItems.indexOf(
-			this.data.slot?.name ?? "default",
+			this.properties.slot?.name ?? "default",
 		);
 		if (selectedSlotNameIndex === -1) {
 			selectedSlotNameIndex = 0;
@@ -597,7 +597,7 @@ export class ItemDataCreator {
 		const textFieldId: ModalFormTextFieldComponent = {
 			label: this.formatInputLabel(idQuestion, idStatement, ""),
 			options: {
-				defaultValue: `${this.data.slot?.id ?? ""}`,
+				defaultValue: `${this.properties.slot?.id ?? ""}`,
 			},
 			type: "textField",
 		};
@@ -605,7 +605,7 @@ export class ItemDataCreator {
 		const toggleKeepOldItem: ModalFormToggleComponent = {
 			label: keepOldItemLabel,
 			options: {
-				defaultValue: this.data.slot?.keepOldItem ?? SlotDataKeepOldItemDefault,
+				defaultValue: this.properties.slot?.keepOldItem ?? SlotDataKeepOldItemDefault,
 				tooltip:
 					"If true, the old item in your selected slot is given back to the reciever.",
 			},
@@ -613,13 +613,13 @@ export class ItemDataCreator {
 		};
 		const form = this.getTemplatePrompt([textFieldSlotName, textFieldId, toggleKeepOldItem]);
 		await showModalForm(form, this.player);
-		return Promise.resolve("This component is in progress");
+		return Promise.resolve("This property is in progress");
 	}
 
 	// Returns prompt result message to be displayed
-	private async promptItemComponent(component: string): Promise<string> {
+	private async promptItemProperty(property: string): Promise<string> {
 		let result: string = "";
-		switch (component) {
+		switch (property) {
 			case "Amount":
 				result = await this.promptAmount();
 				break;
@@ -633,20 +633,20 @@ export class ItemDataCreator {
 	}
 
 	// Returns message to display on next promptComponent form (if applicable)
-	private async promptItemComponents(
+	private async promptItemProperties(
 		previousMessage: string,
 	): Promise<{ message: string; promptResult: PromptResult }> {
-		this.updateEditableComponents();
-		const itemComponentButtons: ActionFormButton[] = [];
-		for (const component of this.editableComponents) {
-			itemComponentButtons.push({
+		this.updateEditableProperties();
+		const itemPropertyButtons: ActionFormButton[] = [];
+		for (const property of this.editableProperties) {
+			itemPropertyButtons.push({
 				addStyling: true,
-				iconPath: component.iconPath,
-				text: component.text,
+				iconPath: property.iconPath,
+				text: property.text,
 				type: "button",
 			});
 		}
-		let body: string = `Select component to edit for:\n§e${prettyTypeId(this.data.typeId)}`;
+		let body: string = `Select property to edit for:\n§e${prettyTypeId(this.properties.typeId)}`;
 		if (previousMessage) {
 			body = `${previousMessage}§r\n\n${body}`;
 		}
@@ -655,30 +655,30 @@ export class ItemDataCreator {
 			components: [
 				{ type: "divider" },
 				{ addStyling: true, text: "Back", type: "button" },
-				...itemComponentButtons,
+				...itemPropertyButtons,
 				{
 					addStyling: true,
 					text: "Submit",
 					type: "button",
 				},
-				{ text: `Selected Components:\n${this.getComponentsDisplay()}`, type: "label" },
+				{ text: `Selected Components:\n${this.getPropertiesDisplay()}`, type: "label" },
 			],
-			title: ItemDataCreator.FORM_TITLE,
+			title: ItemPropertiesGenerator.FORM_TITLE,
 		};
 		const backButtonIndex: number = 0;
-		const submitButtonIndex: number = itemComponentButtons.length + 1;
-		const itemComponentButtonsOffset: number = -1;
+		const submitButtonIndex: number = itemPropertyButtons.length + 1;
+		const itemPropertyButtonsOffset: number = -1;
 		let selection = await showActionForm(form, this.player);
 		// Treat exiting the form and the back button the same.
 		if (selection === undefined || selection === backButtonIndex) {
 			const BackConfirmationResult: boolean | undefined =
-				await this.componentsBackConfirmation();
+				await this.propertiesBackConfirmation();
 			if (BackConfirmationResult) {
 				system.run(async () => {
-					const creator = new ItemDataCreator(
+					const creator = new ItemPropertiesGenerator(
 						this.player,
 						this.openedFromHelp,
-						this.data.typeId,
+						this.properties.typeId,
 					);
 					creator.commandType = this.commandType;
 					creator.run(true);
@@ -693,15 +693,15 @@ export class ItemDataCreator {
 		} else if (selection === submitButtonIndex) {
 			return Promise.resolve({ message: "", promptResult: PromptResult.Completed });
 		} else {
-			selection += itemComponentButtonsOffset;
-			const selectedButton: ActionFormButton | undefined = itemComponentButtons[selection];
+			selection += itemPropertyButtonsOffset;
+			const selectedButton: ActionFormButton | undefined = itemPropertyButtons[selection];
 			if (selectedButton === undefined) {
 				return Promise.resolve({
 					message: previousMessage,
 					promptResult: PromptResult.InProgress,
 				});
 			}
-			const message = await this.promptItemComponent(selectedButton.text);
+			const message = await this.promptItemProperty(selectedButton.text);
 			return Promise.resolve({ message: message, promptResult: PromptResult.InProgress });
 		}
 	}
@@ -713,9 +713,9 @@ export class ItemDataCreator {
 		} else {
 			command += ` ${commandVector3ToString(this.location)}`;
 		}
-		command += ` ${this.data.typeId} ${this.data.amount}`;
+		command += ` ${this.properties.typeId} ${this.properties.amount}`;
 		// Remove typeId and amount from object since they are not part of the json
-		const { typeId, amount, ...clonedData } = this.data;
+		const { typeId, amount, ...clonedData } = this.properties;
 		if (Object.keys(clonedData).length > 0) {
 			let json: string = JSON.stringify(clonedData);
 			json = json.replaceAll('"', '\\"');
@@ -746,7 +746,7 @@ export class ItemDataCreator {
 				addStyling: true,
 				text: "Done",
 			},
-			title: ItemDataCreator.FORM_TITLE,
+			title: ItemPropertiesGenerator.FORM_TITLE,
 		};
 		// text field default value characters start to distort at a certain length
 		if (textField.options !== undefined) {
@@ -783,8 +783,8 @@ export class ItemDataCreator {
 				return;
 			}
 		}
-		if (this.data.typeId === "minecraft:bed") {
-			this.data.bedColor = "white";
+		if (this.properties.typeId === "minecraft:bed") {
+			this.properties.bedColor = "white";
 		}
 		const commandTypeResult: PromptResult = await this.promptCommandType();
 		if (commandTypeResult !== PromptResult.Completed) {
@@ -799,7 +799,7 @@ export class ItemDataCreator {
 			promptResult: PromptResult.InProgress,
 		};
 		while (componentsResult.promptResult === PromptResult.InProgress) {
-			componentsResult = await this.promptItemComponents(componentsResult.message);
+			componentsResult = await this.promptItemProperties(componentsResult.message);
 		}
 		if (componentsResult.promptResult === PromptResult.Completed) {
 			system.run(async () => {
@@ -835,6 +835,6 @@ export const FormSelectSlotGivex: ModalForm = {
 		addStyling: true,
 		text: "Submit",
 	},
-	title: ItemDataCreator.FormTitle,
+	title: ItemPropertiesGenerator.FormTitle,
 };
 */

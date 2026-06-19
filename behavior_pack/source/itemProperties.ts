@@ -11,16 +11,16 @@ import {
 } from "@minecraft/server";
 import { getMcNamespace } from "./prettyTypeId";
 import {
-	ArrowEffectTypes,
+	ArrowTypes,
 	BedColors,
 	type BooleanWithMessage,
 	type EnchantData,
 	EnchantDataKeys,
-	type ItemData,
-	ItemDataDefaultAmount,
-	ItemDataKeys,
-	ItemDataMaxAmount,
 	type ItemDurability,
+	type ItemProperties,
+	ItemPropertyDefaultAmount,
+	ItemPropertyKeys,
+	ItemPropertyMaxAmount,
 	MaxNameTagLength,
 	type SlotData,
 	SlotDataKeepOldItemDefault,
@@ -123,26 +123,26 @@ function isStringArray(arr: any, propertyName: string): arr is string[] {
 	return true;
 }
 
-// Throwing errors since theres no way to return "obj is ItemData" with a string when its false as far as i can tell.
-// Want the user to know whats wrong with their item data.
+// Throwing errors since theres no way to return "obj is ItemProperties" with a string when its false as far as i can tell.
+// Want the user to know whats wrong with their item properties.
 // biome-ignore lint/suspicious/noExplicitAny: Type is validated through the function. Any is required here.
-function isItemData(obj: any): obj is ItemData {
+function isItemProperties(obj: any): obj is ItemProperties {
 	if (typeof obj !== "object" || obj === null) {
-		throw new Error("itemData must be an Object");
+		throw new Error("itemProperties must be an Object");
 	}
 	// Keys with default values
 	if (obj.amount === undefined) {
-		obj.amount = ItemDataDefaultAmount;
+		obj.amount = ItemPropertyDefaultAmount;
 	} else if (typeof obj.amount !== "number") {
 		throw new Error("amount must be a number");
-	} else if (obj.amount > ItemDataMaxAmount) {
+	} else if (obj.amount > ItemPropertyMaxAmount) {
 		throw new Error(
-			`The number you have entered (${obj.amount}) is too big, it must be at most ${ItemDataMaxAmount}`,
+			`The number you have entered (${obj.amount}) is too big, it must be at most ${ItemPropertyMaxAmount}`,
 		);
 	}
 	// Mandatory keys
 	if (obj.typeId === undefined) {
-		throw new Error(`ItemData requires "typeId"`);
+		throw new Error(`ItemProperties requires "typeId"`);
 	}
 	if (typeof obj.typeId !== "string") {
 		throw new Error("typeId must be a string");
@@ -212,7 +212,7 @@ function isItemData(obj: any): obj is ItemData {
 	}
 	const keyValidationResult: BooleanWithMessage = validateKeys(
 		Object.keys(obj),
-		Object.values(ItemDataKeys),
+		Object.values(ItemPropertyKeys),
 	);
 	if (!keyValidationResult.bool) {
 		throw new Error(keyValidationResult.message);
@@ -220,12 +220,12 @@ function isItemData(obj: any): obj is ItemData {
 	return true;
 }
 
-export function parseJsonArg(
+export function parseCommandJson(
 	strJson: string,
 	itemTypeId: string,
 	amount: number,
 ): {
-	itemData: ItemData | undefined;
+	properties: ItemProperties | undefined;
 	syntaxError: string | undefined;
 } {
 	// biome-ignore lint/suspicious/noExplicitAny: any is required here for JSON.parse. Type will be assigned later.
@@ -238,31 +238,31 @@ export function parseJsonArg(
 			syntaxError = error.message;
 		}
 		return {
-			itemData: undefined,
+			properties: undefined,
 			syntaxError: syntaxError,
 		};
 	}
 	if (typeof parsedData === "object" && parsedData !== null) {
 		if (parsedData.typeId !== undefined) {
 			return {
-				itemData: undefined,
+				properties: undefined,
 				syntaxError: `Remove json key "typeId", as you have already defined it in the command`,
 			};
 		}
 		if (parsedData.amount !== undefined) {
 			return {
-				itemData: undefined,
+				properties: undefined,
 				syntaxError: `Remove json key "amount", as you have already defined it in the command`,
 			};
 		}
 		parsedData.typeId = itemTypeId;
 		parsedData.amount = amount;
 	}
-	let syntaxError: string = "Object is not ItemData";
+	let syntaxError: string = "Object is not ItemProperties";
 	try {
-		if (isItemData(parsedData)) {
+		if (isItemProperties(parsedData)) {
 			return {
-				itemData: parsedData,
+				properties: parsedData,
 				syntaxError: undefined,
 			};
 		}
@@ -272,7 +272,7 @@ export function parseJsonArg(
 		}
 	}
 	return {
-		itemData: undefined,
+		properties: undefined,
 		syntaxError: syntaxError,
 	};
 }
@@ -347,18 +347,18 @@ export function getMaxStackSize(itemTypeId: string): number | undefined {
 	return itemStack.maxAmount;
 }
 
-export function getMaxItemDataAmount(data: ItemData): number {
-	if (data.slot !== undefined && data.slot.id !== undefined) {
-		const maxStackSize: number | undefined = getMaxStackSize(data.typeId);
+export function getMaxItemPropertiesAmount(properties: ItemProperties): number {
+	if (properties.slot !== undefined && properties.slot.id !== undefined) {
+		const maxStackSize: number | undefined = getMaxStackSize(properties.typeId);
 		if (maxStackSize !== undefined) {
 			return maxStackSize;
 		}
 	}
-	return ItemDataMaxAmount;
+	return ItemPropertyMaxAmount;
 }
 
-// biome-ignore assist/source/useSortedKeys: Want to keep it in the same order as declared in the ItemData interface.
-export const ItemDataValidation = {
+// biome-ignore assist/source/useSortedKeys: Want to keep it in the same order as declared in the ItemProperties interface.
+export const ItemPropertiesValidation = {
 	typeId(value: string): BooleanWithMessage {
 		const itemType = ItemTypes.get(value);
 		const result: boolean = itemType !== undefined && itemType.id !== "minecraft:air";
@@ -367,9 +367,9 @@ export const ItemDataValidation = {
 			message: result ? "Valid Type ID" : `Invalid Type ID "${value}"`,
 		};
 	},
-	amount(value: number, data: ItemData): BooleanWithMessage {
+	amount(value: number, properties: ItemProperties): BooleanWithMessage {
 		const result: boolean =
-			value > 0 && Number.isInteger(value) && value < getMaxItemDataAmount(data);
+			value > 0 && Number.isInteger(value) && value < getMaxItemPropertiesAmount(properties);
 		return {
 			bool: result,
 			message: result ? "Valid Amount" : `Invalid Amount "${value}"`,
@@ -483,7 +483,7 @@ export const ItemDataValidation = {
 				message: `Amount ${amount} exceeds the maximum for ${itemStack.typeId} (${itemStack.maxAmount})\nIf you would like to give an amount exceeding the max stack size, you cannot select a slot.`,
 			};
 		}
-		// data.slot.keepOldItem is a boolean. Nothing to check there.
+		// ItemProperties.slot.keepOldItem is a boolean. Nothing to check there.
 		return {
 			bool: true,
 			message: "Valid SlotData",
@@ -509,20 +509,20 @@ export const ItemDataValidation = {
 			message: `Valid ${propertyName}`,
 		};
 	},
-	// Pass ItemData directly to edit potionType if its missing a namespace.
-	potionType(data: ItemData, potionType: string): BooleanWithMessage {
-		data.potionType = potionType;
-		if (data.arrowType !== undefined) {
+	// Pass ItemProperties directly to edit potionType if its missing a namespace.
+	potionType(potionType: string, properties: ItemProperties): BooleanWithMessage {
+		properties.potionType = potionType;
+		if (properties.arrowType !== undefined) {
 			return {
 				bool: false,
 				message: "Cannot have both arrowType and potionType",
 			};
 		}
-		const deliveryType = itemTypeToPotionDeliveryType(data.typeId);
+		const deliveryType = itemTypeToPotionDeliveryType(properties.typeId);
 		if (deliveryType === undefined) {
-			let message: string = `${data.typeId} is not compatible with potionType`;
+			let message: string = `${properties.typeId} is not compatible with potionType`;
 			// In case user gets confused and tries to use potionType for tipped arrows
-			if (data.typeId === "minecraft:arrow") {
+			if (properties.typeId === "minecraft:arrow") {
 				message += ". Use arrowType instead";
 			}
 			return {
@@ -530,34 +530,34 @@ export const ItemDataValidation = {
 				message: message,
 			};
 		}
-		const effectTypeNamespace = getMcNamespace(data.potionType);
+		const effectTypeNamespace = getMcNamespace(properties.potionType);
 		if (effectTypeNamespace === undefined) {
-			data.potionType = `minecraft:${data.potionType}`;
+			properties.potionType = `minecraft:${properties.potionType}`;
 		}
-		const effect: PotionEffectType | undefined = Potions.getEffectType(data.potionType);
+		const effect: PotionEffectType | undefined = Potions.getEffectType(properties.potionType);
 		if (effect === undefined) {
 			return {
 				bool: false,
-				message: `Invalid potionType "${data.potionType}". Valid options include:\n${Potions.getAllEffectTypes().join("\n")}`,
+				message: `Invalid potionType "${properties.potionType}". Valid options include:\n${Potions.getAllEffectTypes().join("\n")}`,
 			};
 		}
 		return {
 			bool: true,
-			message: "Valid potionData",
+			message: "Valid potionType",
 		};
 	},
-	arrowType(data: ItemData, arrowType: string): BooleanWithMessage {
-		data.arrowType = arrowType;
-		if (data.typeId !== "minecraft:arrow") {
+	arrowType(arrowType: string, properties: ItemProperties): BooleanWithMessage {
+		properties.arrowType = arrowType;
+		if (properties.typeId !== "minecraft:arrow") {
 			return {
 				bool: false,
-				message: `${data.typeId} is not compatible with arrowType. Use "minecraft:arrow:"`,
+				message: `${properties.typeId} is not compatible with arrowType. Use "minecraft:arrow:"`,
 			};
 		}
-		if (!ArrowEffectTypes.includes(arrowType)) {
+		if (!ArrowTypes.includes(arrowType)) {
 			return {
 				bool: false,
-				message: `Invalid arrowType "${arrowType}". Valid options include:\n${ArrowEffectTypes.join(", ")}`,
+				message: `Invalid arrowType "${arrowType}". Valid options include:\n${ArrowTypes.join(", ")}`,
 			};
 		}
 		return {
@@ -565,11 +565,11 @@ export const ItemDataValidation = {
 			message: "Valid arrowType",
 		};
 	},
-	bedColor(data: ItemData, bedColor: string): BooleanWithMessage {
-		if (data.typeId !== "minecraft:bed") {
+	bedColor(bedColor: string, properties: ItemProperties): BooleanWithMessage {
+		if (properties.typeId !== "minecraft:bed") {
 			return {
 				bool: false,
-				message: `${data.typeId} is not compatible with bedColor. Use "minecraft:bed"`,
+				message: `${properties.typeId} is not compatible with bedColor. Use "minecraft:bed"`,
 			};
 		}
 		if (BedColors.includes(bedColor)) {
@@ -584,78 +584,82 @@ export const ItemDataValidation = {
 			};
 		}
 	},
-	complete(data: ItemData): BooleanWithMessage {
+	complete(properties: ItemProperties): BooleanWithMessage {
 		let messageResult: BooleanWithMessage;
-		messageResult = ItemDataValidation.typeId(data.typeId);
+		messageResult = ItemPropertiesValidation.typeId(properties.typeId);
 		if (!messageResult.bool) {
 			return messageResult;
 		}
-		messageResult = ItemDataValidation.amount(data.amount, data);
+		messageResult = ItemPropertiesValidation.amount(properties.amount, properties);
 		if (!messageResult.bool) {
 			return messageResult;
 		}
-		if (data.lockMode) {
-			messageResult = ItemDataValidation.lockMode(data.lockMode);
+		if (properties.lockMode) {
+			messageResult = ItemPropertiesValidation.lockMode(properties.lockMode);
 			if (!messageResult.bool) {
 				return messageResult;
 			}
 		}
-		if (data.nameTag) {
-			messageResult = ItemDataValidation.nameTag(data.nameTag);
+		if (properties.nameTag) {
+			messageResult = ItemPropertiesValidation.nameTag(properties.nameTag);
 			if (!messageResult.bool) {
 				return messageResult;
 			}
 		}
-		const itemStack = new ItemStack(data.typeId);
-		if (data.durability) {
-			messageResult = ItemDataValidation.durability(data.durability, itemStack);
+		const itemStack = new ItemStack(properties.typeId);
+		if (properties.durability) {
+			messageResult = ItemPropertiesValidation.durability(properties.durability, itemStack);
 			if (!messageResult.bool) {
 				return messageResult;
 			}
 		}
-		if (data.enchants) {
-			messageResult = ItemDataValidation.enchants(data.enchants, itemStack);
+		if (properties.enchants) {
+			messageResult = ItemPropertiesValidation.enchants(properties.enchants, itemStack);
 			if (!messageResult.bool) {
 				return messageResult;
 			}
 		}
-		if (data.slot) {
-			messageResult = ItemDataValidation.slot(data.slot, itemStack, data.amount);
+		if (properties.slot) {
+			messageResult = ItemPropertiesValidation.slot(
+				properties.slot,
+				itemStack,
+				properties.amount,
+			);
 			if (!messageResult.bool) {
 				return messageResult;
 			}
 		}
-		if (data.potionType) {
-			messageResult = ItemDataValidation.potionType(data, data.potionType);
+		if (properties.potionType) {
+			messageResult = ItemPropertiesValidation.potionType(properties.potionType, properties);
 			if (!messageResult.bool) {
 				return messageResult;
 			}
 		}
-		if (data.arrowType) {
-			messageResult = ItemDataValidation.arrowType(data, data.arrowType);
+		if (properties.arrowType) {
+			messageResult = ItemPropertiesValidation.arrowType(properties.arrowType, properties);
 			if (!messageResult.bool) {
 				return messageResult;
 			}
 		}
-		if (data.bedColor) {
-			messageResult = ItemDataValidation.bedColor(data, data.bedColor);
+		if (properties.bedColor) {
+			messageResult = ItemPropertiesValidation.bedColor(properties.bedColor, properties);
 			if (!messageResult.bool) {
 				return messageResult;
 			}
 		}
-		// ItemData.keepOnDeath is a boolean. Nothing to validate there.
-		if (data.canPlaceOn) {
-			messageResult = ItemDataValidation.canPlaceOnAndCanDestroy(
-				data.canPlaceOn,
+		// ItemProperties.keepOnDeath is a boolean. Nothing to validate there.
+		if (properties.canPlaceOn) {
+			messageResult = ItemPropertiesValidation.canPlaceOnAndCanDestroy(
+				properties.canPlaceOn,
 				"canPlaceOn",
 			);
 			if (!messageResult.bool) {
 				return messageResult;
 			}
 		}
-		if (data.canDestroy) {
-			messageResult = ItemDataValidation.canPlaceOnAndCanDestroy(
-				data.canDestroy,
+		if (properties.canDestroy) {
+			messageResult = ItemPropertiesValidation.canPlaceOnAndCanDestroy(
+				properties.canDestroy,
 				"canDestroy",
 			);
 			if (!messageResult.bool) {
@@ -664,7 +668,7 @@ export const ItemDataValidation = {
 		}
 		return {
 			bool: true,
-			message: "ItemData is valid",
+			message: "ItemProperties are valid",
 		};
 	},
 };

@@ -14,10 +14,10 @@ import {
 	world,
 } from "@minecraft/server";
 import { giveItemToBlock, giveItemToEntity } from "./containers";
-import { ItemDataValidation, parseJsonArg } from "./itemData";
-import { dataToStack } from "./itemStack";
+import { ItemPropertiesValidation, parseCommandJson } from "./itemProperties";
+import { propertiesToItemStack } from "./itemStack";
 import { appendColorAfterResets, prettyTypeId, vector3ToString } from "./prettyTypeId";
-import type { BooleanWithMessage, GivexContext, ItemData, SlotData } from "./types";
+import type { BooleanWithMessage, GivexContext, ItemProperties, SlotData } from "./types";
 
 // Errors are often too long to fit in the command block ui, so send them in chat if commandblockoutput is enabled.
 function commandBlockOutputMessage(origin: CustomCommandOrigin, result: CustomCommandResult): void {
@@ -180,13 +180,13 @@ function givexGiveItemType(context: GivexContext): CustomCommandResult {
 	return givexGiveItemStack(context, itemStack, undefined, undefined);
 }
 
-function givexPrepareItemData(context: GivexContext): {
+function givexPrepareItemProperties(context: GivexContext): {
 	result: CustomCommandResult;
-	itemData: ItemData | undefined;
+	properties: ItemProperties | undefined;
 } {
 	if (context.recievers.length === 0) {
 		return {
-			itemData: undefined,
+			properties: undefined,
 			result: {
 				message: "No valid selector",
 				status: CustomCommandStatus.Failure,
@@ -196,7 +196,7 @@ function givexPrepareItemData(context: GivexContext): {
 	// Trying to access an itemstack created using minecraft:air crashes the world
 	if (context.itemType.id === "minecraft:air") {
 		return {
-			itemData: undefined,
+			properties: undefined,
 			result: {
 				message: givexFormatMessage(
 					context,
@@ -211,21 +211,25 @@ function givexPrepareItemData(context: GivexContext): {
 	}
 	if (context.json === undefined) {
 		return {
-			itemData: undefined,
+			properties: undefined,
 			result: {
 				status: CustomCommandStatus.Success,
 			},
 		};
 	}
-	const itemDataResult = parseJsonArg(context.json, context.itemType.id, context.itemAmount);
-	if (itemDataResult.itemData === undefined) {
+	const propertiesResult = parseCommandJson(
+		context.json,
+		context.itemType.id,
+		context.itemAmount,
+	);
+	if (propertiesResult.properties === undefined) {
 		return {
-			itemData: undefined,
+			properties: undefined,
 			result: {
 				message: givexFormatMessage(
 					context,
 					0,
-					itemDataResult.syntaxError ?? "Unknown error in your json. (sorry)",
+					propertiesResult.syntaxError ?? "Unknown error in your json. (sorry)",
 					undefined,
 					undefined,
 				),
@@ -233,25 +237,25 @@ function givexPrepareItemData(context: GivexContext): {
 			},
 		};
 	}
-	const itemData: ItemData = itemDataResult.itemData;
-	const validationResult = ItemDataValidation.complete(itemData);
+	const properties: ItemProperties = propertiesResult.properties;
+	const validationResult = ItemPropertiesValidation.complete(properties);
 	if (!validationResult.bool) {
 		return {
-			itemData: undefined,
+			properties: undefined,
 			result: {
 				message: givexFormatMessage(
 					context,
 					0,
 					validationResult.message,
 					undefined,
-					itemData.slot,
+					properties.slot,
 				),
 				status: CustomCommandStatus.Failure,
 			},
 		};
 	}
 	return {
-		itemData: itemData,
+		properties: properties,
 		result: {
 			status: CustomCommandStatus.Success,
 		},
@@ -277,14 +281,14 @@ function getLocationOfSomeReciever(context: GivexContext): DimensionLocation | u
 	return undefined;
 }
 
-function givexGetSpecialIdentifier(itemData: ItemData): string | undefined {
+function givexGetSpecialIdentifier(properties: ItemProperties): string | undefined {
 	let specialIdentifier: string = "";
-	if (itemData.potionType) {
-		specialIdentifier = itemData.potionType;
-	} else if (itemData.arrowType) {
-		specialIdentifier = itemData.arrowType;
-	} else if (itemData.bedColor) {
-		specialIdentifier = itemData.bedColor;
+	if (properties.potionType) {
+		specialIdentifier = properties.potionType;
+	} else if (properties.arrowType) {
+		specialIdentifier = properties.arrowType;
+	} else if (properties.bedColor) {
+		specialIdentifier = properties.bedColor;
 	} else {
 		return undefined;
 	}
@@ -295,10 +299,10 @@ function givexGetSpecialIdentifier(itemData: ItemData): string | undefined {
 
 // Automatically runs givex, blockx, or spawnx based on type of context.recievers
 export function givexRun(context: GivexContext): CustomCommandResult {
-	const itemDataResult = givexPrepareItemData(context);
-	if (itemDataResult.result.status === CustomCommandStatus.Failure) {
-		commandBlockOutputMessage(context.origin, itemDataResult.result);
-		return itemDataResult.result;
+	const propertiesResult = givexPrepareItemProperties(context);
+	if (propertiesResult.result.status === CustomCommandStatus.Failure) {
+		commandBlockOutputMessage(context.origin, propertiesResult.result);
+		return propertiesResult.result;
 	}
 	if (context.json === undefined) {
 		system.run(() => {
@@ -309,15 +313,15 @@ export function givexRun(context: GivexContext): CustomCommandResult {
 			status: CustomCommandStatus.Success,
 		};
 	}
-	// itemData should not be undefined beyond this point
-	if (itemDataResult.itemData === undefined) {
-		commandBlockOutputMessage(context.origin, itemDataResult.result);
+	// item properties should not be undefined beyond this point
+	if (propertiesResult.properties === undefined) {
+		commandBlockOutputMessage(context.origin, propertiesResult.result);
 		return {
-			message: itemDataResult.result.message ?? "",
+			message: propertiesResult.result.message ?? "",
 			status: CustomCommandStatus.Failure,
 		};
 	}
-	const itemData: ItemData = itemDataResult.itemData;
+	const properties: ItemProperties = propertiesResult.properties;
 	system.run(() => {
 		const aRecieverLocation: DimensionLocation | undefined = getLocationOfSomeReciever(context);
 		if (aRecieverLocation === undefined) {
@@ -327,7 +331,7 @@ export function givexRun(context: GivexContext): CustomCommandResult {
 			});
 			return;
 		}
-		const itemStackResult = dataToStack(itemData, aRecieverLocation);
+		const itemStackResult = propertiesToItemStack(properties, aRecieverLocation);
 		if (itemStackResult.item === undefined) {
 			afterTickCommandResultHandler(context.origin, {
 				message: itemStackResult.warnings ?? "Failed to create item stack",
@@ -338,8 +342,8 @@ export function givexRun(context: GivexContext): CustomCommandResult {
 		const givexResult = givexGiveItemStack(
 			context,
 			itemStackResult.item,
-			itemData.slot,
-			givexGetSpecialIdentifier(itemData),
+			properties.slot,
+			givexGetSpecialIdentifier(properties),
 		);
 		// Append warnings if they exist
 		if (itemStackResult.warnings) {

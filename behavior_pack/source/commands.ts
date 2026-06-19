@@ -14,7 +14,7 @@ import {
 	type Vector3,
 } from "@minecraft/server";
 import { FormHelp } from "./forms/help";
-import { ItemDataCreator } from "./forms/itemDataCreator";
+import { ItemPropertiesGenerator } from "./forms/itemPropertiesGenerator";
 import { showActionForm } from "./forms/types";
 import { blockxGetBlock, getDimensionFromOrigin, givexRun } from "./givex";
 import { getRecieverName, prettyTypeId, vector3ToString } from "./prettyTypeId";
@@ -44,7 +44,7 @@ function getSelectorName(recievers: Entity[] | Block | Vector3): string {
 }
 
 export const GIVEX_COMMAND: CustomCommand = {
-	description: "Give items with special components to entities.",
+	description: "Give items with special properties to entities.",
 	mandatoryParameters: [
 		{
 			name: "target",
@@ -90,7 +90,7 @@ export function givexCommandCallback(
 }
 
 export const BLOCKX_COMMAND: CustomCommand = {
-	description: "Give items with special components to blocks.",
+	description: "Give items with special properties to blocks.",
 	mandatoryParameters: [
 		{
 			name: "position",
@@ -141,7 +141,7 @@ export function blockxCommandCallback(
 }
 
 export const SPAWNX_COMMAND: CustomCommand = {
-	description: "Spawn items with special components.",
+	description: "Spawn items with special properties.",
 	mandatoryParameters: [
 		{
 			name: "position",
@@ -197,7 +197,7 @@ export function spawnxCommandCallback(
 	return givexRun(context);
 }
 
-// Use server ui to easily generate item data json
+// Use server ui to easily generate item properties json
 export const HELP_COMMAND: CustomCommand = {
 	description: "Easily generate givex json.",
 	name: `${CommandNamespace}:help`,
@@ -236,7 +236,7 @@ export function helpCommandCallback(
 		if (itemType === undefined) {
 			showActionForm(FormHelp, viewer);
 		} else {
-			const creator = new ItemDataCreator(viewer, false, itemType.id);
+			const creator = new ItemPropertiesGenerator(viewer, false, itemType.id);
 			creator.run();
 		}
 	});

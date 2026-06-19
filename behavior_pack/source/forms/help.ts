@@ -1,6 +1,6 @@
 import { type Player, system } from "@minecraft/server";
 import { FormCredits } from "./credits";
-import { ItemDataCreator } from "./itemDataCreator";
+import { ItemPropertiesGenerator } from "./itemPropertiesGenerator";
 import { type ActionForm, showActionForm } from "./types";
 import { FormWiki } from "./wiki";
 
@@ -11,7 +11,7 @@ export const FormHelp: ActionForm = {
 			addStyling: true,
 			async callback(player: Player): Promise<void> {
 				system.run(async () => {
-					const creator = new ItemDataCreator(player, true);
+					const creator = new ItemPropertiesGenerator(player, true);
 					creator.run();
 				});
 			},

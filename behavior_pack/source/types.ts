@@ -47,10 +47,10 @@ export const SlotDataKeys = ["name", "id", "keepOldItem"];
 export const SlotDataKeepOldItemDefault: boolean = false;
 export const SlotDataNameDefault: SlotName = SlotName.Inventory;
 
-// As of MC v26.21, there's no official way to access tipped arrows besides item data values
+// As of MC v26.21, there's no official way to access tipped arrows besides command data values
 // This array is in order of data value starting at 6 = night_vision
-export const ArrowEffectSartingDataValue: number = 6;
-export const ArrowEffectTypes: string[] = [
+export const ArrowTypeStartingDataValue: number = 6;
+export const ArrowTypes: string[] = [
 	"night_vision",
 	"long_night_vision",
 	"invisibility",
@@ -115,7 +115,7 @@ export const BedColors: string[] = [
 	"black",
 ];
 
-/* The following item components are not supported due to scripting limitations:
+/* The following item properties are not supported due to scripting limitations:
 
 	Firework rocket types:
 	no way to give with commands or scripting
@@ -125,7 +125,7 @@ export const BedColors: string[] = [
 	Dont want to force a half implementation because of this.
 */
 
-export interface ItemData {
+export interface ItemProperties {
 	typeId: string;
 	amount: number;
 	lockMode?: ItemLockMode;
@@ -143,7 +143,7 @@ export interface ItemData {
 	canPlaceOn?: string[];
 	canDestroy?: string[];
 }
-export enum ItemDataKeys {
+export enum ItemPropertyKeys {
 	TypeId = "typeId",
 	Amount = "amount",
 	LockMode = "lockMode",
@@ -158,9 +158,9 @@ export enum ItemDataKeys {
 	CanPlaceOn = "canPlaceOn",
 	CanDestroy = "canDestroy",
 }
-export const ItemDataDefaultAmount: number = 1;
+export const ItemPropertyDefaultAmount: number = 1;
 // Matches max amount in vanilla /give
-export const ItemDataMaxAmount: number = 32767;
+export const ItemPropertyMaxAmount: number = 32767;
 // 255 is the max item nametag length as stated in index.d.ts. Going by 253 since I automatically add §r to the start of nametag to avoid italicization.
 export const MaxNameTagLength: number = 253;
 

@@ -11,8 +11,8 @@ import {
 	Potions,
 } from "@minecraft/server";
 import { getCommandDataValue, getDataValueItem } from "./dataValueItems";
-import { ItemDataValidation, itemTypeToPotionDeliveryType } from "./itemData";
-import type { BooleanWithMessage, EnchantData, ItemData, ItemDurability } from "./types";
+import { ItemPropertiesValidation, itemTypeToPotionDeliveryType } from "./itemProperties";
+import type { BooleanWithMessage, EnchantData, ItemDurability, ItemProperties } from "./types";
 
 export function applyDurability(item: ItemStack, value: ItemDurability): BooleanWithMessage {
 	const durabilityComponent = item.getComponent(ItemComponentTypes.Durability);
@@ -131,8 +131,8 @@ function createPotionItem(
 }
 
 // Cannot be run in restricted execution
-export function dataToStack(
-	data: ItemData,
+export function propertiesToItemStack(
+	properties: ItemProperties,
 	locationOfReciever: DimensionLocation,
 ): {
 	item: ItemStack | undefined;
@@ -140,10 +140,10 @@ export function dataToStack(
 } {
 	let itemStack: ItemStack;
 	try {
-		if (!data.potionType) {
-			itemStack = new ItemStack(data.typeId);
+		if (!properties.potionType) {
+			itemStack = new ItemStack(properties.typeId);
 		} else {
-			const potionItemResult = createPotionItem(data.potionType, data.typeId);
+			const potionItemResult = createPotionItem(properties.potionType, properties.typeId);
 			if (potionItemResult.item) {
 				itemStack = potionItemResult.item;
 			} else {
@@ -163,53 +163,45 @@ export function dataToStack(
 			warnings: message,
 		};
 	}
-	if (data.slot !== undefined) {
-		if (data.amount > itemStack.maxAmount) {
+	if (properties.slot !== undefined) {
+		if (properties.amount > itemStack.maxAmount) {
 			return {
 				item: undefined,
-				warnings: `Amount ${data.amount} exceeds maximum for ${data.typeId} (${itemStack.maxAmount})\nIf you would like to give an amount exceeding the max stack size, you cannot select a slot.`,
+				warnings: `Amount ${properties.amount} exceeds maximum for ${properties.typeId} (${itemStack.maxAmount})\nIf you would like to give an amount exceeding the max stack size, you cannot select a slot.`,
 			};
 		}
-		itemStack.amount = data.amount;
+		itemStack.amount = properties.amount;
 	}
 	// Issues beyond this point are not fatal. Will just return a \n seperated list of warnings in a single string.
 	let warning: string = "";
-	if (data.lockMode !== undefined) {
-		if (ItemDataValidation.lockMode(data.lockMode)) {
-			itemStack.lockMode = data.lockMode;
+	if (properties.lockMode !== undefined) {
+		if (ItemPropertiesValidation.lockMode(properties.lockMode)) {
+			itemStack.lockMode = properties.lockMode;
 		} else {
 			warning += "Invalid lockMode. Skipped.\n";
 		}
 	}
-	if (data.nameTag !== undefined) {
-		const nameTagResult = ItemDataValidation.nameTag(data.nameTag);
+	if (properties.nameTag !== undefined) {
+		const nameTagResult = ItemPropertiesValidation.nameTag(properties.nameTag);
 		if (nameTagResult) {
 			// Add §r to reset auto italicization
-			itemStack.nameTag = `§r${data.nameTag}`;
+			itemStack.nameTag = `§r${properties.nameTag}`;
 		} else {
 			warning += `Invalid nameTag. Skipped.\n`;
 		}
 	}
-	if (data.durability !== undefined) {
-		const result = applyDurability(itemStack, data.durability);
+	if (properties.durability !== undefined) {
+		const result = applyDurability(itemStack, properties.durability);
 		if (!result.bool) {
 			warning += `${result.message}.\n`;
 		}
 	}
-	/* Will add back once mojang fixes dyeable component (Bug tracker MCPE-237577 and MCPE-232617)
-	if (data.dye) {
-		const result = applyDye(itemStack, data.dye);
-		if (!result.bool) {
-			warning += `${result.message}.\n`;
-		}
-	}
-	*/
-	if (data.enchants !== undefined) {
+	if (properties.enchants !== undefined) {
 		const enchantableComponent = itemStack.getComponent(ItemComponentTypes.Enchantable);
 		if (enchantableComponent === undefined || !enchantableComponent.isValid) {
 			warning += `Unable to apply enchantments to ${itemStack.typeId}. Skipping\n`;
 		} else {
-			for (const enchant of data.enchants) {
+			for (const enchant of properties.enchants) {
 				const result = applyEnchantData(enchantableComponent, enchant);
 				if (!result.bool) {
 					warning += `${result.message}.\n`;
@@ -217,12 +209,12 @@ export function dataToStack(
 			}
 		}
 	}
-	if (data.keepOnDeath !== undefined) {
-		itemStack.keepOnDeath = data.keepOnDeath;
+	if (properties.keepOnDeath !== undefined) {
+		itemStack.keepOnDeath = properties.keepOnDeath;
 	}
-	if (data.canPlaceOn !== undefined) {
+	if (properties.canPlaceOn !== undefined) {
 		try {
-			itemStack.setCanPlaceOn(data.canPlaceOn);
+			itemStack.setCanPlaceOn(properties.canPlaceOn);
 		} catch (error) {
 			let message: string = "Unable to set canPlaceOn";
 			if (error instanceof Error) {
@@ -231,9 +223,9 @@ export function dataToStack(
 			warning += `${message}\n`;
 		}
 	}
-	if (data.canDestroy !== undefined) {
+	if (properties.canDestroy !== undefined) {
 		try {
-			itemStack.setCanDestroy(data.canDestroy);
+			itemStack.setCanDestroy(properties.canDestroy);
 		} catch (error) {
 			let message: string = "Unable to set canDestroy";
 			if (error instanceof Error) {
@@ -242,7 +234,7 @@ export function dataToStack(
 			warning += `${message}\n`;
 		}
 	}
-	const dataValue: number = getCommandDataValue(data);
+	const dataValue: number = getCommandDataValue(properties);
 	if (dataValue !== 0) {
 		const dataValueResult = getDataValueItem(itemStack, dataValue, locationOfReciever);
 		if (dataValueResult.item !== undefined) {

@@ -9,11 +9,11 @@ import {
 	type Vector3,
 } from "@minecraft/server";
 import {
-	ArrowEffectSartingDataValue,
-	ArrowEffectTypes,
+	ArrowTypeStartingDataValue,
+	ArrowTypes,
 	BedColors,
 	type BooleanWithMessage,
-	type ItemData,
+	type ItemProperties,
 } from "./types";
 
 const CustomContainerEntityType = "givex:custom_container";
@@ -75,7 +75,7 @@ function copyItemStackComponents(from: ItemStack, to: ItemStack): BooleanWithMes
 }
 
 // Cannot be run in restricted execution
-// Uses /give on a custom entity for data value, applies components of itemstack, then returns new itemstack with data value attached internally.
+// Uses /give on a custom entity for command data value, applies components of itemstack, then returns new itemstack with data value attached internally.
 export function getDataValueItem(
 	item: ItemStack,
 	dataValue: number,
@@ -164,18 +164,18 @@ export function getDataValueItem(
 }
 
 // For arrowType, bedColor, etc
-export function getCommandDataValue(itemData: ItemData): number {
-	if (itemData.arrowType && itemData.typeId === "minecraft:arrow") {
-		const arrowEffectResult: number = ArrowEffectTypes.indexOf(itemData.arrowType);
+export function getCommandDataValue(properties: ItemProperties): number {
+	if (properties.arrowType && properties.typeId === "minecraft:arrow") {
+		const arrowEffectResult: number = ArrowTypes.indexOf(properties.arrowType);
 		if (arrowEffectResult !== -1) {
-			return arrowEffectResult + ArrowEffectSartingDataValue;
+			return arrowEffectResult + ArrowTypeStartingDataValue;
 		}
-	} else if (itemData.bedColor && itemData.typeId === "minecraft:bed") {
-		const bedColorResult = BedColors.indexOf(itemData.bedColor);
+	} else if (properties.bedColor && properties.typeId === "minecraft:bed") {
+		const bedColorResult = BedColors.indexOf(properties.bedColor);
 		if (bedColorResult !== -1) {
 			return bedColorResult;
 		}
-	} else if (itemData.typeId === "minecraft:spawn_egg") {
+	} else if (properties.typeId === "minecraft:spawn_egg") {
 		// npcs are the only spawn egg that still use data values. The rest have their own type id. Just redirect all references of the old spawn egg typeid to npc.
 		return 51;
 	}
