@@ -43,6 +43,7 @@ interface CommandVector3Value {
 	num?: number;
 	includeSquiggly: boolean;
 }
+const MaxCommandVector3Value = 2 ** 30 - 1;
 
 export interface CommandVector3 {
 	x: CommandVector3Value;
@@ -58,7 +59,7 @@ function cVector3ValueToString(value: CommandVector3Value, decimalPlaces: number
 	return str;
 }
 
-export function commandVector3ToString(vector: CommandVector3, decimalPlaces: number = 2): string {
+export function commandVector3ToString(vector: CommandVector3, decimalPlaces: number = 3): string {
 	let str = `${cVector3ValueToString(vector.x, decimalPlaces)}`;
 	str += ` ${cVector3ValueToString(vector.y, decimalPlaces)}`;
 	str += ` ${cVector3ValueToString(vector.z, decimalPlaces)}`;
@@ -69,7 +70,6 @@ interface CommandVector3ParseResult {
 	result: CommandVector3 | undefined;
 	message: string;
 }
-
 export function parseCommandVector3(str: string): CommandVector3ParseResult {
 	const vectorValues: CommandVector3Value[] = [];
 	const arr: string[] = str.split(" ");
@@ -90,14 +90,14 @@ export function parseCommandVector3(str: string): CommandVector3ParseResult {
 					value = value.slice(1);
 					continue;
 				}
-				let nextSquigglyIndex: number | undefined = str.slice(1).indexOf("~") + 1;
+				let nextSquigglyIndex: number | undefined = value.slice(1).indexOf("~") + 1;
 				if (nextSquigglyIndex === 0) {
 					nextSquigglyIndex = undefined;
 				}
 				const numResult: number | undefined = stringToNumber(
 					value.slice(1, nextSquigglyIndex),
 				);
-				if (numResult === undefined) {
+				if (numResult === undefined || numResult > MaxCommandVector3Value) {
 					return {
 						message: `Invalid entry "${value}"`,
 						result: undefined,
@@ -490,7 +490,7 @@ export class ItemPropertiesForm {
 			maxAmount = getMaxItemPropertiesAmount(this.properties, this.commandType);
 		}
 		const question: string = `How much of your item would you like to ${this.commandType === "spawnx" ? "spawn" : "give"}?`;
-		const statement: string = `Enter number within range 1-${maxAmount}:`;
+		const statement: string = `Enter integer within range 1-${maxAmount}:`;
 		const textField: ModalFormTextFieldComponent = {
 			label: this.formatInputLabel(question, statement, ""),
 			options: {
@@ -586,7 +586,7 @@ export class ItemPropertiesForm {
 			type: "dropdown",
 		};
 		const idQuestion: string = "What slot id would you like to place the item in? (Optional)";
-		const idStatement: string = "Enter number greater than 0:";
+		const idStatement: string = "Enter integer greater than 0:";
 		const textFieldId: ModalFormTextFieldComponent = {
 			label: this.formatInputLabel(idQuestion, idStatement, ""),
 			options: {

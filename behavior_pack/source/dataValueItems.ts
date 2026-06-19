@@ -84,16 +84,16 @@ function copyItemStackComponents(from: ItemStack, to: ItemStack): BooleanWithMes
 	};
 }
 
-export interface GetDataValueItemResult {
+export interface GetCommandDataValueItemResult {
 	item: ItemStack | undefined;
 	message: string;
 }
 // Uses /give on a custom entity for command data value, applies components of itemstack, then returns new itemstack with data value attached internally.
-export function getDataValueItem(
+export function getCommandDataValueItem(
 	item: ItemStack,
 	dataValue: number,
 	locationForCustomEntity: DimensionLocation,
-): GetDataValueItemResult {
+): GetCommandDataValueItemResult {
 	if (dataValue === 0) {
 		return {
 			item: item,

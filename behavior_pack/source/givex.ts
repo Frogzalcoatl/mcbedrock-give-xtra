@@ -6,7 +6,7 @@ import {
 	CustomCommandStatus,
 	type DimensionLocation,
 	Entity,
-	ItemStack,
+	type ItemStack,
 	type ItemType,
 	Player,
 	system,
@@ -244,21 +244,6 @@ export class GivexCommand {
 		};
 	}
 
-	private giveItemType(): CustomCommandResult {
-		const itemStack: ItemStack = new ItemStack(this.itemProperties.typeId);
-		const amountValidationResult: BooleanWithMessage = ItemPropertiesValidation.amount(
-			this.itemProperties,
-			this.commandType,
-		);
-		if (!amountValidationResult.bool) {
-			return {
-				message: this.formatMessage(0, amountValidationResult.message),
-				status: CustomCommandStatus.Failure,
-			};
-		}
-		return this.giveItemStack(itemStack);
-	}
-
 	private getLocationOfSomeSelector(): DimensionLocation | undefined {
 		for (const selector of this.selectors) {
 			if (selector instanceof Entity || selector instanceof Block) {
@@ -283,16 +268,6 @@ export class GivexCommand {
 		if (propertiesResult.status === CustomCommandStatus.Failure) {
 			commandBlockOutputMessage(this.origin, propertiesResult);
 			return propertiesResult;
-		}
-		if (this.json === undefined) {
-			// Give item with no special properties
-			system.run(() => {
-				const result: CustomCommandResult = this.giveItemType();
-				afterTickCommandResultHandler(this.origin, result);
-			});
-			return {
-				status: CustomCommandStatus.Success,
-			};
 		}
 		system.run(() => {
 			const aSelectorLocation: DimensionLocation | undefined =

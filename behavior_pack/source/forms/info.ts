@@ -42,5 +42,5 @@ export const FormInfo: ActionForm = {
 			type: "button",
 		},
 	],
-	title: "Givex Help",
+	title: "Givex Info",
 };

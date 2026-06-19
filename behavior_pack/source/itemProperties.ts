@@ -39,7 +39,7 @@ export function validateKeys(objKeys: string[], validKeys: string[]): BooleanWit
 		if (!validKeys.includes(key)) {
 			return {
 				bool: false,
-				message: `Invalid key "${key}. Valid options include:\n${validKeys.join(", ")}"`,
+				message: `Invalid key "${key}". Valid options include:\n${validKeys.join(", ")}"`,
 			};
 		}
 	}
@@ -377,8 +377,15 @@ export function getMaxItemPropertiesAmount(
 // biome-ignore assist/source/useSortedKeys: Want to keep it in the same order as declared in the ItemProperties interface.
 export const ItemPropertiesValidation = {
 	typeId(value: string): BooleanWithMessage {
-		const itemType: ItemType | undefined = ItemTypes.get(value);
-		const result: boolean = itemType !== undefined && itemType.id !== "minecraft:air";
+		let result: boolean = false;
+		if (value === "spawn_egg" || value === "minecraft:spawn_egg") {
+			// This type id is not included in ItemTypes.get but is still needed to get npc spawn eggs by data value
+			// All references to this type id are redirected to the npc spawn egg;
+			result = true;
+		} else {
+			const itemType: ItemType | undefined = ItemTypes.get(value);
+			result = itemType !== undefined && itemType.id !== "minecraft:air";
+		}
 		return {
 			bool: result,
 			message: result ? "Valid Type ID" : `Invalid Type ID "${value}"`,

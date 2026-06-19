@@ -13,9 +13,9 @@ import {
 	Potions,
 } from "@minecraft/server";
 import {
-	type GetDataValueItemResult,
+	type GetCommandDataValueItemResult,
 	getCommandDataValue,
-	getDataValueItem,
+	getCommandDataValueItem,
 } from "./dataValueItems";
 import { ItemPropertiesValidation, itemTypeToPotionDeliveryType } from "./itemProperties";
 import type { BooleanWithMessage, EnchantData, ItemDurability, ItemProperties } from "./types";
@@ -231,7 +231,7 @@ export function propertiesToItemStack(
 	}
 	const dataValue: number = getCommandDataValue(properties);
 	if (dataValue !== 0) {
-		const dataValueResult: GetDataValueItemResult = getDataValueItem(
+		const dataValueResult: GetCommandDataValueItemResult = getCommandDataValueItem(
 			itemStack,
 			dataValue,
 			locationOfSelector,
