@@ -122,10 +122,9 @@ export interface PropertiesToItemStackResult {
 	item: ItemStack | undefined;
 	warnings: string | undefined;
 }
-// Cannot be run in restricted execution
 export function propertiesToItemStack(
 	properties: ItemProperties,
-	locationOfReciever: DimensionLocation,
+	locationOfSelector: DimensionLocation,
 ): PropertiesToItemStackResult {
 	let itemStack: ItemStack;
 	try {
@@ -235,7 +234,7 @@ export function propertiesToItemStack(
 		const dataValueResult: GetDataValueItemResult = getDataValueItem(
 			itemStack,
 			dataValue,
-			locationOfReciever,
+			locationOfSelector,
 		);
 		if (dataValueResult.item !== undefined) {
 			itemStack = dataValueResult.item;

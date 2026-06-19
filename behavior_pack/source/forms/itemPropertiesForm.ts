@@ -23,7 +23,7 @@ import {
 	SlotDataKeepOldItemDefault,
 	SlotName,
 } from "../types";
-import { FormHelp } from "./help";
+import { FormInfo } from "./info";
 import {
 	type ActionForm,
 	type ActionFormButton,
@@ -65,14 +65,6 @@ export function commandVector3ToString(vector: CommandVector3, decimalPlaces: nu
 	return str;
 }
 
-function getNextSquigglyIndex(str: string): number | undefined {
-	let nextSquigglyIndex: number | undefined = str.slice(1).indexOf("~") + 1;
-	if (nextSquigglyIndex === 0) {
-		nextSquigglyIndex = undefined;
-	}
-	return nextSquigglyIndex;
-}
-
 interface CommandVector3ParseResult {
 	result: CommandVector3 | undefined;
 	message: string;
@@ -98,7 +90,10 @@ export function parseCommandVector3(str: string): CommandVector3ParseResult {
 					value = value.slice(1);
 					continue;
 				}
-				const nextSquigglyIndex = getNextSquigglyIndex(value);
+				let nextSquigglyIndex: number | undefined = str.slice(1).indexOf("~") + 1;
+				if (nextSquigglyIndex === 0) {
+					nextSquigglyIndex = undefined;
+				}
 				const numResult: number | undefined = stringToNumber(
 					value.slice(1, nextSquigglyIndex),
 				);
@@ -158,8 +153,8 @@ export class ItemPropertiesForm {
 	public commandType: CommandType;
 	public location: CommandVector3;
 	private editableProperties: { text: string; iconPath: string }[];
-	private openedFromHelp: boolean;
-	constructor(creator: Player, openedFromHelp: boolean, itemTypeId?: string) {
+	private openedFromInfo: boolean;
+	constructor(creator: Player, openedFromInfo: boolean, itemTypeId?: string) {
 		this.player = creator;
 		// Just default values, can be changed by user later
 		this.properties = {
@@ -179,14 +174,14 @@ export class ItemPropertiesForm {
 			},
 		};
 		this.editableProperties = [];
-		this.openedFromHelp = openedFromHelp;
+		this.openedFromInfo = openedFromInfo;
 	}
 
 	private static readonly FORM_TITLE: string = "Get Started";
 
 	private updateEditableProperties(): void {
 		const editableProperties: { text: string; iconPath: string }[] = [];
-		const maxAmount: number = getMaxItemPropertiesAmount(this.properties);
+		const maxAmount: number = getMaxItemPropertiesAmount(this.properties, this.commandType);
 		if (maxAmount > 1) {
 			editableProperties.push({
 				iconPath: "textures/items/hopper.png",
@@ -275,66 +270,64 @@ export class ItemPropertiesForm {
 
 	private getPropertiesDisplay(): string {
 		const data = this.properties;
-		const formatProperty = this.formatProperty;
-		// ^ Just to make things a little easier to look at
-		let str: string = formatProperty("Item Type", prettyTypeId(data.typeId));
-		str += formatProperty("Amount", data.amount);
-		str += formatProperty("Command Type", `/${this.commandType}`);
+		let str: string = this.formatProperty("Item Type", prettyTypeId(data.typeId));
+		str += this.formatProperty("Amount", data.amount);
+		str += this.formatProperty("Command Type", `/${this.commandType}`);
 		if (data.nameTag) {
-			str += formatProperty("Name Tag", data.nameTag);
+			str += this.formatProperty("Name Tag", data.nameTag);
 		}
 		if (this.commandType !== "givex") {
-			str += formatProperty("Location", commandVector3ToString(this.location));
+			str += this.formatProperty("Location", commandVector3ToString(this.location));
 		}
 		if (this.commandType !== "spawnx") {
 			if (data.slot === undefined) {
-				formatProperty("Slot", "Default");
+				this.formatProperty("Slot", "Default");
 			} else {
-				formatProperty("Slot", data.slot.name);
+				this.formatProperty("Slot", data.slot.name);
 				if (data.slot.id !== undefined) {
-					formatProperty("Slot Id", data.slot.id);
+					this.formatProperty("Slot Id", data.slot.id);
 				}
-				formatProperty("Keep Old Item in Slot", data.slot.keepOldItem);
+				this.formatProperty("Keep Old Item in Slot", data.slot.keepOldItem);
 			}
 		}
 		if (data.durability !== undefined) {
-			formatProperty("Durability", data.durability);
+			this.formatProperty("Durability", data.durability);
 		}
 		if (data.enchants !== undefined) {
 			let enchants: string = "";
 			for (const e of data.enchants) {
 				enchants += `\n-${prettyTypeId(e.id)} ${e.level}`;
 			}
-			str += formatProperty("Enchants", enchants);
+			str += this.formatProperty("Enchants", enchants);
 		}
 		if (data.potionType !== undefined) {
-			str += formatProperty("Potion Type", prettyTypeId(data.potionType));
+			str += this.formatProperty("Potion Type", prettyTypeId(data.potionType));
 		}
 		if (data.arrowType !== undefined) {
-			str += formatProperty("Arrow Type", prettyTypeId(data.arrowType));
+			str += this.formatProperty("Arrow Type", prettyTypeId(data.arrowType));
 		}
 		if (data.bedColor !== undefined) {
-			str += formatProperty("Bed Color", prettyTypeId(data.bedColor));
+			str += this.formatProperty("Bed Color", prettyTypeId(data.bedColor));
 		}
 		if (data.lockMode !== undefined) {
-			str += formatProperty("Item Lock Mode", prettyTypeId(data.lockMode));
+			str += this.formatProperty("Item Lock Mode", prettyTypeId(data.lockMode));
 		}
 		if (data.keepOnDeath !== undefined) {
-			str += formatProperty("Keep On Death", data.keepOnDeath);
+			str += this.formatProperty("Keep On Death", data.keepOnDeath);
 		}
 		if (data.canPlaceOn !== undefined) {
 			let canPlaceOn: string = "";
 			for (const value of data.canPlaceOn) {
 				canPlaceOn += `\n${prettyTypeId(value)}`;
 			}
-			formatProperty("Can Place On", canPlaceOn);
+			this.formatProperty("Can Place On", canPlaceOn);
 		}
 		if (data.canDestroy !== undefined) {
 			let canDestroy: string = "";
 			for (const value of data.canDestroy) {
 				canDestroy += `\n${prettyTypeId(value)}`;
 			}
-			formatProperty("Can Destroy", canDestroy);
+			this.formatProperty("Can Destroy", canDestroy);
 		}
 		return str;
 	}
@@ -390,7 +383,7 @@ export class ItemPropertiesForm {
 		};
 		const form: ModalForm = this.getTemplatePrompt(
 			[textField],
-			"Note: You can also run the command §e/givex:help <itemType>§r for auto completion.",
+			"Note: You can also run the command §e/givex:info <itemType>§r for auto completion.",
 		);
 		let result: ModalFormReturnType[] | undefined;
 		let input: ModalFormReturnType;
@@ -409,8 +402,8 @@ export class ItemPropertiesForm {
 			}
 			input = result[0];
 		}
-		// Ensure values like "grass" are converted to "minecraft:grass_block"
 		const itemType = ItemTypes.get(input);
+		// ^ Ensure values like "grass" are converted to "minecraft:grass_block"
 		if (itemType !== undefined) {
 			this.properties.typeId = itemType.id;
 			return Promise.resolve(PromptResult.Completed);
@@ -494,7 +487,7 @@ export class ItemPropertiesForm {
 		if (this.commandType === "spawnx") {
 			maxAmount = getMaxStackSize(this.properties.typeId) ?? 64;
 		} else {
-			maxAmount = getMaxItemPropertiesAmount(this.properties);
+			maxAmount = getMaxItemPropertiesAmount(this.properties, this.commandType);
 		}
 		const question: string = `How much of your item would you like to ${this.commandType === "spawnx" ? "spawn" : "give"}?`;
 		const statement: string = `Enter number within range 1-${maxAmount}:`;
@@ -607,7 +600,7 @@ export class ItemPropertiesForm {
 			options: {
 				defaultValue: this.properties.slot?.keepOldItem ?? SlotDataKeepOldItemDefault,
 				tooltip:
-					"If true, the old item in your selected slot is given back to the reciever.",
+					"If true, the old item in your selected slot is given back to the selector.",
 			},
 			type: "toggle",
 		};
@@ -616,7 +609,6 @@ export class ItemPropertiesForm {
 		return Promise.resolve("This property is in progress");
 	}
 
-	// Returns prompt result message to be displayed
 	private async promptItemProperty(property: string): Promise<string> {
 		let result: string = "";
 		switch (property) {
@@ -677,7 +669,7 @@ export class ItemPropertiesForm {
 				system.run(async () => {
 					const newInstance = new ItemPropertiesForm(
 						this.player,
-						this.openedFromHelp,
+						this.openedFromInfo,
 						this.properties.typeId,
 					);
 					newInstance.commandType = this.commandType;
@@ -775,9 +767,9 @@ export class ItemPropertiesForm {
 		if (!skipItemTypePrompt) {
 			const typeIdResult: PromptResult = await this.promptTypeId();
 			if (typeIdResult !== PromptResult.Completed) {
-				if (this.openedFromHelp) {
+				if (this.openedFromInfo) {
 					system.run(async () => {
-						showActionForm(FormHelp, this.player);
+						showActionForm(FormInfo, this.player);
 					});
 				}
 				return;
@@ -808,33 +800,3 @@ export class ItemPropertiesForm {
 		}
 	}
 }
-
-/*
-export const FormSelectSlotGivex: ModalForm = {
-	components: [
-		{
-			items: ["Default"], // Add the rest based on itemType
-			label: "Default functions the same as the /give command.\nSlot Name:",
-			type: "dropdown",
-		},
-		{
-			label: "Slot Id:",
-			placeHolderText: "0 or higher",
-			type: "textField",
-		},
-		{
-			label: "Keep Old Item in Slot:",
-			options: {
-				defaultValue: false,
-				tooltip: "Gives previous item in slot back to entity",
-			},
-			type: "toggle",
-		},
-	],
-	submitButton: {
-		addStyling: true,
-		text: "Submit",
-	},
-	title: ItemPropertiesGenerator.FormTitle,
-};
-*/

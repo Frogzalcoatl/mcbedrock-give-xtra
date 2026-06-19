@@ -26,8 +26,8 @@ export enum SlotName {
 	Hotbar = "slot.hotbar",
 	Inventory = "slot.inventory",
 	MobChest = "slot.chest", // Donkeys, Mules, Llamas
-	Armor = "slot.armor", // Used for horse armor
-	Saddle = "slot.saddle", // Used for horses, llamas (carpet), donkeys, etc.
+	Armor = "slot.armor", // Horse armor
+	Saddle = "slot.saddle", // Horses, llamas (carpet), donkeys, etc.
 	EndChest = "slot.endchest",
 }
 
@@ -88,7 +88,7 @@ export const ArrowTypes: string[] = [
 	"infestation",
 ];
 
-// index matches data value starting at white = 0
+// index matches command data value starting at white = 0
 export const BedColors: string[] = [
 	"white",
 	"orange",

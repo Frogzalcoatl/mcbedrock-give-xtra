@@ -1,5 +1,5 @@
 import {
-	Block,
+	type Block,
 	CommandPermissionLevel,
 	type CustomCommand,
 	type CustomCommandOrigin,
@@ -14,35 +14,12 @@ import {
 	system,
 	type Vector3,
 } from "@minecraft/server";
-import { FormHelp } from "./forms/help";
+import { FormInfo } from "./forms/info";
 import { ItemPropertiesForm } from "./forms/itemPropertiesForm";
 import { showActionForm } from "./forms/types";
 import { GivexCommand } from "./givex";
-import { getRecieverName, prettyTypeId, vector3ToString } from "./prettyTypeId";
+import { vector3ToString } from "./prettyTypeId";
 import { CommandNamespace } from "./types";
-
-function getSelectorName(recievers: Entity[] | Block | Vector3): string {
-	if (recievers instanceof Block) {
-		return prettyTypeId(recievers.typeId);
-	} else if (Array.isArray(recievers)) {
-		// Entities
-		if (recievers.length <= 0) {
-			return "unknown selector";
-		} else if (recievers.length === 1) {
-			const entity: Entity | undefined = recievers[0];
-			if (entity) {
-				return getRecieverName(entity);
-			} else {
-				return "selector";
-			}
-		} else {
-			return "selectors";
-		}
-	} else {
-		// Vector3
-		return `location ${vector3ToString(recievers, 0)}`;
-	}
-}
 
 export const GIVEX_COMMAND: CustomCommand = {
 	description: "Give items with special properties to entities.",
@@ -70,7 +47,7 @@ export const GIVEX_COMMAND: CustomCommand = {
 	permissionLevel: CommandPermissionLevel.GameDirectors,
 };
 
-// Players must use escape characters for double quotes: \"
+// Players must use escape characters for quotation symbols: \"
 export function givexCommandCallback(
 	origin: CustomCommandOrigin,
 	selectorResult: Entity[],
@@ -78,15 +55,7 @@ export function givexCommandCallback(
 	amount: number = 1,
 	json?: string,
 ): CustomCommandResult {
-	const command = new GivexCommand(
-		"givex",
-		origin,
-		selectorResult,
-		getSelectorName(selectorResult),
-		itemType,
-		amount,
-		json,
-	);
+	const command = new GivexCommand("givex", origin, selectorResult, itemType, amount, json);
 	return command.run();
 }
 
@@ -191,21 +160,12 @@ export function blockxCommandCallback(
 	amount: number = 1,
 	json?: string,
 ): CustomCommandResult {
-	const command = new GivexCommand(
-		"blockx",
-		origin,
-		[],
-		"selectorName placeholder",
-		itemType,
-		amount,
-		json,
-	);
+	const command = new GivexCommand("blockx", origin, [], itemType, amount, json);
 	const blockResult: BlockxGetBlockResult = blockxGetBlock(command, location);
 	if (blockResult.block === undefined) {
 		return blockResult.result;
 	}
-	command.recievers = [blockResult.block];
-	command.selectorName = getSelectorName(blockResult.block);
+	command.selectors = [blockResult.block];
 	return command.run();
 }
 
@@ -242,20 +202,12 @@ export function spawnxCommandCallback(
 	amount: number = 1,
 	json?: string,
 ): CustomCommandResult {
-	const command = new GivexCommand(
-		"spawnx",
-		origin,
-		[],
-		getSelectorName(position),
-		itemType,
-		amount,
-		json,
-	);
+	const command = new GivexCommand("spawnx", origin, [], itemType, amount, json);
 	const dimensionResult: GetDimensionFromOriginResult = getDimensionFromOrigin(origin);
 	if (dimensionResult.dimension === undefined) {
 		return dimensionResult.result;
 	}
-	command.recievers = [
+	command.selectors = [
 		{
 			dimension: dimensionResult.dimension,
 			x: position.x,
@@ -267,9 +219,9 @@ export function spawnxCommandCallback(
 }
 
 // Use server ui to easily generate item properties json
-export const HELP_COMMAND: CustomCommand = {
+export const INFO_COMMAND: CustomCommand = {
 	description: "Easily generate givex json.",
-	name: `${CommandNamespace}:help`,
+	name: `${CommandNamespace}:info`,
 	optionalParameters: [
 		{
 			name: "itemName",
@@ -279,7 +231,7 @@ export const HELP_COMMAND: CustomCommand = {
 	permissionLevel: CommandPermissionLevel.GameDirectors,
 };
 
-export function helpCommandCallback(
+export function infoCommandCallback(
 	origin: CustomCommandOrigin,
 	itemType?: ItemType,
 ): CustomCommandResult {
@@ -303,7 +255,7 @@ export function helpCommandCallback(
 	system.run(async () => {
 		viewer.playSound("random.pop", { pitch: 0.5, volume: 0.3 });
 		if (itemType === undefined) {
-			showActionForm(FormHelp, viewer);
+			showActionForm(FormInfo, viewer);
 		} else {
 			const propertiesForm = new ItemPropertiesForm(viewer, false, itemType.id);
 			propertiesForm.run();

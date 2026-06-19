@@ -1,5 +1,5 @@
 import { type Player, system } from "@minecraft/server";
-import { FormHelp } from "./help";
+import { FormInfo } from "./info";
 import { type ActionForm, showActionForm } from "./types";
 
 export const FormCredits: ActionForm = {
@@ -10,7 +10,7 @@ export const FormCredits: ActionForm = {
 			addStyling: true,
 			async callback(player: Player): Promise<void> {
 				system.run(async () => {
-					showActionForm(FormHelp, player);
+					showActionForm(FormInfo, player);
 				});
 			},
 			text: "Back",

@@ -1,4 +1,4 @@
-import { type Player, system } from "@minecraft/server";
+import type { Player } from "@minecraft/server";
 import {
 	ActionFormData,
 	MessageFormData,
@@ -139,10 +139,7 @@ export async function showActionForm(
 	}
 	const selectedButton = buttons[result.selection];
 	if (selectedButton?.callback !== undefined) {
-		const callback = selectedButton.callback;
-		system.run(() => {
-			callback(viewer);
-		});
+		selectedButton.callback(viewer);
 	}
 	return Promise.resolve(result.selection);
 }
@@ -212,11 +209,8 @@ export async function showModalForm(
 		modalDataAddComponent(component, formData);
 	}
 	const result = await formData.show(viewer);
-	if (form.submitButton.callback) {
-		const callback = form.submitButton.callback;
-		system.run(() => {
-			callback(viewer);
-		});
+	if (form.submitButton.callback !== undefined) {
+		form.submitButton.callback(viewer);
 	}
 	return Promise.resolve(result.formValues);
 }
@@ -250,18 +244,12 @@ export async function showMessageForm(
 	formData.body(form.body);
 	const result = await formData.show(viewer);
 	if (result.selection === 0) {
-		if (form.button1.callback) {
-			const callback = form.button1.callback;
-			system.run(() => {
-				callback(viewer);
-			});
+		if (form.button1.callback !== undefined) {
+			form.button1.callback(viewer);
 		}
 	} else if (result.selection === 1) {
-		if (form.button2.callback) {
-			const callback = form.button2.callback;
-			system.run(() => {
-				callback(viewer);
-			});
+		if (form.button2.callback !== undefined) {
+			form.button2.callback(viewer);
 		}
 	}
 	return Promise.resolve(result.selection);

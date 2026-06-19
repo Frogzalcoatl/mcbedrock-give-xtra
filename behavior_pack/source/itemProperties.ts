@@ -300,7 +300,6 @@ const SlotsAlwaysEquippable: SlotName[] = [
 
 function canEquipInSlot(itemStack: ItemStack, targetSlot: SlotName): boolean {
 	if (SlotsAlwaysEquippable.includes(targetSlot)) {
-		// All items can go inside the above SlotNames
 		return true;
 	}
 	const itemNamespace: string | undefined = getMcNamespace(itemStack.typeId) ?? "minecraft";
@@ -500,7 +499,7 @@ export const ItemPropertiesValidation = {
 				message: `Slot id must be an integer greater than or equal to 0`,
 			};
 		}
-		// Cannot have an amount greater than the max if placing in a specific slot
+		// Cannot have an amount greater than the max item stack size if placing in a specific slot
 		if (amount > itemStack.maxAmount) {
 			return {
 				bool: false,
@@ -533,9 +532,8 @@ export const ItemPropertiesValidation = {
 			message: `Valid ${propertyName}`,
 		};
 	},
-	// Pass ItemProperties directly to edit potionType if its missing a namespace.
-	potionType(potionType: string, properties: ItemProperties): BooleanWithMessage {
-		properties.potionType = potionType;
+	potionType(value: string, properties: ItemProperties): BooleanWithMessage {
+		properties.potionType = value;
 		if (properties.arrowType !== undefined) {
 			return {
 				bool: false,
@@ -545,9 +543,9 @@ export const ItemPropertiesValidation = {
 		const deliveryType: string | undefined = itemTypeToPotionDeliveryType(properties.typeId);
 		if (deliveryType === undefined) {
 			let message: string = `${properties.typeId} is not compatible with potionType`;
-			// In case user gets confused and tries to use potionType for tipped arrows
 			if (properties.typeId === "minecraft:arrow") {
-				message += ". Use arrowType instead";
+				// In case user gets confused and tries to use potionType for tipped arrows
+				message += ". Use arrowType instead.";
 			}
 			return {
 				bool: false,

@@ -19,7 +19,7 @@ import {
 	parseCommandJson,
 } from "./itemProperties";
 import { type PropertiesToItemStackResult, propertiesToItemStack } from "./itemStack";
-import { appendColorAfterResets, prettyTypeId } from "./prettyTypeId";
+import { appendColorAfterResets, getSelectorName, prettyTypeId } from "./prettyTypeId";
 import type { BooleanWithMessage, CommandType, ItemProperties } from "./types";
 
 // Errors are often too long to fit in the command block ui, so send them in chat if commandblockoutput is enabled.
@@ -66,11 +66,11 @@ function afterTickCommandResultHandler(
 export class GivexCommand {
 	private itemProperties: ItemProperties;
 	public specialIdentifier: string | undefined;
+	public selectorName: string;
 	constructor(
 		public commandType: CommandType,
 		public origin: CustomCommandOrigin,
-		public recievers: Entity[] | Block[] | DimensionLocation[],
-		public selectorName: string,
+		public selectors: Entity[] | Block[] | DimensionLocation[],
 		itemType: ItemType,
 		itemAmount: number,
 		public json: string | undefined,
@@ -79,6 +79,8 @@ export class GivexCommand {
 			amount: itemAmount,
 			typeId: itemType.id,
 		};
+		this.selectorName = "";
+		this.updateSelectorName();
 	}
 
 	public formatMessage(successCount: number, errors: string): string {
@@ -90,29 +92,29 @@ export class GivexCommand {
 		let actionWordPastTense: string = "";
 		let actionWordPresentTense: string = "";
 		let wordBeforeSelectorName: string = "";
-		if (this.commandType === "givex" || this.commandType === "blockx") {
-			if (
-				this.itemProperties.slot === undefined ||
-				this.itemProperties.slot.name === undefined
-			) {
-				actionWordPastTense = "Gave";
-				actionWordPresentTense = "give";
-				wordBeforeSelectorName = "to";
-			} else {
-				actionWordPastTense = "Set";
-				actionWordPresentTense = "set";
-				wordBeforeSelectorName = `in ${this.itemProperties.slot.name} for`;
-			}
-		} else if (this.commandType === "spawnx") {
+		if (this.commandType === "spawnx") {
 			actionWordPastTense = "Spawned";
 			actionWordPresentTense = "spawn";
 			wordBeforeSelectorName = "at";
+		} else if (this.commandType === "givex" || this.commandType === "blockx") {
+			if (
+				this.itemProperties.slot !== undefined &&
+				this.itemProperties.slot.name !== undefined
+			) {
+				actionWordPastTense = "Set";
+				actionWordPresentTense = "set";
+				wordBeforeSelectorName = `in ${this.itemProperties.slot.name} for`;
+			} else {
+				actionWordPastTense = "Gave";
+				actionWordPresentTense = "give";
+				wordBeforeSelectorName = "to";
+			}
 		}
-		if (successCount === this.recievers.length) {
+		if (successCount === this.selectors.length) {
 			message = `${actionWordPastTense} ${itemName} * ${this.itemProperties.amount} ${wordBeforeSelectorName} ${this.selectorName}§r`;
 		} else if (successCount > 0) {
 			message = `${actionWordPastTense} ${itemName} * ${this.itemProperties.amount} ${wordBeforeSelectorName} ${this.selectorName}§r`;
-			message += `\n§6However, this failed for ${this.recievers.length - successCount}/${this.recievers.length} selectors`;
+			message += `\n§6However, this failed for ${this.selectors.length - successCount}/${this.selectors.length} selectors`;
 		} else {
 			message = `§cUnable to ${actionWordPresentTense} ${itemName} ${wordBeforeSelectorName} ${this.selectorName}§r`;
 		}
@@ -123,7 +125,7 @@ export class GivexCommand {
 		return message;
 	}
 
-	// Updates identifier to place before item name in return messages, ex: "Poison Potion" instead of just "Potion"
+	// ex: "Poison Potion" instead of just "Potion"
 	private updateSpecialIdentifier(): void {
 		let specialIdentifier: string = "";
 		const properties: ItemProperties = this.itemProperties;
@@ -141,15 +143,28 @@ export class GivexCommand {
 		this.specialIdentifier = specialIdentifier;
 	}
 
+	private updateSelectorName() {
+		if (this.selectors.length > 1) {
+			this.selectorName = "selectors";
+			return;
+		}
+		const firstSelector = this.selectors[0];
+		if (firstSelector === undefined) {
+			this.selectorName = "unknown selector";
+			return;
+		}
+		this.selectorName = getSelectorName(firstSelector);
+	}
+
 	private prepareItemProperties(): CustomCommandResult {
-		if (this.recievers.length === 0) {
+		if (this.selectors.length === 0) {
 			return {
 				message: "No valid selector",
 				status: CustomCommandStatus.Failure,
 			};
 		}
-		// Trying to access an itemstack created using minecraft:air crashes the world
 		if (this.itemProperties.typeId === "minecraft:air") {
+			// Trying to access an itemstack created using minecraft:air crashes the world
 			return {
 				message: this.formatMessage(0, `Invalid item type "Air"`),
 				status: CustomCommandStatus.Failure,
@@ -194,25 +209,25 @@ export class GivexCommand {
 	private giveItemStack(itemStack: ItemStack): CustomCommandResult {
 		let errors: string = "";
 		let successCount: number = 0;
-		for (const reciever of this.recievers) {
+		for (const selector of this.selectors) {
 			let result: BooleanWithMessage;
-			if (reciever instanceof Entity) {
+			if (selector instanceof Entity) {
 				result = giveItemToEntity(
-					reciever,
+					selector,
 					itemStack,
 					this.itemProperties.amount,
 					this.itemProperties.slot,
 				);
-			} else if (reciever instanceof Block) {
+			} else if (selector instanceof Block) {
 				result = giveItemToBlock(
-					reciever,
+					selector,
 					itemStack,
 					this.itemProperties.amount,
 					this.itemProperties.slot,
 				);
 			} else {
 				result = spawnItemAtDimensionLocation(
-					reciever,
+					selector,
 					itemStack,
 					this.itemProperties.amount,
 				);
@@ -244,20 +259,20 @@ export class GivexCommand {
 		return this.giveItemStack(itemStack);
 	}
 
-	private getLocationOfSomeReciever(): DimensionLocation | undefined {
-		for (const reciever of this.recievers) {
-			if (reciever instanceof Entity || reciever instanceof Block) {
-				if (!reciever.isValid) {
+	private getLocationOfSomeSelector(): DimensionLocation | undefined {
+		for (const selector of this.selectors) {
+			if (selector instanceof Entity || selector instanceof Block) {
+				if (!selector.isValid) {
 					continue;
 				}
 				return {
-					dimension: reciever.dimension,
-					x: reciever.location.x,
-					y: reciever.location.y,
-					z: reciever.location.z,
+					dimension: selector.dimension,
+					x: selector.location.x,
+					y: selector.location.y,
+					z: selector.location.z,
 				};
 			} else {
-				return reciever;
+				return selector;
 			}
 		}
 		return undefined;
@@ -280,18 +295,18 @@ export class GivexCommand {
 			};
 		}
 		system.run(() => {
-			const aRecieverLocation: DimensionLocation | undefined =
-				this.getLocationOfSomeReciever();
-			if (aRecieverLocation === undefined) {
+			const aSelectorLocation: DimensionLocation | undefined =
+				this.getLocationOfSomeSelector();
+			if (aSelectorLocation === undefined) {
 				afterTickCommandResultHandler(this.origin, {
-					message: "Unable to get location of any reciever",
+					message: "Unable to get location of any selector",
 					status: CustomCommandStatus.Failure,
 				});
 				return;
 			}
 			const itemStackResult: PropertiesToItemStackResult = propertiesToItemStack(
 				this.itemProperties,
-				aRecieverLocation,
+				aSelectorLocation,
 			);
 			if (itemStackResult.item === undefined) {
 				afterTickCommandResultHandler(this.origin, {

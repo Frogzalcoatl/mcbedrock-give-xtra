@@ -1,4 +1,4 @@
-import { Block, type Entity, Player, type Vector3 } from "@minecraft/server";
+import { Block, type DimensionLocation, Entity, Player, type Vector3 } from "@minecraft/server";
 
 export function prettyTypeId(typeId: string): string {
 	const namespaceColonIndex: number = typeId.indexOf(":");
@@ -29,18 +29,25 @@ export function getMcNamespace(typeId: string): string | undefined {
 	}
 }
 
-export function getRecieverName(reciever: Entity | Block): string {
-	if (!reciever.isValid) {
-		return "Unknown reciever";
-	}
-	if (reciever instanceof Block) {
-		return prettyTypeId(reciever.typeId);
-	} else if (reciever instanceof Player) {
-		return `${reciever.name}§r`;
-	} else if (reciever.nameTag) {
-		return `${reciever.nameTag}`;
+export function getSelectorName(selector: Entity | Block | DimensionLocation): string {
+	if (selector instanceof Block) {
+		if (!selector.isValid) {
+			return "selector";
+		}
+		return prettyTypeId(selector.typeId);
+	} else if (selector instanceof Entity) {
+		if (!selector.isValid) {
+			return "selector";
+		}
+		if (selector instanceof Player) {
+			return `${selector.name}§r`;
+		} else if (selector.nameTag) {
+			return `${selector.nameTag}§r`;
+		} else {
+			return prettyTypeId(selector.typeId);
+		}
 	} else {
-		return prettyTypeId(reciever.typeId);
+		return `location ${vector3ToString({ x: selector.x, y: selector.y, z: selector.z }, 0)}`;
 	}
 }
 

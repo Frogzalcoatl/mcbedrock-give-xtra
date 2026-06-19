@@ -88,7 +88,6 @@ export interface GetDataValueItemResult {
 	item: ItemStack | undefined;
 	message: string;
 }
-// Cannot be run in restricted execution
 // Uses /give on a custom entity for command data value, applies components of itemstack, then returns new itemstack with data value attached internally.
 export function getDataValueItem(
 	item: ItemStack,

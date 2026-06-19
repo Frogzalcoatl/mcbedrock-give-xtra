@@ -4,7 +4,7 @@ import { ItemPropertiesForm } from "./itemPropertiesForm";
 import { type ActionForm, showActionForm } from "./types";
 import { FormWiki } from "./wiki";
 
-export const FormHelp: ActionForm = {
+export const FormInfo: ActionForm = {
 	body: "Expansion of Minecraft Bedrock's /give command including item names, enchantments, and more.",
 	components: [
 		{

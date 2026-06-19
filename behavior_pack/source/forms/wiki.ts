@@ -1,5 +1,5 @@
 import { system } from "@minecraft/server";
-import { FormHelp } from "./help";
+import { FormInfo } from "./info";
 import { type ActionForm, showActionForm } from "./types";
 
 export const FormWiki: ActionForm = {
@@ -8,7 +8,7 @@ export const FormWiki: ActionForm = {
 			addStyling: true,
 			async callback(player): Promise<void> {
 				system.run(() => {
-					showActionForm(FormHelp, player);
+					showActionForm(FormInfo, player);
 				});
 			},
 			text: "Back",
