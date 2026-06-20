@@ -1,10 +1,10 @@
 import { type ItemProperties, ItemPropertyKeys } from "../types";
 
-const ItemsPath = "textures/items/";
-const BlocksPath = "textures/blocks/";
-const uiPath = "textures/ui/";
+const ItemsPath: string = "textures/items/";
+const BlocksPath: string = "textures/blocks/";
+const uiPath: string = "textures/ui/";
 
-function getArrowTypeIconFileName(arrowType: string): string {
+function getArrowTypeIconFileName(arrowType: string | undefined): string {
 	switch (arrowType) {
 		case "night_vision":
 		case "long_night_vision":
@@ -93,7 +93,7 @@ function getArrowTypeIconFileName(arrowType: string): string {
 	}
 }
 
-function getBedColorIconFileName(bedColor: string): string {
+function getBedColorIconFileName(bedColor: string | undefined): string {
 	switch (bedColor) {
 		case "white":
 			return "bed_white";
@@ -132,9 +132,10 @@ function getBedColorIconFileName(bedColor: string): string {
 	}
 }
 
-const EmptyBottleFileName: string = "potion_bottle_empty.png";
-
-function getPotionTypeIconFileName(properties: ItemProperties): string {
+function getPotionTypeIconFileName(properties: ItemProperties | undefined): string {
+	if (properties === undefined) {
+		return "potion_bottle_drinkable";
+	}
 	let potionBottleName: string = "";
 	if (properties.typeId === "minecraft:potion") {
 		potionBottleName = "potion_bottle";
@@ -143,7 +144,7 @@ function getPotionTypeIconFileName(properties: ItemProperties): string {
 	} else if (properties.typeId === "minecraft:lingering_potion") {
 		potionBottleName = "potion_bottle_lingering";
 	} else {
-		return EmptyBottleFileName;
+		return "potion_bottle_empty";
 	}
 
 	let effectName: string = "";
@@ -264,9 +265,9 @@ function getPotionTypeIconFileName(properties: ItemProperties): string {
 			break;
 	}
 
-	// minecraft:potion of water is named in a different way than splash and lingering for some reason
 	if (effectName === "") {
 		if (potionBottleName === "potion_bottle") {
+			// minecraft:potion of water is named in a different way than splash and lingering for some reason
 			return "potion_bottle_drinkable";
 		}
 		return `${potionBottleName}`;
@@ -275,7 +276,10 @@ function getPotionTypeIconFileName(properties: ItemProperties): string {
 	return `${potionBottleName}_${effectName}`;
 }
 
-export function getItemPropertyIconPath(propertyType: string, properties: ItemProperties): string {
+export function getItemPropertyIconPath(
+	propertyType: string,
+	properties: ItemProperties | undefined,
+): string {
 	switch (propertyType) {
 		case "location": {
 			return `${ItemsPath}map_filled.png`;
@@ -284,10 +288,10 @@ export function getItemPropertyIconPath(propertyType: string, properties: ItemPr
 			return `${ItemsPath}hopper.png`;
 		}
 		case ItemPropertyKeys.ArrowType: {
-			return `${ItemsPath}${getArrowTypeIconFileName(properties.arrowType ?? "")}.png`;
+			return `${ItemsPath}${getArrowTypeIconFileName(properties?.arrowType)}.png`;
 		}
 		case ItemPropertyKeys.BedColor: {
-			return `${ItemsPath}${getBedColorIconFileName(properties.bedColor ?? "")}.png`;
+			return `${ItemsPath}${getBedColorIconFileName(properties?.bedColor)}.png`;
 		}
 		case ItemPropertyKeys.CanDestroy: {
 			return `${ItemsPath}iron_pickaxe.png`;
