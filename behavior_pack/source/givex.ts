@@ -67,19 +67,31 @@ export class GivexCommand {
 	private itemProperties: ItemProperties;
 	public specialIdentifier: string | undefined;
 	public selectorName: string;
+	private _selectors: Entity[] | Block[] | DimensionLocation[];
 	constructor(
 		public commandType: CommandType,
 		public origin: CustomCommandOrigin,
-		public selectors: Entity[] | Block[] | DimensionLocation[],
+		selectors: Entity[] | Block[] | DimensionLocation[],
 		itemType: ItemType,
 		itemAmount: number,
 		public json: string | undefined,
 	) {
 		this.itemProperties = {
 			amount: itemAmount,
+			slot: undefined,
 			typeId: itemType.id,
 		};
+		this._selectors = selectors;
 		this.selectorName = "";
+		this.updateSelectorName();
+	}
+
+	public get selectors() {
+		return this._selectors;
+	}
+
+	public set selectors(value: Entity[] | Block[] | DimensionLocation[]) {
+		this._selectors = value;
 		this.updateSelectorName();
 	}
 
@@ -103,20 +115,33 @@ export class GivexCommand {
 			) {
 				actionWordPastTense = "Set";
 				actionWordPresentTense = "set";
-				wordBeforeSelectorName = `in ${this.itemProperties.slot.name} for`;
+				wordBeforeSelectorName = `in ${this.itemProperties.slot.name}`;
+				wordBeforeSelectorName +=
+					this.itemProperties.slot.id !== undefined
+						? ` ${this.itemProperties.slot.id}`
+						: "";
+				wordBeforeSelectorName += " for";
 			} else {
 				actionWordPastTense = "Gave";
 				actionWordPresentTense = "give";
 				wordBeforeSelectorName = "to";
 			}
 		}
-		if (successCount === this.selectors.length) {
-			message = `${actionWordPastTense} ${itemName} * ${this.itemProperties.amount} ${wordBeforeSelectorName} ${this.selectorName}§r`;
+		if (successCount === this._selectors.length) {
+			message = `${actionWordPastTense} ${itemName} * ${this.itemProperties.amount} ${wordBeforeSelectorName} ${this.selectorName}`;
 		} else if (successCount > 0) {
-			message = `${actionWordPastTense} ${itemName} * ${this.itemProperties.amount} ${wordBeforeSelectorName} ${this.selectorName}§r`;
-			message += `\n§6However, this failed for ${this.selectors.length - successCount}/${this.selectors.length} selectors`;
+			message = `${actionWordPastTense} ${itemName} * ${this.itemProperties.amount} ${wordBeforeSelectorName} ${this.selectorName}`;
+			message += `\n§6However, this failed for ${this._selectors.length - successCount}/${this._selectors.length} selectors`;
 		} else {
-			message = `§cUnable to ${actionWordPresentTense} ${itemName} ${wordBeforeSelectorName} ${this.selectorName}§r`;
+			message = `§cUnable to ${actionWordPresentTense} ${itemName} ${wordBeforeSelectorName} ${this.selectorName}`;
+		}
+		if (
+			successCount > 0 &&
+			this.itemProperties.slot !== undefined &&
+			this.itemProperties.slot.id !== undefined &&
+			this.itemProperties.slot.keepOldItem === true
+		) {
+			message += `\n§6If any items were previously in slot ${this.itemProperties.slot.id}, they were given back to ${this.selectorName}§r`;
 		}
 		if (errors) {
 			message += `\n§cError(s):\n${errors.slice(0, 1024)}${errors.length > 1024 ? "...\n" : ""}`;
@@ -144,7 +169,7 @@ export class GivexCommand {
 	}
 
 	private updateSelectorName() {
-		if (this.selectors.length > 1) {
+		if (this._selectors.length > 1) {
 			this.selectorName = "selectors";
 			return;
 		}
@@ -157,7 +182,7 @@ export class GivexCommand {
 	}
 
 	private prepareItemProperties(): CustomCommandResult {
-		if (this.selectors.length === 0) {
+		if (this._selectors.length === 0) {
 			return {
 				message: "No valid selector",
 				status: CustomCommandStatus.Failure,
@@ -209,7 +234,7 @@ export class GivexCommand {
 	private giveItemStack(itemStack: ItemStack): CustomCommandResult {
 		let errors: string = "";
 		let successCount: number = 0;
-		for (const selector of this.selectors) {
+		for (const selector of this._selectors) {
 			let result: BooleanWithMessage;
 			if (selector instanceof Entity) {
 				result = giveItemToEntity(
@@ -245,7 +270,7 @@ export class GivexCommand {
 	}
 
 	private getLocationOfSomeSelector(): DimensionLocation | undefined {
-		for (const selector of this.selectors) {
+		for (const selector of this._selectors) {
 			if (selector instanceof Entity || selector instanceof Block) {
 				if (!selector.isValid) {
 					continue;
