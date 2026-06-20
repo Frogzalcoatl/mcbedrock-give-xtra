@@ -383,9 +383,13 @@ export function giveItemToBlock(
 		BlockComponentTypes.Inventory,
 	);
 	if (inventory === undefined || !inventory.isValid || inventory.container === undefined) {
+		let message: string = `${prettyTypeId(block.typeId)} at location ${vector3ToString(block.location, 0)} does not have a valid inventory`;
+		if (block.typeId === "minecraft:ender_chest") {
+			message += `\nTo access Ender Chest slots, use /givex:givex with slot ${SlotName.EndChest}`;
+		}
 		return {
 			bool: false,
-			message: `${prettyTypeId(block.typeId)} at location ${vector3ToString(block.location, 0)} does not have a valid inventory`,
+			message: message,
 		};
 	}
 	if (slot) {

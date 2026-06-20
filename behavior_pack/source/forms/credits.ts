@@ -7,6 +7,9 @@ export const FormCredits: ActionForm = {
 	body: "Programming: §eFrogzalcoatl\n§rProject Setup: §eSunnyTheFennec\n\n\n\n\n\n\n\n\n\n§r",
 	components: [
 		{
+			type: "divider",
+		},
+		{
 			addStyling: true,
 			async callback(player: Player): Promise<void> {
 				system.run(async () => {
