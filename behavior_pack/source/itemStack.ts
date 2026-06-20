@@ -68,13 +68,22 @@ export function applyEnchantData(
 	try {
 		enchantableComponent.addEnchantment(enchant);
 	} catch (error) {
-		let message: string = `Unable to apply ${enchant.type} to item`;
+		let message: string = `Unable to apply ${enchant.type.id} to item`;
 		if (error instanceof EnchantmentLevelOutOfBoundsError) {
-			message = `Invalid enchantment level ${enchant.level} for ${enchant.type.id}. Max is ${enchant.type.maxLevel}`;
+			if (
+				enchant.level < enchant.type.maxLevel &&
+				enchant.level > 0 &&
+				Number.isInteger(enchant.level)
+			) {
+				// ^ This means the error actually is an exclusive enchant error. Ex: mending and infinity cannot go on the same bow
+				message += `: Mutually exclusive enchant prevented its addition`;
+			} else {
+				message += `: Invalid enchantment level "${enchant.level}" for "${enchant.type.id}". Must be an integer within range 1-${enchant.type.maxLevel}`;
+			}
 		} else if (error instanceof EnchantmentTypeUnknownIdError) {
-			message = `Invalid enchantId "${enchant.type.id}"`;
+			message += `: Invalid enchantId "${enchant.type.id}"`;
 		} else if (error instanceof EnchantmentTypeNotCompatibleError) {
-			message = `${enchant.type} not compatible with item`;
+			message += `: ${enchant.type} not compatible with item`;
 		}
 		return {
 			bool: false,

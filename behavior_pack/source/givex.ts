@@ -292,7 +292,7 @@ export class GivexCommand {
 			}
 			const giveResult: CustomCommandResult = this.giveItemStack(itemStackResult.item);
 			if (itemStackResult.warnings) {
-				giveResult.message = `${giveResult.message ?? ""}\nWarning(s):\n${itemStackResult.warnings}`;
+				giveResult.message = `${giveResult.message ?? ""}\nWarning(s):\n§6${appendColorAfterResets(itemStackResult.warnings, "§6")}`;
 			}
 			afterTickCommandResultHandler(this.origin, giveResult);
 		});

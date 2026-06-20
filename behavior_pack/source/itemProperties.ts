@@ -21,6 +21,7 @@ import {
 	type CommandType,
 	type EnchantData,
 	EnchantDataKeys,
+	EnchantDataLevelDefault,
 	type ItemDurability,
 	type ItemProperties,
 	ItemPropertyDefaultAmount,
@@ -61,9 +62,8 @@ function isEnchantData(obj: any): obj is EnchantData {
 		throw new Error("enchant.id must be a string");
 	}
 	if (obj.level === undefined) {
-		throw new Error(`enchant ${obj.id} requires a level`);
-	}
-	if (typeof obj.level !== "number") {
+		obj.level = EnchantDataLevelDefault;
+	} else if (typeof obj.level !== "number") {
 		throw new Error(`${obj.id} enchant.level must be a number`);
 	}
 	const keyValidationResult: BooleanWithMessage = validateKeys(Object.keys(obj), EnchantDataKeys);
@@ -76,11 +76,17 @@ function isEnchantData(obj: any): obj is EnchantData {
 // biome-ignore lint/suspicious/noExplicitAny: Type is validated through the function. Any is required here.
 function isEnchantDataArr(arr: any): arr is EnchantData[] {
 	if (typeof arr !== "object" || arr === null || !Array.isArray(arr)) {
-		throw new Error("enchants must be an array");
+		throw new Error("Enchants must be an array");
 	}
-	for (const value of arr) {
+	for (let i: number = 0; i < arr.length; i++) {
+		const value = arr[i];
 		if (!isEnchantData(value)) {
-			throw new Error("enchant data is invalid");
+			throw new Error("Enchant data is invalid");
+		}
+		for (let j: number = 0; j < i; j++) {
+			if (value.id === arr[j].id) {
+				throw new Error(`Duplicate enchant "${value.id}"`);
+			}
 		}
 	}
 	return true;
@@ -497,7 +503,7 @@ export const ItemPropertiesValidation = {
 			) {
 				return {
 					bool: false,
-					message: `Invalid enchantment level for "${enchant.id}". Must be an integer within range 1-${type.maxLevel}`,
+					message: `Invalid enchantment level "${enchant.level}" for "${enchant.id}". Must be an integer within range 1-${type.maxLevel}`,
 				};
 			}
 			if (!enchantableComonent.canAddEnchantment({ level: enchant.level, type: type })) {

@@ -12,6 +12,7 @@ export interface EnchantData {
 	level: number;
 }
 export const EnchantDataKeys: string[] = ["id", "level"];
+export const EnchantDataLevelDefault: number = 1;
 
 // Based on /replaceitem command slots.
 // Excluding slot.armor.body. Used for wolf armor but cannot be accessed.
