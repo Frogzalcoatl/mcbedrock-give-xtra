@@ -293,7 +293,7 @@ export function parseCommandJson(
 	};
 }
 
-const SlotsAlwaysEquippable: SlotName[] = [
+const SlotsAlwaysEquippable: string[] = [
 	SlotName.Inventory,
 	SlotName.MobChest,
 	SlotName.Mainhand,
@@ -304,7 +304,7 @@ const SlotsAlwaysEquippable: SlotName[] = [
 	SlotName.EndChest,
 ];
 
-function canEquipInSlot(itemStack: ItemStack, targetSlot: SlotName): boolean {
+function canEquipInSlot(itemStack: ItemStack, targetSlot: string): boolean {
 	if (SlotsAlwaysEquippable.includes(targetSlot)) {
 		return true;
 	}
@@ -544,7 +544,18 @@ export const ItemPropertiesValidation = {
 			message: "Valid enchants",
 		};
 	},
-	slot(value: SlotData, itemTypeId: string, amount: number): BooleanWithMessage {
+	slot(
+		value: SlotData,
+		itemTypeId: string,
+		amount: number,
+		commandType: CommandType,
+	): BooleanWithMessage {
+		if (commandType === "spawnx") {
+			return {
+				bool: false,
+				message: `Slot cannot be used with /spawnx`,
+			};
+		}
 		let testItem: ItemStack;
 		try {
 			testItem = new ItemStack(itemTypeId);
@@ -725,6 +736,7 @@ export const ItemPropertiesValidation = {
 				properties.slot,
 				properties.typeId,
 				properties.amount,
+				commandType,
 			);
 			if (!messageResult.bool) {
 				return messageResult;

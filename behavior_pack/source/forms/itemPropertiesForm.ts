@@ -10,15 +10,17 @@ import {
 import {
 	formatTypeId,
 	getMaxItemPropertiesAmount,
-	getMaxStackSize,
+	ItemPropertiesValidation,
 	itemTypeToPotionDeliveryType,
 } from "../itemProperties";
 import { camelToTitleCase, prettyTypeId, stringToNumber, truncTo } from "../prettyTypeId";
 import {
+	type BooleanWithMessage,
 	CommandNamespace,
 	type CommandType,
 	type ItemProperties,
 	ItemPropertyKeys,
+	type SlotData,
 	SlotDataKeepOldItemDefault,
 	SlotName,
 } from "../types";
@@ -27,6 +29,7 @@ import { FormInfo } from "./info";
 import {
 	type ActionForm,
 	type ActionFormButton,
+	type FormTextComponent,
 	type MessageForm,
 	type ModalForm,
 	type ModalFormComponent,
@@ -67,7 +70,7 @@ export function commandVector3ToString(vector: CommandVector3, decimalPlaces: nu
 }
 
 interface CommandVector3ParseResult {
-	result: CommandVector3 | undefined;
+	vector: CommandVector3 | undefined;
 	message: string;
 }
 export function parseCommandVector3(str: string): CommandVector3ParseResult {
@@ -84,7 +87,7 @@ export function parseCommandVector3(str: string): CommandVector3ParseResult {
 			if (numResult === undefined) {
 				return {
 					message: `Invalid entry "${value}"`,
-					result: undefined,
+					vector: undefined,
 				};
 			}
 			vectorValues.push({ includeSquiggly: false, num: numResult });
@@ -108,7 +111,7 @@ export function parseCommandVector3(str: string): CommandVector3ParseResult {
 			if (numResult === undefined || numResult > MaxCommandVector3Value) {
 				return {
 					message: `Invalid entry "${value}"`,
-					result: undefined,
+					vector: undefined,
 				};
 			}
 			vectorValues.push({ includeSquiggly: true, num: numResult });
@@ -126,12 +129,12 @@ export function parseCommandVector3(str: string): CommandVector3ParseResult {
 	) {
 		return {
 			message: `Must have exactly three values`,
-			result: undefined,
+			vector: undefined,
 		};
 	}
 	return {
 		message: "Parsed coordinates",
-		result: {
+		vector: {
 			x: vectorValues[0],
 			y: vectorValues[1],
 			z: vectorValues[2],
@@ -152,14 +155,20 @@ export class ItemPropertiesForm {
 	public location: CommandVector3;
 	private editableProperties: string[];
 	private openedFromInfo: boolean;
-	constructor(creator: Player, openedFromInfo: boolean, itemTypeId?: string) {
+	constructor(
+		creator: Player,
+		openedFromInfo: boolean,
+		itemTypeId?: string,
+		commandType?: CommandType,
+	) {
 		this.player = creator;
 		// Just default values, can be changed by user later
 		this.properties = {
 			amount: 1,
+			slot: undefined,
 			typeId: itemTypeId ?? "",
 		};
-		this.commandType = "givex";
+		this.commandType = commandType ?? "givex";
 		this.location = {
 			x: {
 				includeSquiggly: true,
@@ -219,75 +228,89 @@ export class ItemPropertiesForm {
 		this.editableProperties.push(ItemPropertyKeys.CanDestroy);
 	}
 
-	private formatProperty(property: string, value: string | number | boolean): string {
+	private propertyDisplay(property: string, value: string | number | boolean): string {
 		return `§r\n${property}: §e${value}`;
 	}
 
-	private getPropertiesDisplay(): string {
+	private slotPropertyDisplay(): string {
+		let str: string = "";
 		const data = this.properties;
-		let str: string = this.formatProperty("Item Type", prettyTypeId(data.typeId));
-		str += this.formatProperty("Amount", data.amount);
-		str += this.formatProperty("Command Type", `/${this.commandType}`);
-		if (data.nameTag) {
-			str += this.formatProperty("Name Tag", data.nameTag);
-		}
-		if (this.commandType !== "givex") {
-			str += this.formatProperty("Location", commandVector3ToString(this.location));
-		}
-		if (this.commandType !== "spawnx") {
-			if (data.slot === undefined) {
-				this.formatProperty("Slot", "Default");
-			} else {
-				this.formatProperty("Slot", data.slot.name);
-				if (data.slot.id !== undefined) {
-					this.formatProperty("Slot Id", data.slot.id);
-				}
-				this.formatProperty("Keep Old Item in Slot", data.slot.keepOldItem);
+		if (data.slot === undefined) {
+			str += this.propertyDisplay("Slot", "Default");
+		} else {
+			str += this.propertyDisplay("Slot", data.slot.name);
+			if (data.slot.id !== undefined) {
+				str += this.propertyDisplay("Slot ID", data.slot.id);
 			}
-		}
-		if (data.durability !== undefined) {
-			this.formatProperty("Durability", data.durability);
-		}
-		if (data.enchants !== undefined) {
-			let enchants: string = "";
-			for (const e of data.enchants) {
-				enchants += `\n-${prettyTypeId(e.id)} ${e.level}`;
-			}
-			str += this.formatProperty("Enchants", enchants);
-		}
-		if (data.potionType !== undefined) {
-			str += this.formatProperty("Potion Type", prettyTypeId(data.potionType));
-		}
-		if (data.arrowType !== undefined) {
-			str += this.formatProperty("Arrow Type", prettyTypeId(data.arrowType));
-		}
-		if (data.bedColor !== undefined) {
-			str += this.formatProperty("Bed Color", prettyTypeId(data.bedColor));
-		}
-		if (data.lockMode !== undefined) {
-			str += this.formatProperty("Item Lock Mode", prettyTypeId(data.lockMode));
-		}
-		if (data.keepOnDeath !== undefined) {
-			str += this.formatProperty("Keep On Death", data.keepOnDeath);
-		}
-		if (data.canPlaceOn !== undefined) {
-			let canPlaceOn: string = "";
-			for (const value of data.canPlaceOn) {
-				canPlaceOn += `\n${prettyTypeId(value)}`;
-			}
-			this.formatProperty("Can Place On", canPlaceOn);
-		}
-		if (data.canDestroy !== undefined) {
-			let canDestroy: string = "";
-			for (const value of data.canDestroy) {
-				canDestroy += `\n${prettyTypeId(value)}`;
-			}
-			this.formatProperty("Can Destroy", canDestroy);
+			str += this.propertyDisplay("Keep Old Item in Slot", data.slot.keepOldItem);
 		}
 		return str;
 	}
 
-	private getTemplatePrompt(
+	private enchantsPropertyDisplay(): string {
+		if (this.properties.enchants === undefined) {
+			return "";
+		}
+		let enchants: string = "";
+		for (const e of this.properties.enchants) {
+			enchants += `\n-${prettyTypeId(e.id)} ${e.level}`;
+		}
+		return this.propertyDisplay("Enchants", enchants);
+	}
+
+	private strArrayPropertyDisplay(arr: string[]): string {
+		let str: string = "";
+		for (const value of arr) {
+			str += `\n-${prettyTypeId(value)}`;
+		}
+		return str;
+	}
+
+	private getPropertiesDisplay(): string {
+		const data = this.properties;
+		let str: string = this.propertyDisplay("Item Type", prettyTypeId(data.typeId));
+		str += this.propertyDisplay("Amount", data.amount);
+		str += this.propertyDisplay("Command Type", `/${this.commandType}`);
+		if (data.nameTag) {
+			str += this.propertyDisplay("Name Tag", data.nameTag);
+		}
+		if (this.commandType !== "givex") {
+			str += this.propertyDisplay("Location", commandVector3ToString(this.location));
+		}
+		if (this.commandType !== "spawnx") {
+			str += this.slotPropertyDisplay();
+		}
+		if (data.durability !== undefined) {
+			str += this.propertyDisplay("Durability", data.durability);
+		}
+		if (data.enchants !== undefined) {
+			str += this.enchantsPropertyDisplay();
+		}
+		if (data.potionType !== undefined) {
+			str += this.propertyDisplay("Potion Type", prettyTypeId(data.potionType));
+		}
+		if (data.arrowType !== undefined) {
+			str += this.propertyDisplay("Arrow Type", prettyTypeId(data.arrowType));
+		}
+		if (data.bedColor !== undefined) {
+			str += this.propertyDisplay("Bed Color", prettyTypeId(data.bedColor));
+		}
+		if (data.lockMode !== undefined) {
+			str += this.propertyDisplay("Item Lock Mode", prettyTypeId(data.lockMode));
+		}
+		if (data.keepOnDeath !== undefined) {
+			str += this.propertyDisplay("Keep On Death", data.keepOnDeath);
+		}
+		if (data.canPlaceOn !== undefined) {
+			this.propertyDisplay("Can Place On", this.strArrayPropertyDisplay(data.canPlaceOn));
+		}
+		if (data.canDestroy !== undefined) {
+			this.propertyDisplay("Can Destroy", this.strArrayPropertyDisplay(data.canDestroy));
+		}
+		return str;
+	}
+
+	private getTemplatePromptForm(
 		inputComponents: ModalFormComponent[],
 		optionalNote?: string,
 	): ModalForm {
@@ -336,30 +359,31 @@ export class ItemPropertiesForm {
 			},
 			type: "textField",
 		};
-		const form: ModalForm = this.getTemplatePrompt(
+		const form: ModalForm = this.getTemplatePromptForm(
 			[textField],
 			"Note: You can also run the command §e/givex:info <itemType>§r for auto completion.",
 		);
-		let result: ModalFormReturnType[] | undefined;
-		let input: ModalFormReturnType = "";
+		let input: string = "";
 		let formattedTypeId: string | undefined = formatTypeId(input);
 		while (formattedTypeId === undefined) {
-			let error: string = "";
 			if (input) {
-				error = `Invalid Type ID "${input}"`;
+				textField.label = this.formatInputLabel(
+					question,
+					statement,
+					`Invalid Type ID "${input}"`,
+				);
 				textField.options = {
-					defaultValue: `${input}`,
+					defaultValue: input,
 				};
 			}
-			textField.label = this.formatInputLabel(question, statement, error);
-			result = await showModalForm(form, this.player);
-			if (result === undefined) {
+			const formResult: ModalFormReturnType[] | undefined = await showModalForm(
+				form,
+				this.player,
+			);
+			if (formResult === undefined || typeof formResult[0] !== "string") {
 				return Promise.resolve(PromptResult.Closed);
 			}
-			input = result[0];
-			if (typeof input !== "string") {
-				input = "";
-			}
+			input = formResult[0];
 			formattedTypeId = formatTypeId(input);
 		}
 		this.properties.typeId = formattedTypeId;
@@ -385,15 +409,12 @@ export class ItemPropertiesForm {
 			},
 			type: "dropdown",
 		};
-		const form: ModalForm = this.getTemplatePrompt([dropdown]);
+		const form: ModalForm = this.getTemplatePromptForm([dropdown]);
 		const result: ModalFormReturnType[] | undefined = await showModalForm(form, this.player);
-		if (result === undefined) {
+		if (result === undefined || typeof result[0] !== "number") {
 			return Promise.resolve(PromptResult.Closed);
 		}
-		const selection: ModalFormReturnType = result[0];
-		if (typeof selection !== "number") {
-			return Promise.resolve(PromptResult.Closed);
-		}
+		const selection: number = result[0];
 		switch (selection) {
 			case 0:
 				this.commandType = "givex";
@@ -437,12 +458,7 @@ export class ItemPropertiesForm {
 	}
 
 	private async promptAmount(): Promise<string> {
-		let maxAmount: number = 0;
-		if (this.commandType === "spawnx") {
-			maxAmount = getMaxStackSize(this.properties.typeId) ?? 64;
-		} else {
-			maxAmount = getMaxItemPropertiesAmount(this.properties, this.commandType);
-		}
+		const maxAmount: number = getMaxItemPropertiesAmount(this.properties, this.commandType);
 		const question: string = `How much of your item would you like to ${this.commandType === "spawnx" ? "spawn" : "give"}?`;
 		const statement: string = `Enter integer within range 1-${maxAmount}:`;
 		const textField: ModalFormTextFieldComponent = {
@@ -452,7 +468,7 @@ export class ItemPropertiesForm {
 			},
 			type: "textField",
 		};
-		const form = this.getTemplatePrompt([textField]);
+		const form = this.getTemplatePromptForm([textField]);
 		let input: string = "";
 		let amountResult: number | undefined;
 		while (
@@ -471,7 +487,10 @@ export class ItemPropertiesForm {
 					defaultValue: input,
 				};
 			}
-			const formResult = await showModalForm(form, this.player);
+			const formResult: ModalFormReturnType[] | undefined = await showModalForm(
+				form,
+				this.player,
+			);
 			if (formResult === undefined || typeof formResult[0] !== "string") {
 				return Promise.resolve("§cAmount unchanged");
 			}
@@ -495,10 +514,10 @@ export class ItemPropertiesForm {
 			},
 			type: "textField",
 		};
-		const form = this.getTemplatePrompt([textField]);
+		const form = this.getTemplatePromptForm([textField]);
 		let input: string = "";
 		let parseResult: CommandVector3ParseResult | undefined;
-		while (parseResult === undefined || parseResult.result === undefined) {
+		while (parseResult === undefined || parseResult.vector === undefined) {
 			if (input) {
 				textField.label = this.formatInputLabel(
 					question,
@@ -516,35 +535,40 @@ export class ItemPropertiesForm {
 			input = formResult[0];
 			parseResult = parseCommandVector3(input);
 		}
-		this.location = parseResult.result;
+		this.location = parseResult.vector;
 		return Promise.resolve(`Location set to: §e${commandVector3ToString(this.location)}`);
 	}
 
 	private async promptSlot(): Promise<string> {
-		const slotNameQuestion: string = "Which slot name would you like to use?";
-		const slotNameStatement: string = "Select Slot:";
+		const potentialSlotData: SlotData = {
+			id: this.properties.slot?.id,
+			keepOldItem: this.properties.slot?.keepOldItem ?? SlotDataKeepOldItemDefault,
+			name: this.properties.slot?.name ?? "default",
+		};
+		const errorLabel: FormTextComponent = {
+			text: "",
+			type: "label",
+		};
+		const slotNameLabel: string = "Select Slot Name:";
 		const slotNameItems: string[] = ["default"].concat(Object.values(SlotName));
-		let selectedSlotNameIndex: number = slotNameItems.indexOf(
-			this.properties.slot?.name ?? "default",
-		);
+		let selectedSlotNameIndex: number = slotNameItems.indexOf(potentialSlotData.name);
 		if (selectedSlotNameIndex === -1) {
 			selectedSlotNameIndex = 0;
 		}
-		const textFieldSlotName: ModalFormDropdownComponent = {
+		const dropdownSlotName: ModalFormDropdownComponent = {
 			items: slotNameItems,
-			label: this.formatInputLabel(slotNameQuestion, slotNameStatement, ""),
+			label: slotNameLabel,
 			options: {
 				defaultValueIndex: selectedSlotNameIndex,
-				tooltip: "default functions like the /give command",
+				tooltip: '"default" option functions like the vanilla /give command',
 			},
 			type: "dropdown",
 		};
-		const idQuestion: string = "What slot id would you like to place the item in? (Optional)";
-		const idStatement: string = "Enter integer greater than 0:";
-		const textFieldId: ModalFormTextFieldComponent = {
-			label: this.formatInputLabel(idQuestion, idStatement, ""),
+		const idLabel: string = "Enter slot ID greater than or equal to 0:";
+		const textFieldSlotId: ModalFormTextFieldComponent = {
+			label: idLabel,
 			options: {
-				defaultValue: `${this.properties.slot?.id ?? ""}`,
+				defaultValue: `${potentialSlotData.id ?? ""}`,
 			},
 			type: "textField",
 		};
@@ -552,27 +576,100 @@ export class ItemPropertiesForm {
 		const toggleKeepOldItem: ModalFormToggleComponent = {
 			label: keepOldItemLabel,
 			options: {
-				defaultValue: this.properties.slot?.keepOldItem ?? SlotDataKeepOldItemDefault,
-				tooltip:
-					"If true, the old item in your selected slot is given back to the selector.",
+				defaultValue: potentialSlotData.keepOldItem,
+				tooltip: "If true, the old item in the selector's slot is given back to them.",
 			},
 			type: "toggle",
 		};
-		const form = this.getTemplatePrompt([textFieldSlotName, textFieldId, toggleKeepOldItem]);
-		await showModalForm(form, this.player);
-		return Promise.resolve("This property is in progress");
+		// Account for extra spacing components added by template prompt form and errorLabel
+		let slotNameIndex: number = 1;
+		let slotIdIndex: number = 3;
+		let keepOldItemIndex: number = 5;
+		const inputComponents: ModalFormComponent[] = [];
+		if (this.commandType === "givex") {
+			inputComponents.push(dropdownSlotName);
+			textFieldSlotId.label += " (Optional)";
+		} else {
+			slotNameIndex = -1;
+			slotIdIndex--;
+			keepOldItemIndex--;
+		}
+		inputComponents.push(textFieldSlotId);
+		inputComponents.push(toggleKeepOldItem);
+		const form = this.getTemplatePromptForm(inputComponents);
+		form.components.unshift(errorLabel);
+		let validationResult: BooleanWithMessage = {
+			bool: false,
+			message: "",
+		};
+		while (!validationResult.bool) {
+			if (validationResult.message) {
+				errorLabel.text = `§c${validationResult.message}`;
+			}
+			const formResult: ModalFormReturnType[] | undefined = await showModalForm(
+				form,
+				this.player,
+			);
+			if (formResult === undefined) {
+				return Promise.resolve("§cSlot Unchanged");
+			}
+			if (slotNameIndex !== -1) {
+				const slotNameItemsIndex: ModalFormReturnType = formResult[slotNameIndex];
+				if (typeof slotNameItemsIndex === "number") {
+					if (dropdownSlotName.options) {
+						dropdownSlotName.options.defaultValueIndex = slotNameItemsIndex;
+					}
+					const slotName: string | undefined = slotNameItems[slotNameItemsIndex];
+					if (slotName) {
+						potentialSlotData.name = slotName;
+					}
+				}
+			}
+			const slotIdResult: ModalFormReturnType = formResult[slotIdIndex];
+			if (typeof slotIdResult === "string") {
+				if (textFieldSlotId.options) {
+					textFieldSlotId.options.defaultValue = slotIdResult;
+				}
+				const slotId: number | undefined = stringToNumber(slotIdResult);
+				if (slotId !== undefined) {
+					potentialSlotData.id = slotId;
+				}
+			}
+			const keepOldItemResult: ModalFormReturnType = formResult[keepOldItemIndex];
+			if (typeof keepOldItemResult === "boolean") {
+				if (toggleKeepOldItem.options) {
+					toggleKeepOldItem.options.defaultValue = keepOldItemResult;
+				}
+				potentialSlotData.keepOldItem = keepOldItemResult;
+			}
+
+			if (potentialSlotData.name === "default") {
+				this.properties.slot = undefined;
+				return Promise.resolve(
+					`Set SlotName to: §edefault§6\n\n"Slot ID" and "Keep old item?" are not compatible with default, so they were ignored.`,
+				);
+			}
+			validationResult = ItemPropertiesValidation.slot(
+				potentialSlotData,
+				this.properties.typeId,
+				this.properties.amount,
+				this.commandType,
+			);
+		}
+		this.properties.slot = potentialSlotData;
+		return Promise.resolve(`Set to:${this.slotPropertyDisplay()}`);
 	}
 
 	private async promptItemProperty(property: string): Promise<string> {
-		let result: string = "";
+		let result: string = `§cUnable to open form for property "${property}"`;
 		switch (property) {
-			case "Amount":
+			case ItemPropertyKeys.Amount:
 				result = await this.promptAmount();
 				break;
-			case "Location":
+			case "location":
 				result = await this.promptLocation();
 				break;
-			case "Slot":
+			case ItemPropertyKeys.Slot:
 				result = await this.promptSlot();
 		}
 		return Promise.resolve(result);
@@ -607,7 +704,7 @@ export class ItemPropertiesForm {
 					text: "Submit",
 					type: "button",
 				},
-				{ text: `Selected Components:\n${this.getPropertiesDisplay()}`, type: "label" },
+				{ text: `Selected Properties:\n${this.getPropertiesDisplay()}`, type: "label" },
 			],
 			title: ItemPropertiesForm.FORM_TITLE,
 		};
@@ -625,14 +722,14 @@ export class ItemPropertiesForm {
 						this.player,
 						this.openedFromInfo,
 						this.properties.typeId,
+						this.commandType,
 					);
-					newInstance.commandType = this.commandType;
 					newInstance.run(true);
 				});
 				return Promise.resolve({ message: "", promptResult: PromptResult.Closed });
 			} else {
 				return Promise.resolve({
-					message: previousMessage,
+					message: "",
 					promptResult: PromptResult.InProgress,
 				});
 			}
@@ -647,7 +744,13 @@ export class ItemPropertiesForm {
 					promptResult: PromptResult.InProgress,
 				});
 			}
-			const message = await this.promptItemProperty(selectedButton.text);
+			const selectedProperty: string | undefined = this.editableProperties[selection];
+			let message: string = "";
+			if (typeof selectedProperty === "string") {
+				message = await this.promptItemProperty(selectedProperty);
+			} else {
+				message = `Unable to open property form at selection index ${selection}`;
+			}
 			return Promise.resolve({ message: message, promptResult: PromptResult.InProgress });
 		}
 	}
@@ -679,15 +782,15 @@ export class ItemPropertiesForm {
 			},
 			type: "textField",
 		};
-		const sendInChatToggle: ModalFormToggleComponent = {
-			label: "Send command in chat?",
+		const shareInChatToggle: ModalFormToggleComponent = {
+			label: "Share command in chat?",
 			options: {
 				defaultValue: false,
 			},
 			type: "toggle",
 		};
 		const form: ModalForm = {
-			components: [textField, { type: "divider" }, sendInChatToggle],
+			components: [textField, { type: "divider" }, shareInChatToggle],
 			submitButton: {
 				addStyling: true,
 				text: "Done",
@@ -702,7 +805,7 @@ export class ItemPropertiesForm {
 			}
 			if (command.length > 4096) {
 				textField.options.tooltip +=
-					"\nAlso command is too long to safely send in chat. Option removed.";
+					"\nAlso command is too long to safely share in chat. Option removed.";
 				// Remove send in chat toggle component
 				form.components.pop();
 			}

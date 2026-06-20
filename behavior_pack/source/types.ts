@@ -33,8 +33,8 @@ export enum SlotName {
 }
 
 export interface SlotData {
-	name: SlotName;
-	id?: number;
+	name: string;
+	id: number | undefined;
 	keepOldItem: boolean;
 }
 export const SlotDataKeys = ["name", "id", "keepOldItem"];
@@ -129,7 +129,7 @@ export interface ItemProperties {
 	// Dyeable component simply doesn't exist on vanilla items. (Bug tracker MCPE-237577 and MCPE-232617)
 	// dye?: RGB;
 	enchants?: EnchantData[];
-	slot?: SlotData;
+	slot: SlotData | undefined;
 	potionType?: string;
 	arrowType?: string;
 	bedColor?: string;
