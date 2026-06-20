@@ -1,3 +1,4 @@
+import { removeMcNamespace } from "../prettyTypeId";
 import { type ItemProperties, ItemPropertyKeys } from "../types";
 
 const ItemsPath: string = "textures/items/";
@@ -149,7 +150,7 @@ function getPotionTypeIconFileName(properties: ItemProperties | undefined): stri
 
 	let effectName: string = "";
 
-	switch (properties.potionType) {
+	switch (removeMcNamespace(properties.potionType ?? "")) {
 		case "water":
 		case "mundane":
 		case "long_mundane":

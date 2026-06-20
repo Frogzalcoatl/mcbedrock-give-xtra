@@ -5,6 +5,7 @@ import {
 	ItemLockMode,
 	ItemStack,
 	type Player,
+	Potions,
 	system,
 	world,
 } from "@minecraft/server";
@@ -19,6 +20,8 @@ import {
 import { getMaxDurability } from "../itemStack";
 import { camelToTitleCase, prettyTypeId, stringToNumber, truncTo } from "../prettyTypeId";
 import {
+	ArrowTypes,
+	BedColors,
 	type BooleanWithMessage,
 	CommandNamespace,
 	type CommandType,
@@ -641,6 +644,91 @@ export class ItemPropertiesForm {
 		return Promise.resolve(`Set durability to: §e${this.properties.durability}`);
 	}
 
+	private async promptEnchants(): Promise<string> {
+		return Promise.resolve("§cUnfinished");
+	}
+
+	// Returns new value
+	private async promptEnum(
+		question: string,
+		statement: string,
+		enumArr: string[],
+		currentValue: string | undefined,
+	): Promise<string | undefined> {
+		let currentIndex: number = 0;
+		if (currentValue !== undefined) {
+			currentIndex = enumArr.indexOf(currentValue);
+			if (currentIndex === -1) {
+				currentIndex = 0;
+			}
+		}
+		const enumArrDisplay: string[] = enumArr.map((value) => prettyTypeId(value));
+		const dropdown: ModalFormDropdownComponent = {
+			items: enumArrDisplay,
+			label: this.formatInputLabel(question, statement, ""),
+			options: {
+				defaultValueIndex: currentIndex,
+			},
+			type: "dropdown",
+		};
+		const form = this.getTemplatePromptForm([dropdown]);
+		const formResult: ModalFormReturnType[] | undefined = await showModalForm(
+			form,
+			this.player,
+		);
+		if (formResult === undefined || typeof formResult[0] !== "number") {
+			return Promise.resolve(undefined);
+		}
+		currentIndex = formResult[0];
+		const selectedValue: string | undefined = enumArr[currentIndex];
+		return Promise.resolve(selectedValue);
+	}
+
+	private async promptPotionType(): Promise<string> {
+		const newValue: string | undefined = await this.promptEnum(
+			"Would you like to select a specific potion type?",
+			"Select potion type:",
+			Potions.getAllEffectTypes().map((e) => e.id),
+			this.properties.potionType,
+		);
+		if (newValue === undefined) {
+			return Promise.resolve("§cPotion Type Unchanged");
+		} else {
+			this.properties.potionType = newValue;
+			return Promise.resolve(`Potion Type set to:§e ${newValue}`);
+		}
+	}
+
+	private async promptArrowType(): Promise<string> {
+		const newValue: string | undefined = await this.promptEnum(
+			"Would you like to select a tipped arrow?",
+			"Select arrow type:",
+			ArrowTypes,
+			this.properties.arrowType,
+		);
+		if (newValue === undefined) {
+			return Promise.resolve("§cArrow Type Unchanged");
+		} else {
+			this.properties.arrowType = newValue;
+			return Promise.resolve(`Arrow Type set to:§e ${newValue}`);
+		}
+	}
+
+	private async promptBedColor(): Promise<string> {
+		const newValue: string | undefined = await this.promptEnum(
+			"Would you like to select a bed color?",
+			"Select bed color:",
+			BedColors,
+			this.properties.bedColor,
+		);
+		if (newValue === undefined) {
+			return Promise.resolve("§cBed Color Unchanged");
+		} else {
+			this.properties.bedColor = newValue;
+			return Promise.resolve(`Bed Color set to:§e ${newValue}`);
+		}
+	}
+
 	private async promptSlot(): Promise<string> {
 		const potentialSlotData: SlotData = {
 			id: this.properties.slot?.id,
@@ -872,6 +960,20 @@ export class ItemPropertiesForm {
 		return Promise.resolve(`Keep on Death set to: §e${this.properties.keepOnDeath}`);
 	}
 
+	private async promptItemTypeArray(
+		_property: ItemPropertyKeys.CanDestroy | ItemPropertyKeys.CanPlaceOn,
+	): Promise<string> {
+		/*
+		let arr: string[];
+		if (property === ItemPropertyKeys.CanDestroy) {
+			arr = this.properties.canDestroy ?? [];
+		} else if (property === ItemPropertyKeys.CanPlaceOn) {
+			arr = this.properties.canPlaceOn ?? [];
+		}
+		*/
+		return Promise.resolve("§cUnfinished");
+	}
+
 	private async promptItemProperty(property: string): Promise<string> {
 		let result: string = `§cUnable to open form for property "${property}"`;
 		switch (property) {
@@ -885,12 +987,16 @@ export class ItemPropertiesForm {
 				result = await this.promptDurability();
 				break;
 			case ItemPropertyKeys.Enchants:
+				result = await this.promptEnchants();
 				break;
 			case ItemPropertyKeys.PotionType:
+				result = await this.promptPotionType();
 				break;
 			case ItemPropertyKeys.ArrowType:
+				result = await this.promptArrowType();
 				break;
 			case ItemPropertyKeys.BedColor:
+				result = await this.promptBedColor();
 				break;
 			case ItemPropertyKeys.Slot:
 				result = await this.promptSlot();
@@ -905,8 +1011,10 @@ export class ItemPropertiesForm {
 				result = await this.promptKeepOnDeath();
 				break;
 			case ItemPropertyKeys.CanPlaceOn:
+				result = await this.promptItemTypeArray(ItemPropertyKeys.CanPlaceOn);
 				break;
 			case ItemPropertyKeys.CanDestroy:
+				result = await this.promptItemTypeArray(ItemPropertyKeys.CanDestroy);
 				break;
 		}
 		return Promise.resolve(result);
