@@ -356,11 +356,12 @@ export function itemTypeToPotionDeliveryType(typeId: string): string | undefined
 }
 
 export function getMaxStackSize(itemTypeId: string): number | undefined {
-	const itemType: ItemType | undefined = ItemTypes.get(itemTypeId);
-	if (itemType === undefined) {
+	let itemStack: ItemStack;
+	try {
+		itemStack = new ItemStack(itemTypeId);
+	} catch (_error) {
 		return undefined;
 	}
-	const itemStack: ItemStack = new ItemStack(itemType);
 	return itemStack.maxAmount;
 }
 
@@ -445,8 +446,21 @@ export const ItemPropertiesValidation = {
 				: `Invalid Name Tag "${value}". Name Tag must be within 1-${MaxNameTagLength} characters`,
 		};
 	},
-	durability(durability: ItemDurability, itemStack: ItemStack): BooleanWithMessage {
-		const durabilityComponent: ItemDurabilityComponent | undefined = itemStack.getComponent(
+	durability(durability: ItemDurability, itemTypeId: string): BooleanWithMessage {
+		let testItem: ItemStack;
+		try {
+			testItem = new ItemStack(itemTypeId);
+		} catch (error) {
+			let message: string = "Unable to create item to verify durability";
+			if (error instanceof Error) {
+				message += `: ${error.message}`;
+			}
+			return {
+				bool: false,
+				message: message,
+			};
+		}
+		const durabilityComponent: ItemDurabilityComponent | undefined = testItem.getComponent(
 			ItemComponentTypes.Durability,
 		);
 		if (durabilityComponent === undefined) {
@@ -478,14 +492,26 @@ export const ItemPropertiesValidation = {
 			message: "Valid durability",
 		};
 	},
-	enchants(value: EnchantData[], itemStack: ItemStack): BooleanWithMessage {
-		const enchantableComonent: ItemEnchantableComponent | undefined = itemStack.getComponent(
-			ItemComponentTypes.Enchantable,
-		);
+	enchants(value: EnchantData[], itemTypeId: string): BooleanWithMessage {
+		let enchantableComonent: ItemEnchantableComponent | undefined;
+		let errorMessage: string = `Cannot apply enchants to selected item "${itemTypeId}"`;
+		try {
+			enchantableComonent = new ItemStack(itemTypeId).getComponent(
+				ItemComponentTypes.Enchantable,
+			);
+		} catch (error) {
+			if (error instanceof Error) {
+				errorMessage += `: ${error.message}`;
+			}
+			return {
+				bool: false,
+				message: errorMessage,
+			};
+		}
 		if (enchantableComonent === undefined) {
 			return {
 				bool: false,
-				message: `Cannot apply enchants to selected item "${itemStack.typeId}"`,
+				message: errorMessage,
 			};
 		}
 		for (const enchant of value) {
@@ -509,7 +535,7 @@ export const ItemPropertiesValidation = {
 			if (!enchantableComonent.canAddEnchantment({ level: enchant.level, type: type })) {
 				return {
 					bool: false,
-					message: `"${enchant.id}" cannot be applied to "${itemStack.typeId}"`,
+					message: `"${enchant.id}" cannot be applied to "${itemTypeId}"`,
 				};
 			}
 		}
@@ -518,11 +544,24 @@ export const ItemPropertiesValidation = {
 			message: "Valid enchants",
 		};
 	},
-	slot(value: SlotData, itemStack: ItemStack, amount: number): BooleanWithMessage {
-		if (!canEquipInSlot(itemStack, value.name)) {
+	slot(value: SlotData, itemTypeId: string, amount: number): BooleanWithMessage {
+		let testItem: ItemStack;
+		try {
+			testItem = new ItemStack(itemTypeId);
+		} catch (error) {
+			let errorMessage = `Unable to validate SlotData`;
+			if (error instanceof Error) {
+				errorMessage += `: ${error.message}`;
+			}
 			return {
 				bool: false,
-				message: `${itemStack.typeId} cannot be placed in ${value.name}`,
+				message: errorMessage,
+			};
+		}
+		if (!canEquipInSlot(testItem, value.name)) {
+			return {
+				bool: false,
+				message: `${itemTypeId} cannot be placed in ${value.name}`,
 			};
 		}
 		// Skipping max slot.id. Container size varies.
@@ -533,10 +572,10 @@ export const ItemPropertiesValidation = {
 			};
 		}
 		// Cannot have an amount greater than the max item stack size if placing in a specific slot
-		if (amount > itemStack.maxAmount) {
+		if (amount > testItem.maxAmount) {
 			return {
 				bool: false,
-				message: `Amount ${amount} exceeds the maximum for ${itemStack.typeId} (${itemStack.maxAmount})\nIf you would like to give an amount exceeding the max stack size, you cannot select a slot.`,
+				message: `Amount ${amount} exceeds the maximum for ${itemTypeId} (${testItem.maxAmount})\nIf you would like to give an amount exceeding the max stack size, you cannot select a slot.`,
 			};
 		}
 		// ItemProperties.slot.keepOldItem is a boolean. Nothing to check there.
@@ -663,15 +702,20 @@ export const ItemPropertiesValidation = {
 				return messageResult;
 			}
 		}
-		const itemStack = new ItemStack(properties.typeId);
 		if (properties.durability) {
-			messageResult = ItemPropertiesValidation.durability(properties.durability, itemStack);
+			messageResult = ItemPropertiesValidation.durability(
+				properties.durability,
+				properties.typeId,
+			);
 			if (!messageResult.bool) {
 				return messageResult;
 			}
 		}
 		if (properties.enchants) {
-			messageResult = ItemPropertiesValidation.enchants(properties.enchants, itemStack);
+			messageResult = ItemPropertiesValidation.enchants(
+				properties.enchants,
+				properties.typeId,
+			);
 			if (!messageResult.bool) {
 				return messageResult;
 			}
@@ -679,7 +723,7 @@ export const ItemPropertiesValidation = {
 		if (properties.slot) {
 			messageResult = ItemPropertiesValidation.slot(
 				properties.slot,
-				itemStack,
+				properties.typeId,
 				properties.amount,
 			);
 			if (!messageResult.bool) {
