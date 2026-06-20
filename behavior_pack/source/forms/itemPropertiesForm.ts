@@ -10,14 +10,18 @@ import {
 import {
 	formatTypeId,
 	getMaxItemPropertiesAmount,
+	getMaxStackSize,
 	ItemPropertiesValidation,
 	itemTypeToPotionDeliveryType,
+	SlotNamesOneStackOnly,
 } from "../itemProperties";
+import { getMaxDurability } from "../itemStack";
 import { camelToTitleCase, prettyTypeId, stringToNumber, truncTo } from "../prettyTypeId";
 import {
 	type BooleanWithMessage,
 	CommandNamespace,
 	type CommandType,
+	type ItemDurability,
 	type ItemProperties,
 	ItemPropertyKeys,
 	type SlotData,
@@ -549,7 +553,6 @@ export class ItemPropertiesForm {
 			text: "",
 			type: "label",
 		};
-		const slotNameLabel: string = "Select Slot Name:";
 		const slotNameItems: string[] = ["default"].concat(Object.values(SlotName));
 		let selectedSlotNameIndex: number = slotNameItems.indexOf(potentialSlotData.name);
 		if (selectedSlotNameIndex === -1) {
@@ -557,24 +560,22 @@ export class ItemPropertiesForm {
 		}
 		const dropdownSlotName: ModalFormDropdownComponent = {
 			items: slotNameItems,
-			label: slotNameLabel,
+			label: "Select Slot Name:",
 			options: {
 				defaultValueIndex: selectedSlotNameIndex,
 				tooltip: '"default" option functions like the vanilla /give command',
 			},
 			type: "dropdown",
 		};
-		const idLabel: string = "Enter slot ID greater than or equal to 0:";
 		const textFieldSlotId: ModalFormTextFieldComponent = {
-			label: idLabel,
+			label: "Enter slot ID greater than or equal to 0:",
 			options: {
 				defaultValue: `${potentialSlotData.id ?? ""}`,
 			},
 			type: "textField",
 		};
-		const keepOldItemLabel: string = "Keep old item?";
 		const toggleKeepOldItem: ModalFormToggleComponent = {
-			label: keepOldItemLabel,
+			label: "Keep old item?",
 			options: {
 				defaultValue: potentialSlotData.keepOldItem,
 				tooltip: "If true, the old item in the selector's slot is given back to them.",
@@ -602,6 +603,8 @@ export class ItemPropertiesForm {
 			bool: false,
 			message: "",
 		};
+		const maxStackSize: number = getMaxStackSize(this.properties.typeId) ?? 1;
+		let potentialAmount: number = this.properties.amount;
 		while (!validationResult.bool) {
 			if (validationResult.message) {
 				errorLabel.text = `§c${validationResult.message}`;
@@ -649,15 +652,122 @@ export class ItemPropertiesForm {
 					`Set SlotName to: §edefault§6\n\n"Slot ID" and "Keep old item?" are not compatible with default, so they were ignored.`,
 				);
 			}
+			if (
+				SlotNamesOneStackOnly.includes(potentialSlotData.name) &&
+				this.properties.amount > maxStackSize
+			) {
+				potentialAmount = maxStackSize;
+			} else {
+				potentialAmount = this.properties.amount;
+			}
 			validationResult = ItemPropertiesValidation.slot(
 				potentialSlotData,
 				this.properties.typeId,
-				this.properties.amount,
+				potentialAmount,
 				this.commandType,
 			);
 		}
 		this.properties.slot = potentialSlotData;
-		return Promise.resolve(`Set to:${this.slotPropertyDisplay()}`);
+		let message: string = `Set to:${this.slotPropertyDisplay()}`;
+		if (potentialAmount !== this.properties.amount) {
+			this.properties.amount = potentialAmount;
+			message += `\n\n§6Additionally reduced amount to max stack size: §e${this.properties.amount}`;
+		}
+		return Promise.resolve(message);
+	}
+
+	private async promptDurability(): Promise<string> {
+		const errorLabel: FormTextComponent = {
+			text: "",
+			type: "label",
+		};
+		const maxDurability: number | undefined = getMaxDurability(this.properties.typeId);
+		if (maxDurability === undefined) {
+			return Promise.resolve(
+				`Unable to get max durability for ${prettyTypeId(this.properties.typeId)}`,
+			);
+		}
+		if (maxDurability === 0) {
+			this.properties.durability = 0;
+			return Promise.resolve(
+				`Max durability of ${prettyTypeId(this.properties.typeId)} is 0. No durability to change`,
+			);
+		}
+		let currentDurabilityStr: string = `${this.properties.durability}`;
+		if (currentDurabilityStr === "undefined" || currentDurabilityStr === "unbreakable") {
+			currentDurabilityStr = "";
+		}
+		const textField: ModalFormTextFieldComponent = {
+			label: `Enter durability value within range 0-${maxDurability}:`,
+			options: {
+				defaultValue: `${currentDurabilityStr}`,
+			},
+			type: "textField",
+		};
+		const toggleUnbreakable: ModalFormToggleComponent = {
+			label: "Infinite Durability?",
+			options: {
+				defaultValue: this.properties.durability === "unbreakable",
+				tooltip: "If true, durability value is ignored",
+			},
+			type: "toggle",
+		};
+		const textFieldIndex: number = 1;
+		const toggleIndex: number = 3;
+		const form = this.getTemplatePromptForm([textField, toggleUnbreakable]);
+		form.components.unshift(errorLabel);
+		let validationResult: BooleanWithMessage = {
+			bool: false,
+			message: "",
+		};
+		let potentialDurability: ItemDurability | undefined;
+		while (!validationResult.bool) {
+			potentialDurability = undefined;
+			if (validationResult.message) {
+				errorLabel.text = `§c${validationResult.message}`;
+			}
+			const formResult: ModalFormReturnType[] | undefined = await showModalForm(
+				form,
+				this.player,
+			);
+			if (formResult === undefined) {
+				return Promise.resolve("§cDurability Unchanged");
+			}
+			const textFieldResult: ModalFormReturnType = formResult[textFieldIndex];
+			if (typeof textFieldResult === "string") {
+				if (textField.options) {
+					textField.options.defaultValue = textFieldResult;
+				}
+				const num: number | undefined = stringToNumber(textFieldResult);
+				if (num !== undefined) {
+					potentialDurability = num;
+				} else {
+					validationResult.bool = false;
+					validationResult.message = `Invalid durability "${textFieldResult}"`;
+				}
+			}
+			const toggleUnbreakableResult: ModalFormReturnType = formResult[toggleIndex];
+			if (typeof toggleUnbreakableResult === "boolean") {
+				if (toggleUnbreakable.options) {
+					toggleUnbreakable.options.defaultValue = toggleUnbreakableResult;
+				}
+				if (toggleUnbreakableResult) {
+					potentialDurability = "unbreakable";
+				}
+			}
+			if (potentialDurability === undefined) {
+				continue;
+			}
+			validationResult = ItemPropertiesValidation.durability(
+				potentialDurability,
+				this.properties.typeId,
+			);
+		}
+		if (potentialDurability === undefined) {
+			return Promise.resolve("§cUnable to set durability");
+		}
+		this.properties.durability = potentialDurability;
+		return Promise.resolve(`Set durability to: §e${this.properties.durability}`);
 	}
 
 	private async promptItemProperty(property: string): Promise<string> {
@@ -669,8 +779,30 @@ export class ItemPropertiesForm {
 			case "location":
 				result = await this.promptLocation();
 				break;
+			case ItemPropertyKeys.Durability:
+				result = await this.promptDurability();
+				break;
+			case ItemPropertyKeys.Enchants:
+				break;
+			case ItemPropertyKeys.PotionType:
+				break;
+			case ItemPropertyKeys.ArrowType:
+				break;
+			case ItemPropertyKeys.BedColor:
+				break;
 			case ItemPropertyKeys.Slot:
 				result = await this.promptSlot();
+				break;
+			case ItemPropertyKeys.NameTag:
+				break;
+			case ItemPropertyKeys.LockMode:
+				break;
+			case ItemPropertyKeys.KeepOnDeath:
+				break;
+			case ItemPropertyKeys.CanPlaceOn:
+				break;
+			case ItemPropertyKeys.CanDestroy:
+				break;
 		}
 		return Promise.resolve(result);
 	}

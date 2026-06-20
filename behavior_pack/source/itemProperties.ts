@@ -4,7 +4,6 @@ import {
 	type EnchantmentType,
 	EnchantmentTypes,
 	ItemComponentTypes,
-	type ItemDurabilityComponent,
 	type ItemEnchantableComponent,
 	ItemLockMode,
 	ItemStack,
@@ -13,6 +12,7 @@ import {
 	type PotionEffectType,
 	Potions,
 } from "@minecraft/server";
+import { getMaxDurability } from "./itemStack";
 import { getMcNamespace, removeMcNamespace } from "./prettyTypeId";
 import {
 	ArrowTypes,
@@ -293,6 +293,17 @@ export function parseCommandJson(
 	};
 }
 
+const VanillaOffhandItems: string[] = [
+	"minecraft:shield",
+	"minecraft:totem_of_undying",
+	"minecraft:arrow",
+	"minecraft:firework_rocket",
+	"minecraft:empty_map",
+	"minecraft:filled_map",
+	"minecraft:nautilus_shell",
+	"minecraft:sparkler",
+];
+
 const SlotsAlwaysEquippable: string[] = [
 	SlotName.Inventory,
 	SlotName.MobChest,
@@ -300,7 +311,6 @@ const SlotsAlwaysEquippable: string[] = [
 	SlotName.Hotbar,
 	SlotName.Saddle, // Surprisingly anything can go in the saddle slot. No point in limiting it to saddles
 	SlotName.Armor,
-	SlotName.Offhand, // No good way to check this with custom items
 	SlotName.EndChest,
 ];
 
@@ -312,6 +322,10 @@ function canEquipInSlot(itemStack: ItemStack, targetSlot: string): boolean {
 	if (itemNamespace !== "minecraft") {
 		// Don't trust custom items to have enchantable slots set up in the same way as vanilla items.
 		return true;
+	}
+	// Vanilla items only
+	if (targetSlot === SlotName.Offhand) {
+		return VanillaOffhandItems.includes(itemStack.typeId);
 	}
 	// Only armor slots remain.
 	const enchantable: ItemEnchantableComponent | undefined = itemStack.getComponent(
@@ -365,12 +379,27 @@ export function getMaxStackSize(itemTypeId: string): number | undefined {
 	return itemStack.maxAmount;
 }
 
+// These slots can only have one stack of an item at most.
+export const SlotNamesOneStackOnly: string[] = [
+	SlotName.Armor,
+	SlotName.Head,
+	SlotName.Chest,
+	SlotName.Legs,
+	SlotName.Feet,
+	SlotName.Offhand,
+	SlotName.Mainhand,
+	SlotName.Armor,
+	SlotName.Saddle,
+];
+
 export function getMaxItemPropertiesAmount(
 	properties: ItemProperties,
 	commandType: CommandType,
 ): number {
 	if (
-		(properties.slot !== undefined && properties.slot.id !== undefined) ||
+		(properties.slot !== undefined &&
+			(properties.slot.id !== undefined ||
+				SlotNamesOneStackOnly.includes(properties.slot.name))) ||
 		commandType === "spawnx"
 	) {
 		const maxStackSize: number | undefined = getMaxStackSize(properties.typeId);
@@ -422,7 +451,7 @@ export const ItemPropertiesValidation = {
 		const result: boolean =
 			properties.amount > 0 &&
 			Number.isInteger(properties.amount) &&
-			properties.amount < getMaxItemPropertiesAmount(properties, commandType);
+			properties.amount <= getMaxItemPropertiesAmount(properties, commandType);
 		return {
 			bool: result,
 			message: result ? "Valid Amount" : `Invalid Amount "${properties.amount}"`,
@@ -447,23 +476,8 @@ export const ItemPropertiesValidation = {
 		};
 	},
 	durability(durability: ItemDurability, itemTypeId: string): BooleanWithMessage {
-		let testItem: ItemStack;
-		try {
-			testItem = new ItemStack(itemTypeId);
-		} catch (error) {
-			let message: string = "Unable to create item to verify durability";
-			if (error instanceof Error) {
-				message += `: ${error.message}`;
-			}
-			return {
-				bool: false,
-				message: message,
-			};
-		}
-		const durabilityComponent: ItemDurabilityComponent | undefined = testItem.getComponent(
-			ItemComponentTypes.Durability,
-		);
-		if (durabilityComponent === undefined) {
+		const maxDurability: number | undefined = getMaxDurability(itemTypeId);
+		if (maxDurability === undefined) {
 			return {
 				bool: false,
 				message: "Cannot apply durability to selected item",
@@ -481,10 +495,10 @@ export const ItemPropertiesValidation = {
 				message: 'Durability must be a positive integer or "unbreakable"',
 			};
 		}
-		if (durabilityComponent.maxDurability < durability) {
+		if (maxDurability < durability) {
 			return {
 				bool: false,
-				message: `Durability number value cannot exceed max for this item (${durabilityComponent.maxDurability})`,
+				message: `Durability number value cannot exceed max for this item (${maxDurability})`,
 			};
 		}
 		return {
@@ -582,8 +596,7 @@ export const ItemPropertiesValidation = {
 				message: `Slot id must be an integer greater than or equal to 0`,
 			};
 		}
-		// Cannot have an amount greater than the max item stack size if placing in a specific slot
-		if (amount > testItem.maxAmount) {
+		if (SlotNamesOneStackOnly.includes(value.name) && amount > testItem.maxAmount) {
 			return {
 				bool: false,
 				message: `Amount ${amount} exceeds the maximum for ${itemTypeId} (${testItem.maxAmount})\nIf you would like to give an amount exceeding the max stack size, you cannot select a slot.`,

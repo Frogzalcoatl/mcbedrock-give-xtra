@@ -216,7 +216,7 @@ function setItemTameable(entity: Entity, item: ItemStack, slot: SlotData): Boole
 	};
 }
 
-function slotNameToEquipmentSlot(name: SlotName): EquipmentSlot | undefined {
+function slotNameToEquipmentSlot(name: string): EquipmentSlot | undefined {
 	switch (name) {
 		case SlotName.Mainhand:
 			return EquipmentSlot.Mainhand;
@@ -359,6 +359,11 @@ export function giveItemToEntity(
 			return setItemEquippable(entity, item, slot);
 		case SlotName.EndChest:
 			return setItemEndChest(entity, item, slot);
+		default:
+			return {
+				bool: false,
+				message: `Invalid slot name "${slot.name}"`,
+			};
 	}
 }
 

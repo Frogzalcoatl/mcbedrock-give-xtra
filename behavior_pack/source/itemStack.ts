@@ -50,6 +50,22 @@ export function applyDurability(item: ItemStack, value: ItemDurability): Boolean
 	};
 }
 
+export function getMaxDurability(itemTypeId: string): number | undefined {
+	let item: ItemStack;
+	try {
+		item = new ItemStack(itemTypeId);
+	} catch (_error) {
+		return undefined;
+	}
+	const component: ItemDurabilityComponent | undefined = item.getComponent(
+		ItemComponentTypes.Durability,
+	);
+	if (component === undefined) {
+		return undefined;
+	}
+	return component.maxDurability;
+}
+
 export function applyEnchantData(
 	enchantableComponent: ItemEnchantableComponent,
 	data: EnchantData,
