@@ -729,9 +729,6 @@ export class ItemPropertiesForm {
 				return;
 			}
 		}
-		if (this.properties.typeId === "minecraft:bed") {
-			this.properties.bedColor = "white";
-		}
 		const commandTypeResult: PromptResult = await this.promptCommandType();
 		if (commandTypeResult !== PromptResult.Completed) {
 			// Go back to typeId selection form if command type form is closed.
@@ -739,6 +736,9 @@ export class ItemPropertiesForm {
 				this.run();
 			});
 			return;
+		}
+		if (this.properties.typeId === "minecraft:bed") {
+			this.properties.bedColor = "white";
 		}
 		let componentsResult = {
 			message: "",
