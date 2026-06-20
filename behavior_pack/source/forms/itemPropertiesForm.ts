@@ -2,6 +2,7 @@ import {
 	ItemComponentTypes,
 	type ItemDurabilityComponent,
 	type ItemEnchantableComponent,
+	ItemLockMode,
 	ItemStack,
 	type Player,
 	system,
@@ -816,6 +817,61 @@ export class ItemPropertiesForm {
 		return Promise.resolve(`Name Tag set to: §e"${this.properties.nameTag}"`);
 	}
 
+	private async promptLockMode(): Promise<string> {
+		const question: string = "Would you like to apply an inventory lock mode to your item?";
+		const statement: string = "Select Lock Mode:";
+		const dropdownItems: ItemLockMode[] = Object.values(ItemLockMode);
+		let selectedLockModeIndex = dropdownItems.indexOf(
+			this.properties.lockMode ?? ItemLockMode.none,
+		);
+		if (selectedLockModeIndex === -1) {
+			selectedLockModeIndex = dropdownItems.indexOf(ItemLockMode.none);
+		}
+		const dropdown: ModalFormDropdownComponent = {
+			items: dropdownItems,
+			label: this.formatInputLabel(question, statement, ""),
+			options: {
+				defaultValueIndex: selectedLockModeIndex,
+			},
+			type: "dropdown",
+		};
+		const form = this.getTemplatePromptForm([dropdown]);
+		const formResult: ModalFormReturnType[] | undefined = await showModalForm(
+			form,
+			this.player,
+		);
+		if (formResult === undefined || typeof formResult[0] !== "number") {
+			return Promise.resolve("§cLock Mode Unchanged");
+		}
+		selectedLockModeIndex = formResult[0];
+		const selectedLockMode: ItemLockMode | undefined = dropdownItems[selectedLockModeIndex];
+		if (selectedLockMode === undefined) {
+			return Promise.resolve("Unable to update lock mode.");
+		}
+		this.properties.lockMode = selectedLockMode;
+		return Promise.resolve(`Lock Mode set to: §e${this.properties.lockMode}`);
+	}
+
+	private async promptKeepOnDeath(): Promise<string> {
+		const toggle: ModalFormToggleComponent = {
+			label: "Keep item on death?",
+			options: {
+				defaultValue: this.properties.keepOnDeath ?? false,
+			},
+			type: "toggle",
+		};
+		const form = this.getTemplatePromptForm([toggle]);
+		// just for some extra spacing
+		form.components.unshift({ text: "", type: "label" });
+		const toggleIndex: number = 1;
+		const result: ModalFormReturnType[] | undefined = await showModalForm(form, this.player);
+		if (result === undefined || typeof result[toggleIndex] !== "boolean") {
+			return Promise.resolve("§cKeep on Death Unchanged");
+		}
+		this.properties.keepOnDeath = result[toggleIndex];
+		return Promise.resolve(`Keep on Death set to: §e${this.properties.keepOnDeath}`);
+	}
+
 	private async promptItemProperty(property: string): Promise<string> {
 		let result: string = `§cUnable to open form for property "${property}"`;
 		switch (property) {
@@ -843,8 +899,10 @@ export class ItemPropertiesForm {
 				result = await this.promptNameTag();
 				break;
 			case ItemPropertyKeys.LockMode:
+				result = await this.promptLockMode();
 				break;
 			case ItemPropertyKeys.KeepOnDeath:
+				result = await this.promptKeepOnDeath();
 				break;
 			case ItemPropertyKeys.CanPlaceOn:
 				break;
