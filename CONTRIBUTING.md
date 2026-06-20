@@ -30,7 +30,7 @@ You need the following utilities installed: [pnpm](https://pnpm.io/), [node LTS]
 
 3. Link this project to the com.mojang folder.
 
-	Open `deploy-pack.bat` and enter "y" to create symlinks in the com.mojang folder.
+	Open `symlinks.bat` and enter "y" to create symlinks in the com.mojang folder.
 
 4. Open your IDE.
 
