@@ -60,7 +60,7 @@ export interface CommandVector3 {
 
 function cVector3ValueToString(value: CommandVector3Value, decimalPlaces: number): string {
 	let str = `${value.includeSquiggly ? "~" : ""}`;
-	if (value.num) {
+	if (value.num !== undefined) {
 		str += `${truncTo(value.num, decimalPlaces)}`;
 	}
 	return str;
@@ -275,8 +275,8 @@ export class ItemPropertiesForm {
 		let str: string = this.propertyDisplay("Item Type", prettyTypeId(data.typeId));
 		str += this.propertyDisplay("Amount", data.amount);
 		str += this.propertyDisplay("Command Type", `/${this.commandType}`);
-		if (data.nameTag) {
-			str += this.propertyDisplay("Name Tag", data.nameTag);
+		if (data.nameTag !== undefined) {
+			str += this.propertyDisplay("Name Tag", `"${data.nameTag}"`);
 		}
 		if (this.commandType !== "givex") {
 			str += this.propertyDisplay("Location", commandVector3ToString(this.location));
@@ -528,11 +528,14 @@ export class ItemPropertiesForm {
 					statement,
 					parseResult?.message ?? "",
 				);
-				textField.options = {
-					defaultValue: input,
-				};
+				if (textField.options) {
+					textField.options.defaultValue = input;
+				}
 			}
-			const formResult = await showModalForm(form, this.player);
+			const formResult: ModalFormReturnType[] | undefined = await showModalForm(
+				form,
+				this.player,
+			);
 			if (formResult === undefined || typeof formResult[0] !== "string") {
 				return Promise.resolve("§cLocation Unchanged");
 			}
@@ -541,139 +544,6 @@ export class ItemPropertiesForm {
 		}
 		this.location = parseResult.vector;
 		return Promise.resolve(`Location set to: §e${commandVector3ToString(this.location)}`);
-	}
-
-	private async promptSlot(): Promise<string> {
-		const potentialSlotData: SlotData = {
-			id: this.properties.slot?.id,
-			keepOldItem: this.properties.slot?.keepOldItem ?? SlotDataKeepOldItemDefault,
-			name: this.properties.slot?.name ?? "default",
-		};
-		const errorLabel: FormTextComponent = {
-			text: "",
-			type: "label",
-		};
-		const slotNameItems: string[] = ["default"].concat(Object.values(SlotName));
-		let selectedSlotNameIndex: number = slotNameItems.indexOf(potentialSlotData.name);
-		if (selectedSlotNameIndex === -1) {
-			selectedSlotNameIndex = 0;
-		}
-		const dropdownSlotName: ModalFormDropdownComponent = {
-			items: slotNameItems,
-			label: "Select Slot Name:",
-			options: {
-				defaultValueIndex: selectedSlotNameIndex,
-				tooltip: '"default" option functions like the vanilla /give command',
-			},
-			type: "dropdown",
-		};
-		const textFieldSlotId: ModalFormTextFieldComponent = {
-			label: "Enter slot ID greater than or equal to 0:",
-			options: {
-				defaultValue: `${potentialSlotData.id ?? ""}`,
-			},
-			type: "textField",
-		};
-		const toggleKeepOldItem: ModalFormToggleComponent = {
-			label: "Keep old item?",
-			options: {
-				defaultValue: potentialSlotData.keepOldItem,
-				tooltip: "If true, the old item in the selector's slot is given back to them.",
-			},
-			type: "toggle",
-		};
-		// Account for extra spacing components added by template prompt form and errorLabel
-		let slotNameIndex: number = 1;
-		let slotIdIndex: number = 3;
-		let keepOldItemIndex: number = 5;
-		const inputComponents: ModalFormComponent[] = [];
-		if (this.commandType === "givex") {
-			inputComponents.push(dropdownSlotName);
-			textFieldSlotId.label += " (Optional)";
-		} else {
-			slotNameIndex = -1;
-			slotIdIndex--;
-			keepOldItemIndex--;
-		}
-		inputComponents.push(textFieldSlotId);
-		inputComponents.push(toggleKeepOldItem);
-		const form = this.getTemplatePromptForm(inputComponents);
-		form.components.unshift(errorLabel);
-		let validationResult: BooleanWithMessage = {
-			bool: false,
-			message: "",
-		};
-		const maxStackSize: number = getMaxStackSize(this.properties.typeId) ?? 1;
-		let potentialAmount: number = this.properties.amount;
-		while (!validationResult.bool) {
-			if (validationResult.message) {
-				errorLabel.text = `§c${validationResult.message}`;
-			}
-			const formResult: ModalFormReturnType[] | undefined = await showModalForm(
-				form,
-				this.player,
-			);
-			if (formResult === undefined) {
-				return Promise.resolve("§cSlot Unchanged");
-			}
-			if (slotNameIndex !== -1) {
-				const slotNameItemsIndex: ModalFormReturnType = formResult[slotNameIndex];
-				if (typeof slotNameItemsIndex === "number") {
-					if (dropdownSlotName.options) {
-						dropdownSlotName.options.defaultValueIndex = slotNameItemsIndex;
-					}
-					const slotName: string | undefined = slotNameItems[slotNameItemsIndex];
-					if (slotName) {
-						potentialSlotData.name = slotName;
-					}
-				}
-			}
-			const slotIdResult: ModalFormReturnType = formResult[slotIdIndex];
-			if (typeof slotIdResult === "string") {
-				if (textFieldSlotId.options) {
-					textFieldSlotId.options.defaultValue = slotIdResult;
-				}
-				const slotId: number | undefined = stringToNumber(slotIdResult);
-				if (slotId !== undefined) {
-					potentialSlotData.id = slotId;
-				}
-			}
-			const keepOldItemResult: ModalFormReturnType = formResult[keepOldItemIndex];
-			if (typeof keepOldItemResult === "boolean") {
-				if (toggleKeepOldItem.options) {
-					toggleKeepOldItem.options.defaultValue = keepOldItemResult;
-				}
-				potentialSlotData.keepOldItem = keepOldItemResult;
-			}
-
-			if (potentialSlotData.name === "default") {
-				this.properties.slot = undefined;
-				return Promise.resolve(
-					`Set SlotName to: §edefault§6\n\n"Slot ID" and "Keep old item?" are not compatible with default, so they were ignored.`,
-				);
-			}
-			if (
-				SlotNamesOneStackOnly.includes(potentialSlotData.name) &&
-				this.properties.amount > maxStackSize
-			) {
-				potentialAmount = maxStackSize;
-			} else {
-				potentialAmount = this.properties.amount;
-			}
-			validationResult = ItemPropertiesValidation.slot(
-				potentialSlotData,
-				this.properties.typeId,
-				potentialAmount,
-				this.commandType,
-			);
-		}
-		this.properties.slot = potentialSlotData;
-		let message: string = `Set to:${this.slotPropertyDisplay()}`;
-		if (potentialAmount !== this.properties.amount) {
-			this.properties.amount = potentialAmount;
-			message += `\n\n§6Additionally reduced amount to max stack size: §e${this.properties.amount}`;
-		}
-		return Promise.resolve(message);
 	}
 
 	private async promptDurability(): Promise<string> {
@@ -770,6 +640,182 @@ export class ItemPropertiesForm {
 		return Promise.resolve(`Set durability to: §e${this.properties.durability}`);
 	}
 
+	private async promptSlot(): Promise<string> {
+		const potentialSlotData: SlotData = {
+			id: this.properties.slot?.id,
+			keepOldItem: this.properties.slot?.keepOldItem ?? SlotDataKeepOldItemDefault,
+			name: this.properties.slot?.name ?? "default",
+		};
+		if (this.commandType !== "givex") {
+			potentialSlotData.name = SlotName.Inventory;
+		}
+		const errorLabel: FormTextComponent = {
+			text: "",
+			type: "label",
+		};
+		const slotNameItems: string[] = ["default"].concat(Object.values(SlotName));
+		let selectedSlotNameIndex: number = slotNameItems.indexOf(potentialSlotData.name);
+		if (selectedSlotNameIndex === -1) {
+			selectedSlotNameIndex = 0;
+		}
+		const dropdownSlotName: ModalFormDropdownComponent = {
+			items: slotNameItems,
+			label: "Select Slot Name:",
+			options: {
+				defaultValueIndex: selectedSlotNameIndex,
+				tooltip: '"default" option functions like the vanilla /give command',
+			},
+			type: "dropdown",
+		};
+		const textFieldSlotId: ModalFormTextFieldComponent = {
+			label: "Enter slot ID greater than or equal to 0:",
+			options: {
+				defaultValue: `${potentialSlotData.id ?? ""}`,
+			},
+			type: "textField",
+		};
+		const toggleKeepOldItem: ModalFormToggleComponent = {
+			label: "Keep old item?",
+			options: {
+				defaultValue: potentialSlotData.keepOldItem,
+				tooltip: "If true, the old item in the selector's slot is given back to them.",
+			},
+			type: "toggle",
+		};
+		// Account for extra spacing components added by template prompt form and errorLabel
+		let slotNameIndex: number = 1;
+		let slotIdIndex: number = 3;
+		let keepOldItemIndex: number = 5;
+		const inputComponents: ModalFormComponent[] = [];
+		if (this.commandType === "givex") {
+			inputComponents.push(dropdownSlotName);
+			textFieldSlotId.label += " (Optional)";
+		} else {
+			slotNameIndex = -1;
+			slotIdIndex -= 2;
+			keepOldItemIndex -= 2;
+		}
+		inputComponents.push(textFieldSlotId);
+		inputComponents.push(toggleKeepOldItem);
+		const form = this.getTemplatePromptForm(inputComponents);
+		form.components.unshift(errorLabel);
+		let validationResult: BooleanWithMessage = {
+			bool: false,
+			message: "",
+		};
+		const maxStackSize: number = getMaxStackSize(this.properties.typeId) ?? 1;
+		let potentialAmount: number = this.properties.amount;
+		while (!validationResult.bool) {
+			if (validationResult.message) {
+				errorLabel.text = `§c${validationResult.message}`;
+			}
+			const formResult: ModalFormReturnType[] | undefined = await showModalForm(
+				form,
+				this.player,
+			);
+			if (formResult === undefined) {
+				return Promise.resolve("§cSlot Unchanged");
+			}
+			if (slotNameIndex !== -1) {
+				const slotNameItemsIndex: ModalFormReturnType = formResult[slotNameIndex];
+				if (typeof slotNameItemsIndex === "number") {
+					if (dropdownSlotName.options) {
+						dropdownSlotName.options.defaultValueIndex = slotNameItemsIndex;
+					}
+					const slotName: string | undefined = slotNameItems[slotNameItemsIndex];
+					if (slotName) {
+						potentialSlotData.name = slotName;
+					}
+				}
+				if (potentialSlotData.name === "default") {
+					this.properties.slot = undefined;
+					return Promise.resolve(
+						`Set SlotName to: §edefault§6\n\n"Slot ID" and "Keep old item?" are not compatible with default, so they were ignored.`,
+					);
+				}
+			}
+			const slotIdResult: ModalFormReturnType = formResult[slotIdIndex];
+			if (typeof slotIdResult === "string") {
+				if (textFieldSlotId.options) {
+					textFieldSlotId.options.defaultValue = slotIdResult;
+				}
+				const slotId: number | undefined = stringToNumber(slotIdResult);
+				if (slotId !== undefined) {
+					potentialSlotData.id = slotId;
+				}
+			}
+			const keepOldItemResult: ModalFormReturnType = formResult[keepOldItemIndex];
+			if (typeof keepOldItemResult === "boolean") {
+				if (toggleKeepOldItem.options) {
+					toggleKeepOldItem.options.defaultValue = keepOldItemResult;
+				}
+				potentialSlotData.keepOldItem = keepOldItemResult;
+			}
+			if (
+				SlotNamesOneStackOnly.includes(potentialSlotData.name) &&
+				this.properties.amount > maxStackSize
+			) {
+				potentialAmount = maxStackSize;
+			} else {
+				potentialAmount = this.properties.amount;
+			}
+			validationResult = ItemPropertiesValidation.slot(
+				potentialSlotData,
+				this.properties.typeId,
+				potentialAmount,
+				this.commandType,
+			);
+		}
+		this.properties.slot = potentialSlotData;
+		let message: string = `Set to:${this.slotPropertyDisplay()}`;
+		if (potentialAmount !== this.properties.amount) {
+			this.properties.amount = potentialAmount;
+			message += `\n\n§6Additionally reduced amount to max stack size: §e${this.properties.amount}`;
+		}
+		return Promise.resolve(message);
+	}
+
+	private async promptNameTag(): Promise<string> {
+		const question: string = "Would you like to give your item a custom name?";
+		const statement: string = "Enter Name Tag:";
+		const textField: ModalFormTextFieldComponent = {
+			label: this.formatInputLabel(question, statement, ""),
+			options: {
+				defaultValue: this.properties.nameTag ?? "",
+			},
+			type: "textField",
+		};
+		const form = this.getTemplatePromptForm([textField]);
+		let input: string = "";
+		let validationResult: BooleanWithMessage = {
+			bool: false,
+			message: "",
+		};
+		while (!validationResult.bool) {
+			if (textField.options) {
+				textField.options.defaultValue = input;
+			}
+			if (input) {
+				textField.label = this.formatInputLabel(
+					question,
+					statement,
+					validationResult.message,
+				);
+			}
+			const formResult: ModalFormReturnType[] | undefined = await showModalForm(
+				form,
+				this.player,
+			);
+			if (formResult === undefined || typeof formResult[0] !== "string") {
+				return Promise.resolve("§cName Tag Unchanged");
+			}
+			input = formResult[0];
+			validationResult = ItemPropertiesValidation.nameTag(input);
+		}
+		this.properties.nameTag = input;
+		return Promise.resolve(`Name Tag set to: §e"${this.properties.nameTag}"`);
+	}
+
 	private async promptItemProperty(property: string): Promise<string> {
 		let result: string = `§cUnable to open form for property "${property}"`;
 		switch (property) {
@@ -794,6 +840,7 @@ export class ItemPropertiesForm {
 				result = await this.promptSlot();
 				break;
 			case ItemPropertyKeys.NameTag:
+				result = await this.promptNameTag();
 				break;
 			case ItemPropertyKeys.LockMode:
 				break;
@@ -948,7 +995,7 @@ export class ItemPropertiesForm {
 		}
 		const sendInChatSelection: ModalFormReturnType = result[2];
 		if (sendInChatSelection) {
-			world.sendMessage(command);
+			world.sendMessage(`§b${command}`);
 		}
 	}
 

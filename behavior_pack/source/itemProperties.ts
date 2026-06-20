@@ -448,13 +448,16 @@ export const ItemPropertiesValidation = {
 		};
 	},
 	amount(properties: ItemProperties, commandType: CommandType): BooleanWithMessage {
+		const maxAmount: number = getMaxItemPropertiesAmount(properties, commandType);
 		const result: boolean =
 			properties.amount > 0 &&
 			Number.isInteger(properties.amount) &&
-			properties.amount <= getMaxItemPropertiesAmount(properties, commandType);
+			properties.amount <= maxAmount;
 		return {
 			bool: result,
-			message: result ? "Valid Amount" : `Invalid Amount "${properties.amount}"`,
+			message: result
+				? "Valid Amount"
+				: `Invalid Amount "${properties.amount}". Must be within range 1-${maxAmount} for your selected item and properties.`,
 		};
 	},
 	lockMode(value: string): BooleanWithMessage {
