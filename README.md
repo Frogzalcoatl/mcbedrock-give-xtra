@@ -1,11 +1,13 @@
 # Give Xtra
 /give or spawn items with special properties including infinite durability, enchants and more.
 
-## Commands
+# Commands
 
 **Note:** Commands can be typed without the "givex:" namespace, given there are no conflicts with commands from other packs.
 
 ## /givex:info
+
+**Usage:**
 ```
 /givex:info <itemName (optional)>
 ```
@@ -20,12 +22,15 @@ Select item properties to generate and copy givex commands. Additionally contain
 
 **Example:**
 
+**Usage:**
 ```
 /givex:info diamond_sword
 ```
 Opens UI to generate a command with special properties for a diamond sword.
 
 ## /givex:givex
+
+**Usage:**
 ```
 /givex:givex <target> <itemName> <amount: (optional, default = 1)> <json (optional)>
 ```
@@ -51,6 +56,8 @@ Give items with special properties to entities.
 Gives the nearest player 64 arrows of poison with the nametag "Scary Arrows".
 
 ## /givex:blockx
+
+**Usage:**
 ```
 /givex:blockx <position> <itemName> <amount(optional, default = 1)> <json (optional)>
 ```
@@ -76,6 +83,8 @@ Give items with special properties to blocks.
 Gives an iron piackaxe with infinite durability to a block with an inventory.
 
 ## /givex:spawnx
+
+**Usage:**
 ```
 /givex:spawnx <position> <itemName> <amount (optional, default = 1)> <json (optional)>
 ```
@@ -101,5 +110,16 @@ Spawn items with special properties.
 Spawns a gold block 10 blocks above the user's head that can be placed on grass blocks in adventure mode.
 
 ## Item Property JSON
+(Not finished writing yet)
 
-(Haven't finished writing yet)
+`lockMode?:` ItemLockMode;\
+`nameTag?:` string;\
+`durability?:` ItemDurability;\
+`enchants?:` EnchantData[];\
+`slot?:` SlotData;\
+`potionType?:` string;\
+`arrowType?:` string;\
+`bedColor?:` string;\
+`keepOnDeath?:` boolean;\
+`canPlaceOn?:` string[];\
+`canDestroy?:` string[];
