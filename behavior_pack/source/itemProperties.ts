@@ -13,7 +13,7 @@ import {
 	type PotionEffectType,
 	Potions,
 } from "@minecraft/server";
-import { getMcNamespace } from "./prettyTypeId";
+import { getMcNamespace, removeMcNamespace } from "./prettyTypeId";
 import {
 	ArrowTypes,
 	BedColors,
@@ -374,21 +374,41 @@ export function getMaxItemPropertiesAmount(
 	return ItemPropertyMaxAmount;
 }
 
+export interface TypeIdValidationReturnType {
+	bool: boolean;
+	formattedTypeId: string | undefined;
+}
+
+export function formatTypeId(typeId: string): string | undefined {
+	if (typeId === "spawn_egg" || typeId === "minecraft:spawn_egg") {
+		// This type id is not included in ItemTypes.get but is still needed to get npc spawn eggs by data value
+		// All references to this type id are redirected to the npc spawn egg
+		return "minecraft:spawn_egg";
+	} else if (typeId === "minecraft:air") {
+		// Accessing an itemstack with typeId air crashes the world.
+		return undefined;
+	} else {
+		const itemType: ItemType | undefined = ItemTypes.get(typeId);
+		if (itemType !== undefined) {
+			// Properly convert values like "grass" to "minecraft:grass"
+			return itemType.id;
+		}
+	}
+	return undefined;
+}
+
 // biome-ignore assist/source/useSortedKeys: Want to keep it in the same order as declared in the ItemProperties interface.
 export const ItemPropertiesValidation = {
-	typeId(value: string): BooleanWithMessage {
+	typeId(properties: ItemProperties): BooleanWithMessage {
 		let result: boolean = false;
-		if (value === "spawn_egg" || value === "minecraft:spawn_egg") {
-			// This type id is not included in ItemTypes.get but is still needed to get npc spawn eggs by data value
-			// All references to this type id are redirected to the npc spawn egg;
+		const formattedTypeId: string | undefined = formatTypeId(properties.typeId);
+		if (formattedTypeId !== undefined) {
+			properties.typeId = formattedTypeId;
 			result = true;
-		} else {
-			const itemType: ItemType | undefined = ItemTypes.get(value);
-			result = itemType !== undefined && itemType.id !== "minecraft:air";
 		}
 		return {
 			bool: result,
-			message: result ? "Valid Type ID" : `Invalid Type ID "${value}"`,
+			message: result ? "Valid Type ID" : `Invalid Type ID "${properties.typeId}"`,
 		};
 	},
 	amount(properties: ItemProperties, commandType: CommandType): BooleanWithMessage {
@@ -567,7 +587,9 @@ export const ItemPropertiesValidation = {
 		if (effect === undefined) {
 			return {
 				bool: false,
-				message: `Invalid potionType "${properties.potionType}". Valid options include:\n${Potions.getAllEffectTypes().join("\n")}`,
+				message: `Invalid potionType "${removeMcNamespace(properties.potionType)}". Valid options include:\n${Potions.getAllEffectTypes()
+					.map((e) => removeMcNamespace(e.id))
+					.join(", ")}`,
 			};
 		}
 		return {
@@ -615,7 +637,7 @@ export const ItemPropertiesValidation = {
 	},
 	full(properties: ItemProperties, commandType: CommandType): BooleanWithMessage {
 		let messageResult: BooleanWithMessage;
-		messageResult = ItemPropertiesValidation.typeId(properties.typeId);
+		messageResult = ItemPropertiesValidation.typeId(properties);
 		if (!messageResult.bool) {
 			return messageResult;
 		}

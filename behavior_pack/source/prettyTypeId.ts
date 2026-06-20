@@ -20,6 +20,15 @@ export function prettyTypeId(typeId: string): string {
 	return words.join(" ");
 }
 
+export function removeMcNamespace(typeId: string): string {
+	const namespaceColonIndex: number = typeId.indexOf(":");
+	if (namespaceColonIndex === -1) {
+		return typeId;
+	} else {
+		return typeId.slice(namespaceColonIndex + 1);
+	}
+}
+
 export function getMcNamespace(typeId: string): string | undefined {
 	const namespaceColonIndex: number = typeId.indexOf(":");
 	if (namespaceColonIndex === -1) {

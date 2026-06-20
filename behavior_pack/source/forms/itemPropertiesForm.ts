@@ -3,15 +3,14 @@ import {
 	type ItemDurabilityComponent,
 	type ItemEnchantableComponent,
 	ItemStack,
-	ItemTypes,
 	type Player,
 	system,
 	world,
 } from "@minecraft/server";
 import {
+	formatTypeId,
 	getMaxItemPropertiesAmount,
 	getMaxStackSize,
-	ItemPropertiesValidation,
 	itemTypeToPotionDeliveryType,
 } from "../itemProperties";
 import { camelToTitleCase, prettyTypeId, stringToNumber, truncTo } from "../prettyTypeId";
@@ -23,6 +22,7 @@ import {
 	SlotDataKeepOldItemDefault,
 	SlotName,
 } from "../types";
+import { getItemPropertyIconPath } from "./iconPaths";
 import { FormInfo } from "./info";
 import {
 	type ActionForm,
@@ -79,46 +79,44 @@ export function parseCommandVector3(str: string): CommandVector3ParseResult {
 			// Skip extra spaces
 			continue;
 		}
-		if (value.startsWith("~")) {
-			while (value.startsWith("~")) {
-				if (value.length === 1) {
-					vectorValues.push({ includeSquiggly: true });
-					break;
-				}
-				if (value[1] === "~") {
-					vectorValues.push({ includeSquiggly: true });
-					value = value.slice(1);
-					continue;
-				}
-				let nextSquigglyIndex: number | undefined = value.slice(1).indexOf("~") + 1;
-				if (nextSquigglyIndex === 0) {
-					nextSquigglyIndex = undefined;
-				}
-				const numResult: number | undefined = stringToNumber(
-					value.slice(1, nextSquigglyIndex),
-				);
-				if (numResult === undefined || numResult > MaxCommandVector3Value) {
-					return {
-						message: `Invalid entry "${value}"`,
-						result: undefined,
-					};
-				}
-				vectorValues.push({ includeSquiggly: true, num: numResult });
-				if (nextSquigglyIndex === undefined) {
-					break;
-				}
-				value = value.slice(nextSquigglyIndex);
+		if (!value.startsWith("~")) {
+			const numResult: number | undefined = stringToNumber(value);
+			if (numResult === undefined) {
+				return {
+					message: `Invalid entry "${value}"`,
+					result: undefined,
+				};
 			}
-			continue;
+			vectorValues.push({ includeSquiggly: false, num: numResult });
 		}
-		const numResult: number | undefined = stringToNumber(value);
-		if (numResult === undefined) {
-			return {
-				message: `Invalid entry "${value}"`,
-				result: undefined,
-			};
+		// Minecraft allows for no spaces between values with squigglys. e.g. "~2~10~2" is valid
+		while (value.startsWith("~")) {
+			if (value.length === 1) {
+				vectorValues.push({ includeSquiggly: true });
+				break;
+			}
+			if (value[1] === "~") {
+				vectorValues.push({ includeSquiggly: true });
+				value = value.slice(1);
+				continue;
+			}
+			let nextSquigglyIndex: number | undefined = value.slice(1).indexOf("~") + 1;
+			if (nextSquigglyIndex === 0) {
+				nextSquigglyIndex = undefined;
+			}
+			const numResult: number | undefined = stringToNumber(value.slice(1, nextSquigglyIndex));
+			if (numResult === undefined || numResult > MaxCommandVector3Value) {
+				return {
+					message: `Invalid entry "${value}"`,
+					result: undefined,
+				};
+			}
+			vectorValues.push({ includeSquiggly: true, num: numResult });
+			if (nextSquigglyIndex === undefined) {
+				break;
+			}
+			value = value.slice(nextSquigglyIndex);
 		}
-		vectorValues.push({ includeSquiggly: false, num: numResult });
 	}
 	if (
 		vectorValues[0] === undefined ||
@@ -152,7 +150,7 @@ export class ItemPropertiesForm {
 	public properties: ItemProperties;
 	public commandType: CommandType;
 	public location: CommandVector3;
-	private editableProperties: { text: string; iconPath: string }[];
+	private editableProperties: string[];
 	private openedFromInfo: boolean;
 	constructor(creator: Player, openedFromInfo: boolean, itemTypeId?: string) {
 		this.player = creator;
@@ -180,88 +178,45 @@ export class ItemPropertiesForm {
 	private static readonly FORM_TITLE: string = "Get Started";
 
 	private updateEditableProperties(): void {
-		const editableProperties: { text: string; iconPath: string }[] = [];
+		this.editableProperties = [];
 		const maxAmount: number = getMaxItemPropertiesAmount(this.properties, this.commandType);
 		if (maxAmount > 1) {
-			editableProperties.push({
-				iconPath: "textures/items/hopper.png",
-				text: ItemPropertyKeys.Amount,
-			});
+			this.editableProperties.push(ItemPropertyKeys.Amount);
 		}
 		if (this.commandType !== "givex") {
-			editableProperties.push({
-				iconPath: "textures/items/map_filled.png",
-				text: "location",
-			});
-		}
-		if (this.commandType !== "spawnx") {
-			editableProperties.push({
-				iconPath: "textures/blocks/chest_front.png",
-				text: ItemPropertyKeys.Slot,
-			});
+			this.editableProperties.push("location");
 		}
 		const testItem = new ItemStack(this.properties.typeId);
 		const durability: ItemDurabilityComponent | undefined = testItem.getComponent(
 			ItemComponentTypes.Durability,
 		);
 		if (durability !== undefined) {
-			editableProperties.push({
-				iconPath: "textures/ui/anvil_icon.png",
-				text: ItemPropertyKeys.Durability,
-			});
+			this.editableProperties.push(ItemPropertyKeys.Durability);
 		}
 		const enchantable: ItemEnchantableComponent | undefined = testItem.getComponent(
 			ItemComponentTypes.Enchantable,
 		);
 		if (enchantable !== undefined) {
-			editableProperties.push({
-				iconPath: "textures/items/book_enchanted.png",
-				text: ItemPropertyKeys.Enchants,
-			});
+			this.editableProperties.push(ItemPropertyKeys.Enchants);
 		}
 		if (itemTypeToPotionDeliveryType(this.properties.typeId) !== undefined) {
-			editableProperties.push({
-				iconPath: "textures/items/potion_bottle_fireResistance.png",
-				text: ItemPropertyKeys.PotionType,
-			});
+			this.editableProperties.push(ItemPropertyKeys.PotionType);
 		}
 		if (this.properties.typeId === "minecraft:arrow") {
-			editableProperties.push({
-				iconPath: "textures/items/tipped_arrow_poison.png",
-				text: ItemPropertyKeys.ArrowType,
-			});
+			this.editableProperties.push(ItemPropertyKeys.ArrowType);
 		}
 		if (this.properties.typeId === "minecraft:bed") {
-			editableProperties.push({
-				iconPath: "textures/items/bed_red.png",
-				text: ItemPropertyKeys.BedColor,
-			});
+			this.editableProperties.push(ItemPropertyKeys.BedColor);
+		}
+		if (this.commandType !== "spawnx") {
+			this.editableProperties.push(ItemPropertyKeys.Slot);
 		}
 		// These properties are always editable
-		editableProperties.push({
-			iconPath: "textures/items/name_tag.png",
-			text: ItemPropertyKeys.NameTag,
-		});
-		editableProperties.push({
-			iconPath: "textures/ui/accessibility_glyph_color.png",
-			text: ItemPropertyKeys.LockMode,
-		});
-		editableProperties.push({
-			iconPath: "textures/items/totem.png",
-			text: ItemPropertyKeys.KeepOnDeath,
-		});
-		editableProperties.push({
-			iconPath: "textures/blocks/target_side.png",
-			text: ItemPropertyKeys.CanPlaceOn,
-		});
-		editableProperties.push({
-			iconPath: "textures/items/iron_pickaxe.png",
-			text: ItemPropertyKeys.CanDestroy,
-		});
-		for (const value of editableProperties) {
-			value.text = camelToTitleCase(value.text);
-		}
-		this.editableProperties = editableProperties;
+		this.editableProperties.push(ItemPropertyKeys.NameTag);
+		this.editableProperties.push(ItemPropertyKeys.LockMode);
+		this.editableProperties.push(ItemPropertyKeys.KeepOnDeath);
+		this.editableProperties.push(ItemPropertyKeys.CanPlaceOn);
+		this.editableProperties.push(ItemPropertyKeys.CanDestroy);
 	}
 
 	private formatProperty(property: string, value: string | number | boolean): string {
@@ -386,8 +341,9 @@ export class ItemPropertiesForm {
 			"Note: You can also run the command §e/givex:info <itemType>§r for auto completion.",
 		);
 		let result: ModalFormReturnType[] | undefined;
-		let input: ModalFormReturnType;
-		while (typeof input !== "string" || !ItemPropertiesValidation.typeId(input).bool) {
+		let input: ModalFormReturnType = "";
+		let formattedTypeId: string | undefined = formatTypeId(input);
+		while (formattedTypeId === undefined) {
 			let error: string = "";
 			if (input) {
 				error = `Invalid Type ID "${input}"`;
@@ -401,15 +357,13 @@ export class ItemPropertiesForm {
 				return Promise.resolve(PromptResult.Closed);
 			}
 			input = result[0];
+			if (typeof input !== "string") {
+				input = "";
+			}
+			formattedTypeId = formatTypeId(input);
 		}
-		const itemType = ItemTypes.get(input);
-		// ^ Ensure values like "grass" are converted to "minecraft:grass_block"
-		if (itemType !== undefined) {
-			this.properties.typeId = itemType.id;
-			return Promise.resolve(PromptResult.Completed);
-		} else {
-			return Promise.resolve(PromptResult.Completed);
-		}
+		this.properties.typeId = formattedTypeId;
+		return Promise.resolve(PromptResult.Completed);
 	}
 
 	private async promptCommandType(): Promise<PromptResult> {
@@ -633,8 +587,8 @@ export class ItemPropertiesForm {
 		for (const property of this.editableProperties) {
 			itemPropertyButtons.push({
 				addStyling: true,
-				iconPath: property.iconPath,
-				text: property.text,
+				iconPath: getItemPropertyIconPath(property, this.properties),
+				text: camelToTitleCase(property),
 				type: "button",
 			});
 		}
