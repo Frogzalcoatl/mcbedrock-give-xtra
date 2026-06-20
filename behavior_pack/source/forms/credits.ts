@@ -17,5 +17,10 @@ export const FormCredits: ActionForm = {
 			type: "button",
 		},
 	],
+	async onClose(player): Promise<void> {
+		system.run(async () => {
+			showActionForm(FormInfo, player);
+		});
+	},
 	title: "Credits",
 };

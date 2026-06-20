@@ -15,5 +15,10 @@ export const FormWiki: ActionForm = {
 			type: "button",
 		},
 	],
+	async onClose(player): Promise<void> {
+		system.run(async () => {
+			showActionForm(FormInfo, player);
+		});
+	},
 	title: "Wiki",
 };

@@ -73,12 +73,22 @@ export interface ActionForm {
 	body?: string;
 	components: ActionFormComponent[];
 	title: string;
+	onClose?: (player: Player) => Promise<void>;
 }
 
 export interface ModalForm {
 	components: ModalFormComponent[];
 	submitButton: FormButton;
 	title: string;
+	onClose?: (player: Player) => Promise<void>;
+}
+
+export interface MessageForm {
+	body: string;
+	button1: FormButton;
+	button2: FormButton;
+	title: string;
+	onClose?: (player: Player) => Promise<void>;
 }
 
 export function styleButtonText(text: string): string {
@@ -135,6 +145,9 @@ export async function showActionForm(
 	}
 	const result = await formData.show(viewer);
 	if (result.canceled || result.selection === undefined) {
+		if (form.onClose) {
+			form.onClose(viewer);
+		}
 		return;
 	}
 	const selectedButton = buttons[result.selection];
@@ -209,17 +222,15 @@ export async function showModalForm(
 		modalDataAddComponent(component, formData);
 	}
 	const result = await formData.show(viewer);
+	if (result.canceled || result.formValues === undefined) {
+		if (form.onClose) {
+			form.onClose(viewer);
+		}
+	}
 	if (form.submitButton.callback !== undefined) {
 		form.submitButton.callback(viewer);
 	}
 	return Promise.resolve(result.formValues);
-}
-
-export interface MessageForm {
-	body: string;
-	button1: FormButton;
-	button2: FormButton;
-	title: string;
 }
 
 export async function showMessageForm(
@@ -243,6 +254,11 @@ export async function showMessageForm(
 	formData.button2(text2);
 	formData.body(form.body);
 	const result = await formData.show(viewer);
+	if (result.canceled || result.selection === undefined) {
+		if (form.onClose) {
+			form.onClose(viewer);
+		}
+	}
 	if (result.selection === 0) {
 		if (form.button1.callback !== undefined) {
 			form.button1.callback(viewer);
