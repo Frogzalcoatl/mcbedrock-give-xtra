@@ -36,11 +36,11 @@ export const GIVEX_COMMAND: CustomCommand = {
 	name: `${CommandNamespace}:givex`,
 	optionalParameters: [
 		{
-			name: "amount",
+			name: "amount (optional)",
 			type: CustomCommandParamType.Integer,
 		},
 		{
-			name: "json",
+			name: "json (optional)",
 			type: CustomCommandParamType.String,
 		},
 	],
@@ -142,11 +142,11 @@ export const BLOCKX_COMMAND: CustomCommand = {
 	name: `${CommandNamespace}:blockx`,
 	optionalParameters: [
 		{
-			name: "amount",
+			name: "amount (optional)",
 			type: CustomCommandParamType.Integer,
 		},
 		{
-			name: "json",
+			name: "json (optional)",
 			type: CustomCommandParamType.String,
 		},
 	],
@@ -184,11 +184,11 @@ export const SPAWNX_COMMAND: CustomCommand = {
 	name: `${CommandNamespace}:spawnx`,
 	optionalParameters: [
 		{
-			name: "amount",
+			name: "amount (optional)",
 			type: CustomCommandParamType.Integer,
 		},
 		{
-			name: "json",
+			name: "json (optional)",
 			type: CustomCommandParamType.String,
 		},
 	],
@@ -224,7 +224,7 @@ export const INFO_COMMAND: CustomCommand = {
 	name: `${CommandNamespace}:info`,
 	optionalParameters: [
 		{
-			name: "itemName",
+			name: "itemName (optional)",
 			type: CustomCommandParamType.ItemType,
 		},
 	],

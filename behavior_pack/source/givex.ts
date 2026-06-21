@@ -141,7 +141,7 @@ export class GivexCommand {
 			this.itemProperties.slot.id !== undefined &&
 			this.itemProperties.slot.keepOldItem === true
 		) {
-			message += `\n§6If any items were previously in slot ${this.itemProperties.slot.id}, they were given back to ${this.selectorName}§r`;
+			message += `\n§6If any items were previously in this slot, they were given back as requested§r`;
 		}
 		if (errors) {
 			message += `\n§cError(s):\n${errors.slice(0, 1024)}${errors.length > 1024 ? "...\n" : ""}`;

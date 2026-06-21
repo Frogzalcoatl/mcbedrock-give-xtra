@@ -605,6 +605,12 @@ export const ItemPropertiesValidation = {
 				message: `Amount ${amount} exceeds the maximum for ${itemTypeId} (${testItem.maxAmount})\nIf you would like to give an amount exceeding the max stack size, you cannot select a slot.`,
 			};
 		}
+		if (value.name === SlotName.Hotbar && value.id !== undefined && value.id > 8) {
+			return {
+				bool: false,
+				message: `Id for hotbar must be within range 0-8`,
+			};
+		}
 		// ItemProperties.slot.keepOldItem is a boolean. Nothing to check there.
 		return {
 			bool: true,

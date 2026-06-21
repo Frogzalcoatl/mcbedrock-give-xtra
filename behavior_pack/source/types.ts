@@ -1,5 +1,3 @@
-import type { ItemLockMode } from "@minecraft/server";
-
 export interface BooleanWithMessage {
 	bool: boolean;
 	message: string;
@@ -122,7 +120,7 @@ export const BedColors: string[] = [
 export interface ItemProperties {
 	typeId: string;
 	amount: number;
-	lockMode?: ItemLockMode;
+	lockMode?: string; // ItemlockMode
 	nameTag?: string;
 	// Must be less than the item's max durability, or the str "unbreakable" to for infinite durability
 	durability?: ItemDurability;

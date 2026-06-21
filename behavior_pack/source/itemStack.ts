@@ -9,6 +9,7 @@ import {
 	ItemComponentTypes,
 	type ItemDurabilityComponent,
 	type ItemEnchantableComponent,
+	type ItemLockMode,
 	ItemStack,
 	Potions,
 } from "@minecraft/server";
@@ -18,6 +19,7 @@ import {
 	getCommandDataValueItem,
 } from "./dataValueItems";
 import { ItemPropertiesValidation, itemTypeToPotionDeliveryType } from "./itemProperties";
+import { prettyTypeId } from "./prettyTypeId";
 import type { BooleanWithMessage, EnchantData, ItemDurability, ItemProperties } from "./types";
 
 export function applyDurability(item: ItemStack, value: ItemDurability): BooleanWithMessage {
@@ -84,18 +86,16 @@ export function applyEnchantData(
 	try {
 		enchantableComponent.addEnchantment(enchant);
 	} catch (error) {
-		let message: string = `Unable to apply ${enchant.type.id} to item`;
+		let message: string = `Unable to apply enchant "${prettyTypeId(enchant.type.id)}" to item`;
 		if (error instanceof EnchantmentLevelOutOfBoundsError) {
 			if (
 				enchant.level < enchant.type.maxLevel &&
 				enchant.level > 0 &&
 				Number.isInteger(enchant.level)
 			) {
-				// ^ This means the error actually is an exclusive enchant error. Ex: mending and infinity cannot go on the same bow
 				message += `: Mutually exclusive enchant prevented its addition`;
-			} else {
+			} else
 				message += `: Invalid enchantment level "${enchant.level}" for "${enchant.type.id}". Must be an integer within range 1-${enchant.type.maxLevel}`;
-			}
 		} else if (error instanceof EnchantmentTypeUnknownIdError) {
 			message += `: Invalid enchantId "${enchant.type.id}"`;
 		} else if (error instanceof EnchantmentTypeNotCompatibleError) {
@@ -110,6 +110,29 @@ export function applyEnchantData(
 		bool: true,
 		message: `Applied ${enchant.type} to item`,
 	};
+}
+
+export function getApplicableEnchantIds(itemTypeId: string): string[] {
+	let itemStack: ItemStack;
+	try {
+		itemStack = new ItemStack(itemTypeId);
+	} catch (_error) {
+		return [];
+	}
+	const enchantable: ItemEnchantableComponent | undefined = itemStack.getComponent(
+		ItemComponentTypes.Enchantable,
+	);
+	if (enchantable === undefined) {
+		return [];
+	}
+	const applicableEnchants: string[] = [];
+	const allTypes: EnchantmentType[] = EnchantmentTypes.getAll();
+	for (const enchant of allTypes) {
+		if (enchantable.canAddEnchantment({ level: 1, type: enchant })) {
+			applicableEnchants.push(enchant.id);
+		}
+	}
+	return applicableEnchants;
 }
 
 interface CreatePotionItemResult {
@@ -192,7 +215,7 @@ export function propertiesToItemStack(
 	let warning: string = "";
 	if (properties.lockMode !== undefined) {
 		if (ItemPropertiesValidation.lockMode(properties.lockMode)) {
-			itemStack.lockMode = properties.lockMode;
+			itemStack.lockMode = properties.lockMode as ItemLockMode;
 		} else {
 			warning += "Invalid lockMode. Skipped.\n";
 		}

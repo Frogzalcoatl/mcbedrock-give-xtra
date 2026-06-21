@@ -1,4 +1,6 @@
 import {
+	type EnchantmentType,
+	EnchantmentTypes,
 	ItemComponentTypes,
 	type ItemDurabilityComponent,
 	type ItemEnchantableComponent,
@@ -17,7 +19,7 @@ import {
 	itemTypeToPotionDeliveryType,
 	SlotNamesOneStackOnly,
 } from "../itemProperties";
-import { getMaxDurability } from "../itemStack";
+import { applyEnchantData, getApplicableEnchantIds, getMaxDurability } from "../itemStack";
 import { camelToTitleCase, prettyTypeId, stringToNumber, truncTo } from "../prettyTypeId";
 import {
 	ArrowTypes,
@@ -150,6 +152,11 @@ export function parseCommandVector3(str: string): CommandVector3ParseResult {
 	};
 }
 
+interface PromptEnchantTypesResult {
+	selectedEnchants: string[];
+	message: string;
+}
+
 enum PromptResult {
 	Completed,
 	InProgress,
@@ -280,7 +287,7 @@ export class ItemPropertiesForm {
 		str += this.propertyDisplay("Amount", data.amount);
 		str += this.propertyDisplay("Command Type", `/${this.commandType}`);
 		if (data.nameTag !== undefined) {
-			str += this.propertyDisplay("Name Tag", `"${data.nameTag}"`);
+			str += this.propertyDisplay("Name Tag", `"${data.nameTag}§r§e"`);
 		}
 		if (this.commandType !== "givex") {
 			str += this.propertyDisplay("Location", commandVector3ToString(this.location));
@@ -644,8 +651,207 @@ export class ItemPropertiesForm {
 		return Promise.resolve(`Set durability to: §e${this.properties.durability}`);
 	}
 
+	private async promptEnchantTypes(previousMessage?: string): Promise<PromptEnchantTypesResult> {
+		const applicableEnchants: string[] = getApplicableEnchantIds(this.properties.typeId);
+		if (applicableEnchants.length === 0) {
+			return Promise.resolve({
+				message: `§cNo valid enchants to apply to ${prettyTypeId(this.properties.typeId)}`,
+				selectedEnchants: [],
+			});
+		}
+		let selectedEnchantTypes: string[] = (this.properties.enchants ?? []).map((e) => e.id);
+		const errorLabel: FormTextComponent = {
+			text: "",
+			type: "label",
+		};
+		const form: ModalForm = {
+			components: [],
+			submitButton: {
+				addStyling: true,
+				text: "Submit",
+			},
+			title: ItemPropertiesForm.FORM_TITLE,
+		};
+		let formResult: ModalFormReturnType[] | undefined;
+		let validationResult: BooleanWithMessage = {
+			bool: false,
+			message: previousMessage ?? "",
+		};
+		let itemStack: ItemStack;
+		let errorMessage: string = "Unable to create test item while validating enchants";
+		try {
+			itemStack = new ItemStack(this.properties.typeId);
+		} catch (error) {
+			if (error instanceof Error) {
+				errorMessage += `: ${error.message}`;
+			}
+			return Promise.resolve({
+				message: `§c${errorMessage}`,
+				selectedEnchants: [],
+			});
+		}
+		const enchantable: ItemEnchantableComponent | undefined = itemStack.getComponent(
+			ItemComponentTypes.Enchantable,
+		);
+		if (enchantable === undefined) {
+			return Promise.resolve({
+				message: `${errorMessage}: Enchantable component is undefined`,
+				selectedEnchants: [],
+			});
+		}
+		while (!validationResult.bool) {
+			errorLabel.text = `§c${validationResult.message}`;
+			form.components = [errorLabel];
+			for (const enchantType of applicableEnchants) {
+				form.components.push({
+					label: `${prettyTypeId(enchantType)}`,
+					options: {
+						defaultValue: selectedEnchantTypes.includes(enchantType),
+					},
+					type: "toggle",
+				});
+			}
+			form.components.push({
+				type: "divider",
+			});
+			formResult = await showModalForm(form, this.player);
+			if (formResult === undefined) {
+				return Promise.resolve({ message: "§cEnchants unchanged", selectedEnchants: [] });
+			}
+			formResult.shift(); // Remove error label from formResult at index 0
+			formResult.pop(); // Remove divider from last index
+			const selectedEnchantIndexes: number[] = [];
+			for (let i: number = 0; i < formResult.length; i++) {
+				if (formResult[i] === true) {
+					selectedEnchantIndexes.push(i);
+				}
+			}
+			selectedEnchantTypes = [];
+			for (const index of selectedEnchantIndexes) {
+				const enchantType: string | undefined = applicableEnchants[index];
+				if (enchantType) {
+					selectedEnchantTypes.push(enchantType);
+				}
+			}
+			if (selectedEnchantTypes.length === 0) {
+				this.properties.enchants = [];
+				return Promise.resolve({
+					message: "Set Enchants to: §enone",
+					selectedEnchants: [],
+				});
+			}
+			enchantable.removeAllEnchantments();
+			for (const enchantType of selectedEnchantTypes) {
+				validationResult = applyEnchantData(enchantable, { id: enchantType, level: 1 });
+				if (!validationResult.bool) {
+					break;
+				}
+			}
+		}
+		return Promise.resolve({
+			message: "User has selected enchant types",
+			selectedEnchants: selectedEnchantTypes,
+		});
+	}
+
+	private async promptEnchantLevels(selectedEnchantTypes: string[]): Promise<BooleanWithMessage> {
+		const errorLabel: FormTextComponent = {
+			text: "",
+			type: "label",
+		};
+		const form: ModalForm = {
+			components: [],
+			submitButton: {
+				addStyling: true,
+				text: "Submit",
+			},
+			title: ItemPropertiesForm.FORM_TITLE,
+		};
+		errorLabel.text = "";
+		form.components = [errorLabel];
+		for (const enchantType of selectedEnchantTypes) {
+			const enchantTypeMc: EnchantmentType | undefined = EnchantmentTypes.get(enchantType);
+			if (enchantTypeMc === undefined) {
+				return Promise.resolve({
+					bool: false,
+					message: `§cUnable to get max level of enchant type ${enchantType}`,
+				});
+			}
+			let currentLevel: number | undefined;
+			if (this.properties.enchants !== undefined) {
+				for (const enchant of this.properties.enchants) {
+					if (enchant.id === enchantTypeMc.id) {
+						currentLevel = enchant.level;
+						break;
+					}
+				}
+			}
+			if (enchantTypeMc.maxLevel === 1) {
+				form.components.push({
+					text: `${prettyTypeId(enchantTypeMc.id)} Level: 1`,
+					type: "label",
+				});
+			} else {
+				form.components.push({
+					label: `${prettyTypeId(enchantTypeMc.id)} Level`,
+					maximumValue: enchantTypeMc.maxLevel,
+					minimumValue: 1,
+					options: {
+						defaultValue: currentLevel ?? 1,
+					},
+					type: "slider",
+				});
+			}
+		}
+		form.components.push({
+			type: "divider",
+		});
+		const formResult: ModalFormReturnType[] | undefined = await showModalForm(
+			form,
+			this.player,
+		);
+		if (formResult === undefined) {
+			return Promise.resolve({ bool: false, message: "§cCancelled level selection" });
+		}
+		formResult.shift(); // Remove formResult of errorLabel
+		formResult.pop(); // Remove divider from last index
+		this.properties.enchants = [];
+		for (let i: number = 0; i < formResult.length; i++) {
+			const currentType: string | undefined = selectedEnchantTypes[i];
+			const level: ModalFormReturnType = formResult[i];
+			if (currentType === undefined || typeof level !== "number") {
+				continue;
+			}
+			this.properties.enchants.push({
+				id: currentType,
+				level: level,
+			});
+		}
+		return Promise.resolve({
+			bool: true,
+			message: `Set Enchants to:\n${this.enchantsPropertyDisplay()}`,
+		});
+	}
+
 	private async promptEnchants(): Promise<string> {
-		return Promise.resolve("§cUnfinished");
+		let enchantTypesResult: PromptEnchantTypesResult = {
+			message: "",
+			selectedEnchants: [],
+		};
+		let enchantLevelsResult: BooleanWithMessage = {
+			bool: false,
+			message: "",
+		};
+		while (!enchantLevelsResult.bool) {
+			enchantTypesResult = await this.promptEnchantTypes(enchantLevelsResult.message);
+			if (enchantTypesResult.selectedEnchants.length === 0) {
+				return Promise.resolve(enchantTypesResult.message);
+			}
+			enchantLevelsResult = await this.promptEnchantLevels(
+				enchantTypesResult.selectedEnchants,
+			);
+		}
+		return Promise.resolve(enchantLevelsResult.message);
 	}
 
 	// Returns new value
@@ -855,11 +1061,20 @@ export class ItemPropertiesForm {
 				this.commandType,
 			);
 		}
+		let adjustedSlotid: boolean = false;
+		if (SlotNamesOneStackOnly.includes(potentialSlotData.name) && potentialSlotData.id !== 0) {
+			// ^ None of these need a slot id greater than 0 as they only have one slot
+			potentialSlotData.id = 0;
+			adjustedSlotid = true;
+		}
 		this.properties.slot = potentialSlotData;
 		let message: string = `Set to:${this.slotPropertyDisplay()}`;
 		if (potentialAmount !== this.properties.amount) {
 			this.properties.amount = potentialAmount;
 			message += `\n\n§6Additionally reduced amount to max stack size: §e${this.properties.amount}`;
+		}
+		if (adjustedSlotid) {
+			message += `\n\n§6Additionally reduced slot id to §e0§6, as anything higher is not needed for ${this.properties.slot.name}`;
 		}
 		return Promise.resolve(message);
 	}
@@ -902,42 +1117,22 @@ export class ItemPropertiesForm {
 			validationResult = ItemPropertiesValidation.nameTag(input);
 		}
 		this.properties.nameTag = input;
-		return Promise.resolve(`Name Tag set to: §e"${this.properties.nameTag}"`);
+		return Promise.resolve(`Name Tag set to: §e"${this.properties.nameTag}§r§e"`);
 	}
 
 	private async promptLockMode(): Promise<string> {
-		const question: string = "Would you like to apply an inventory lock mode to your item?";
-		const statement: string = "Select Lock Mode:";
-		const dropdownItems: ItemLockMode[] = Object.values(ItemLockMode);
-		let selectedLockModeIndex = dropdownItems.indexOf(
-			this.properties.lockMode ?? ItemLockMode.none,
+		const newValue: string | undefined = await this.promptEnum(
+			"Would you like to apply an inventory lock mode to your item?",
+			"Select Lock Mode:",
+			Object.values(ItemLockMode),
+			this.properties.lockMode,
 		);
-		if (selectedLockModeIndex === -1) {
-			selectedLockModeIndex = dropdownItems.indexOf(ItemLockMode.none);
-		}
-		const dropdown: ModalFormDropdownComponent = {
-			items: dropdownItems,
-			label: this.formatInputLabel(question, statement, ""),
-			options: {
-				defaultValueIndex: selectedLockModeIndex,
-			},
-			type: "dropdown",
-		};
-		const form = this.getTemplatePromptForm([dropdown]);
-		const formResult: ModalFormReturnType[] | undefined = await showModalForm(
-			form,
-			this.player,
-		);
-		if (formResult === undefined || typeof formResult[0] !== "number") {
+		if (newValue === undefined) {
 			return Promise.resolve("§cLock Mode Unchanged");
+		} else {
+			this.properties.lockMode = newValue;
+			return Promise.resolve(`Lock Mode set to:§e ${camelToTitleCase(newValue)}`);
 		}
-		selectedLockModeIndex = formResult[0];
-		const selectedLockMode: ItemLockMode | undefined = dropdownItems[selectedLockModeIndex];
-		if (selectedLockMode === undefined) {
-			return Promise.resolve("Unable to update lock mode.");
-		}
-		this.properties.lockMode = selectedLockMode;
-		return Promise.resolve(`Lock Mode set to: §e${this.properties.lockMode}`);
 	}
 
 	private async promptKeepOnDeath(): Promise<string> {

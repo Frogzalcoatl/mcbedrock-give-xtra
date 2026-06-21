@@ -392,6 +392,18 @@ export function giveItemToBlock(
 			message: message,
 		};
 	}
+	if (slot !== undefined && slot.name !== SlotName.Inventory) {
+		let message: string = `${getSelectorName(block)} does not have ${slot.name}`;
+		if (slot.name === SlotName.Chest) {
+			message += `: ${SlotName.Chest} is used for mobs such as donkeys`;
+		} else if (slot.name === SlotName.EndChest) {
+			message += `: to use ${SlotName.EndChest}, target a player with /givex:givex`;
+		}
+		return {
+			bool: false,
+			message: message,
+		};
+	}
 	if (slot) {
 		return setItemInContainerSlot(block, inventory.container, item, slot);
 	} else {
