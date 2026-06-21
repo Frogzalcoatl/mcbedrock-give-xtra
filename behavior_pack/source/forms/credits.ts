@@ -2,9 +2,21 @@ import { type Player, system } from "@minecraft/server";
 import { FormInfo } from "./info";
 import { type ActionForm, showActionForm } from "./types";
 
+const text: string = `
+§rProgramming: §eFrogzalcoatl
+§rProject Setup: §eSunnyTheFennec
+
+§rProject Source Code:
+§bhttps://github.com/Frogzalcoatl/
+mcbedrock-give-xtra
+
+§rVersion:
+§7Pre-Release v1.0.0 June 2026
+§r
+`; // Not trimmed for extra newline(s) at top and bottom
+
 export const FormCredits: ActionForm = {
-	// \n for spacing
-	body: "Programming: §eFrogzalcoatl\n§rProject Setup: §eSunnyTheFennec\n\n\n\n\n\n\n\n\n\n§r",
+	body: text,
 	components: [
 		{
 			type: "divider",
@@ -25,5 +37,5 @@ export const FormCredits: ActionForm = {
 			showActionForm(FormInfo, player);
 		});
 	},
-	title: "Credits",
+	title: "Givex Info",
 };
