@@ -2,6 +2,10 @@
 	"format_version": "1.21.0",
 	"minecraft:entity": {
 		"components": {
+			"minecraft:breathable": {
+				"breathes_air": true,
+				"breathes_water": true
+			},
 			"minecraft:collision_box": {
 				"height": 0,
 				"width": 0
