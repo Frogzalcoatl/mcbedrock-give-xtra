@@ -1,4 +1,4 @@
-import type { EnchantData, ItemDurability, SlotData } from "./types";
+import type { BooleanWithMessage, EnchantData, ItemDurability, SlotData } from "./types";
 
 export class GivexProperties {
 	public typeId: string;
@@ -17,4 +17,15 @@ export class GivexProperties {
 	public keepOnDeath?: boolean;
 	public canPlaceOn?: string[];
 	public canDestroy?: string[];
+	constructor(typeId: string, amount: number, json?: string) {
+		this.typeId = typeId;
+		this.amount = amount;
+	}
+
+	private parseJson(json: string): BooleanWithMessage {
+		let p
+		try {
+
+		}
+	}
 }
