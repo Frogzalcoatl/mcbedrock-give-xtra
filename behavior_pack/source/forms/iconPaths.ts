@@ -95,41 +95,12 @@ function getArrowTypeIconFileName(arrowType: string | undefined): string {
 }
 
 function getBedColorIconFileName(bedColor: string | undefined): string {
-	switch (bedColor) {
-		case "white":
-			return "bed_white";
-		case "orange":
-			return "bed_orange";
-		case "magenta":
-			return "bed_magenta";
-		case "light_blue":
-			return "bed_light_blue";
-		case "yellow":
-			return "bed_yellow";
-		case "lime":
-			return "bed_lime";
-		case "pink":
-			return "bed_pink";
-		case "gray":
-			return "bed_gray";
-		case "light_gray":
-			return "bed_silver";
-		case "cyan":
-			return "bed_cyan";
-		case "purple":
-			return "bed_purple";
-		case "blue":
-			return "bed_blue";
-		case "brown":
-			return "bed_brown";
-		case "green":
-			return "bed_green";
-		case "red":
-			return "bed_red";
-		case "black":
-			return "bed_black";
-		default:
-			return "bed_red";
+	if (bedColor === undefined) {
+		return `bed_red`;
+	} else if (bedColor === "gray") {
+		return "bed_silver";
+	} else {
+		return `bed_${bedColor}`;
 	}
 }
 
