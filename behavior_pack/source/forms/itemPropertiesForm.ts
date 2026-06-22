@@ -1155,19 +1155,79 @@ export class ItemPropertiesForm {
 		return Promise.resolve(`Keep on Death set to: §e${this.properties.keepOnDeath}`);
 	}
 
-	private async promptItemTypeArray(
-		_property: ItemPropertyKeys.CanDestroy | ItemPropertyKeys.CanPlaceOn,
-	): Promise<string> {
-		/*
-		let arr: string[];
-		if (property === ItemPropertyKeys.CanDestroy) {
-			arr = this.properties.canDestroy ?? [];
-		} else if (property === ItemPropertyKeys.CanPlaceOn) {
-			arr = this.properties.canPlaceOn ?? [];
+	/*
+	private async showItemTypes(
+		forProperty: ItemPropertyKeys.CanDestroy | ItemPropertyKeys.CanPlaceOn,
+		currentValues: string[],
+	): Promise<"back" | "addNew" | "removedType"> {
+		const buttonBack: ActionFormButton = {
+			addStyling: true,
+			text: "Back",
+			type: "button",
+		};
+		const buttonBackIndex: number = 0;
+		const buttonAddNew: ActionFormButton = {
+			addStyling: true,
+			text: `Add to ${camelToTitleCase(forProperty)}`,
+			type: "button",
+		};
+		const buttonAddNewIndex: number = 1;
+		const components: ActionFormButton[] = [buttonBack, buttonAddNew];
+		for (const value of currentValues) {
+			components.push({
+				addStyling: false,
+				text: `${prettyTypeId(value)}\n§cClick to Remove!§r`,
+				type: "button",
+			});
 		}
-		*/
-		return Promise.resolve("§cUnfinished");
+		const form: ActionForm = {
+			components: components,
+			title: ItemPropertiesForm.FORM_TITLE,
+		};
+		const formResult: number | undefined = await showActionForm(form, this.player);
+		if (formResult === undefined || formResult === buttonBackIndex) {
+			return Promise.resolve("back");
+		} else if (formResult === buttonAddNewIndex) {
+			return Promise.resolve("addNew");
+		} else {
+			currentValues.splice(formResult, 1);
+			return Promise.resolve("removedType");
+		}
 	}
+
+	private async promptItemTypeAddition(
+		forProperty: ItemPropertyKeys.CanDestroy | ItemPropertyKeys.CanPlaceOn,
+		currentValues: string[],
+	): Promise<boolean> {
+		const label: string = `§rEnter an item to add to ${camelToTitleCase(forProperty)}`;
+		const textField: ModalFormTextFieldComponent = {
+			label: label,
+			options: {},
+			type: "textField",
+		};
+		const form: ModalForm = this.getTemplatePromptForm([textField]);
+		let validationResult: BooleanWithMessage = {
+			bool: false,
+			message: "",
+		};
+		let input: string = "";
+		while (!validationResult.bool) {
+			if (textField.options) {
+				textField.options.defaultValue = input;
+			}
+			if (validationResult.message) {
+				textField.label = `§c${validationResult.message}\n\n${label}`;
+			} else {
+				textField.label = label;
+			}
+			const formResult: ModalFormReturnType[] | undefined = showModalForm(form, this.player);
+			if (formResult === undefined || typeof formResult[0] !== "string") {
+				return Promise.resolve(false);
+			}
+			input = formResult[0];
+			validationResult = ItemPropertiesValidation.typeId()
+		}
+	}*/
 
 	private async promptItemProperty(property: string): Promise<string> {
 		let result: string = `§cUnable to open form for property "${property}"`;
@@ -1206,10 +1266,10 @@ export class ItemPropertiesForm {
 				result = await this.promptKeepOnDeath();
 				break;
 			case ItemPropertyKeys.CanPlaceOn:
-				result = await this.promptItemTypeArray(ItemPropertyKeys.CanPlaceOn);
+				result = "§cUnfinished";
 				break;
 			case ItemPropertyKeys.CanDestroy:
-				result = await this.promptItemTypeArray(ItemPropertyKeys.CanDestroy);
+				result = "§cUnfinished";
 				break;
 		}
 		return Promise.resolve(result);

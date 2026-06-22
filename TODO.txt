@@ -1,2 +1,4 @@
 Info command (server-ui)
 	Come up with a better way to generate prompt edit ui
+
+Add item lore
