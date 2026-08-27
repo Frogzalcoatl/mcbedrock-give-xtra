@@ -37,7 +37,7 @@ You need the following utilities installed: [pnpm](https://pnpm.io/), [node LTS]
 	After installing the packages, open the folder in VSCode.
 	* If you have already opened VSCode, restart so Biome can initialize properly.
 
-5. Install recommended packages.
+5. Install the recommended extensions.
 
 	In the bottom right of VSCode, it should ask you to install some extensions. Click yes!
 
@@ -53,4 +53,4 @@ You need the following utilities installed: [pnpm](https://pnpm.io/), [node LTS]
 If you want to compress your code for mcaddon builds, set minify: true in tools/esbuild.cjs.
 
 ## Beta API
-This project is set up to use the stable version of gametest scripting modules. If you want to switch to beta, there is nothing stopping you. Just make sure to update both the version in package.json AND manifest.json
+This project is set up to use the stable version of gametest scripting modules. If you want to switch to beta, there is nothing stopping you. Just make sure to update both the version in package.json AND manifest.json.
