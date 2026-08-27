@@ -3,6 +3,8 @@ import {
 	BlockComponentTypes,
 	type BlockInventoryComponent,
 	type Container,
+	type CustomCommandResult,
+	CustomCommandStatus,
 	type DimensionLocation,
 	type Entity,
 	EntityComponentTypes,
@@ -14,21 +16,15 @@ import {
 	type ItemStack,
 	Player,
 } from "@minecraft/server";
+import { SlotName } from "./items/slot";
 import { getSelectorName, prettyTypeId, vector3ToString } from "./prettyTypeId";
-import { type BooleanWithMessage, type SlotData, SlotName } from "./types";
 
 function addItemsToContainer(
 	selector: Entity | Block,
 	container: Container,
 	itemStack: ItemStack,
 	amountToGive: number,
-): BooleanWithMessage {
-	if (!selector.isValid || !container.isValid) {
-		return {
-			bool: false,
-			message: `Unable to give ${prettyTypeId(itemStack.typeId)} to invalid selector`,
-		};
-	}
+): CustomCommandResult {
 	let amountLeft: number = amountToGive;
 	while (amountLeft > 0) {
 		itemStack.amount = Math.min(itemStack.maxAmount, amountLeft);
@@ -42,8 +38,8 @@ function addItemsToContainer(
 				message += `: ${error.message}`;
 			}
 			return {
-				bool: false,
 				message: message,
+				status: CustomCommandStatus.Failure,
 			};
 		}
 		if (result !== undefined) {
@@ -55,12 +51,6 @@ function addItemsToContainer(
 	}
 	while (amountLeft > 0) {
 		// Spawn remaining items as entities
-		if (!selector.isValid) {
-			return {
-				bool: false,
-				message: `Only gave ${prettyTypeId(itemStack.type.id)} * ${amountToGive - amountLeft}/${amountToGive} to ${getSelectorName(selector)}. Unable to spawn items on invalid selector.`,
-			};
-		}
 		itemStack.amount = Math.min(itemStack.maxAmount, amountLeft);
 		try {
 			selector.dimension.spawnItem(itemStack, selector.location);
@@ -70,15 +60,15 @@ function addItemsToContainer(
 				message += `: ${error.message}`;
 			}
 			return {
-				bool: false,
 				message: message,
+				status: CustomCommandStatus.Failure,
 			};
 		}
 		amountLeft -= itemStack.amount;
 	}
 	return {
-		bool: true,
 		message: `Gave ${prettyTypeId(itemStack.type.id)} * ${amountToGive} to ${getSelectorName(selector)}`,
+		status: CustomCommandStatus.Success,
 	};
 }
 
@@ -86,133 +76,148 @@ function setItemInContainerSlot(
 	selector: Entity | Block,
 	container: Container,
 	item: ItemStack,
-	slot: SlotData,
-): BooleanWithMessage {
-	if (!container.isValid) {
-		return {
-			bool: false,
-			message: `${getSelectorName(selector)} container is invalid`,
-		};
-	}
-	if (slot.id === undefined) {
-		if (slot.name !== SlotName.Hotbar) {
+	slot: SlotName,
+	slotId: number | undefined,
+	replaceMode: "keep" | "destroy",
+): CustomCommandResult {
+	if (slotId === undefined) {
+		if (slot !== SlotName.Hotbar) {
 			return addItemsToContainer(selector, container, item, item.amount);
 		} else {
 			let firstEmptySlot: number | undefined = container.firstEmptySlot();
 			if (firstEmptySlot === undefined || firstEmptySlot > 8) {
 				firstEmptySlot = 8;
 			}
-			slot.id = firstEmptySlot;
-			return setItemInContainerSlot(selector, container, item, slot);
+			slotId = firstEmptySlot;
+			return setItemInContainerSlot(selector, container, item, slot, slotId, replaceMode);
 		}
 	}
-	if (slot.id < 0 || slot.id >= container.size) {
+	if (slotId < 0 || slotId >= container.size) {
 		return {
-			bool: false,
-			message: `slotId "${slot.id}" is invalid for ${getSelectorName(selector)}. Must be between 0 and ${container.size - 1}`,
+			message: `slotId "${slotId}" is invalid for ${getSelectorName(selector)}. Must be between 0 and ${container.size - 1}`,
+			status: CustomCommandStatus.Failure,
 		};
 	}
 	let oldItem: ItemStack | undefined;
-	if (slot.keepOldItem) {
-		oldItem = container.getItem(slot.id);
+	if (replaceMode === "keep") {
+		oldItem = container.getItem(slotId);
 	}
-	container.setItem(slot.id, item);
-	let oldItemGiveResult: BooleanWithMessage | undefined;
+	container.setItem(slotId, item);
+	let oldItemGiveResult: CustomCommandResult | undefined;
 	if (oldItem) {
 		oldItemGiveResult = addItemsToContainer(selector, container, oldItem, oldItem.amount);
 	}
-	let message: string = `Replaced item in slot ${slot.id}`;
-	if (oldItemGiveResult !== undefined && !oldItemGiveResult.bool) {
+	let message: string = `Replaced item in slot ${slotId}`;
+	if (
+		oldItemGiveResult !== undefined &&
+		oldItemGiveResult.status === CustomCommandStatus.Failure
+	) {
 		message += `\nHowever, ${oldItemGiveResult.message}`;
 	}
 	return {
-		bool: true,
 		message: message,
+		status: CustomCommandStatus.Success,
 	};
 }
 
-function setItemInventory(entity: Entity, item: ItemStack, slot: SlotData): BooleanWithMessage {
+function setItemInventory(
+	entity: Entity,
+	item: ItemStack,
+	slot: SlotName,
+	slotId: number | undefined,
+	replaceMode: "keep" | "destroy",
+): CustomCommandResult {
 	const inventory: EntityInventoryComponent | undefined = entity.getComponent(
 		EntityComponentTypes.Inventory,
 	);
-	if (inventory === undefined || !inventory.isValid) {
+	if (inventory === undefined) {
 		return {
-			bool: false,
 			message: `Unable to get inventory of ${getSelectorName(entity)}`,
+			status: CustomCommandStatus.Failure,
 		};
 	}
-	return setItemInContainerSlot(entity, inventory.container, item, slot);
+	return setItemInContainerSlot(entity, inventory.container, item, slot, slotId, replaceMode);
 }
 
-function setItemHotbar(entity: Entity, item: ItemStack, slot: SlotData): BooleanWithMessage {
+function setItemHotbar(
+	entity: Entity,
+	item: ItemStack,
+	slot: SlotName,
+	slotId: number | undefined,
+	replaceMode: "keep" | "destroy",
+): CustomCommandResult {
 	if (!(entity instanceof Player)) {
 		return {
-			bool: false,
 			message: `Cannot access hotbar of ${getSelectorName(entity)}. Only players have a hotbar.`,
+			status: CustomCommandStatus.Failure,
 		};
 	}
-	if (slot.id !== undefined && (slot.id < 0 || slot.id > 8)) {
+	if (slotId !== undefined && (slotId < 0 || slotId > 8)) {
 		return {
-			bool: false,
-			message: `Invalid hotbar slot id "${slot.id}". Must be between 0 and 8.`,
+			message: `Invalid hotbar slot id "${slotId}". Must be between 0 and 8.`,
+			status: CustomCommandStatus.Failure,
 		};
 	}
-	return setItemInventory(entity, item, slot);
+	return setItemInventory(entity, item, slot, slotId, replaceMode);
 }
 
 // Don't want to include custom tameable mobs here. My implementation was forced to be too oddly specific.
 const MobChestEntityTypes: string[] = ["minecraft:llama", "minecraft:donkey", "minecraft:mule"];
 
 // Includes SlotName.Saddle, SlotName.Armor, and SlotName.MobChest
-function setItemTameable(entity: Entity, item: ItemStack, slot: SlotData): BooleanWithMessage {
+function setItemTameable(
+	entity: Entity,
+	item: ItemStack,
+	slot: SlotName,
+	slotId: number | undefined,
+	replaceMode: "keep" | "destroy",
+): CustomCommandResult {
 	const inventory: EntityInventoryComponent | undefined = entity.getComponent(
 		EntityComponentTypes.Inventory,
 	);
 	const isTamed: EntityIsTamedComponent | undefined = entity.getComponent(
 		EntityComponentTypes.IsTamed,
 	);
-	if (
-		inventory === undefined ||
-		!inventory.isValid ||
-		isTamed === undefined ||
-		!isTamed.isValid
-	) {
+	if (inventory === undefined || isTamed === undefined) {
 		return {
-			bool: false,
-			message: `Unable to get ${slot.name} from ${getSelectorName(entity)}. Only accessible on vanilla tamed entities.`,
+			message: `Unable to get ${slot} from ${getSelectorName(entity)}. Only accessible on vanilla tamed entities.`,
+			status: CustomCommandStatus.Failure,
 		};
 	}
-	if (slot.name === SlotName.MobChest) {
+	if (slot === SlotName.MobChest) {
 		if (!MobChestEntityTypes.includes(entity.typeId)) {
 			return {
-				bool: false,
-				message: `Unable to get ${slot.name} from ${getSelectorName(entity)}. Only accessible on vanilla tamed entities.`,
+				message: `Unable to get ${slot} from ${getSelectorName(entity)}. Only accessible on vanilla tamed entities.`,
+				status: CustomCommandStatus.Failure,
 			};
 		}
-		if (slot.id) {
+		if (slotId) {
 			// Account for saddle/carpet slot (slot 0);
-			slot.id++;
+			slotId++;
 		}
-		return setItemInContainerSlot(entity, inventory.container, item, slot);
+		return setItemInContainerSlot(entity, inventory.container, item, slot, slotId, replaceMode);
 	}
-	if (slot.name === SlotName.Saddle) {
+	if (slot === SlotName.Saddle) {
 		// Saddle is inventory slot 0 on tameable mobs.
-		slot.id = 0;
-	} else if (slot.name === SlotName.Armor) {
+		slotId = 0;
+	} else if (slot === SlotName.Armor) {
 		// Horse Armor is inventory slot 1 on tameable mobs.
-		slot.id = 1;
+		slotId = 1;
 	}
-	const result: BooleanWithMessage = setItemInContainerSlot(
+	const result: CustomCommandResult = setItemInContainerSlot(
 		entity,
 		inventory.container,
 		item,
 		slot,
+		slotId,
+		replaceMode,
 	);
 	return {
-		bool: result.bool,
-		message: result.bool
-			? `Gave ${getSelectorName(entity)} ${item.typeId} in ${slot.name}`
-			: result.message,
+		message:
+			result.status === CustomCommandStatus.Success
+				? `Gave ${getSelectorName(entity)} ${item.typeId} in ${slot}`
+				: (result.message ?? ""),
+		status: result.status,
 	};
 }
 
@@ -235,47 +240,55 @@ function slotNameToEquipmentSlot(name: string): EquipmentSlot | undefined {
 	}
 }
 
-function setItemEquippable(entity: Entity, item: ItemStack, slot: SlotData): BooleanWithMessage {
+function setItemEquippable(
+	entity: Entity,
+	item: ItemStack,
+	slot: SlotName,
+	replaceMode: "keep" | "destroy",
+): CustomCommandResult {
 	const equippable: EntityEquippableComponent | undefined = entity.getComponent(
 		EntityComponentTypes.Equippable,
 	);
 	if (equippable === undefined) {
 		return {
-			bool: false,
 			message: `Unable to get equippable component of ${getSelectorName(entity)}\n(Equippable component doesn't work on vanilla mobs. Blame Mojang)`,
+			status: CustomCommandStatus.Failure,
 		};
 	}
-	const equipmentSlot: EquipmentSlot | undefined = slotNameToEquipmentSlot(slot.name);
+	const equipmentSlot: EquipmentSlot | undefined = slotNameToEquipmentSlot(slot);
 	if (equipmentSlot === undefined) {
 		return {
-			bool: false,
-			message: `Unable to convert ${slot.name} to EquipmentSlot for ${getSelectorName(entity)}`,
+			message: `Unable to convert ${slot} to EquipmentSlot for ${getSelectorName(entity)}`,
+			status: CustomCommandStatus.Failure,
 		};
 	}
 	let oldItem: ItemStack | undefined;
-	if (slot.keepOldItem) {
+	if (replaceMode === "keep") {
 		oldItem = equippable.getEquipment(equipmentSlot);
 	}
 	const equippableResult: boolean = equippable.setEquipment(equipmentSlot, item);
 	if (!equippableResult) {
 		return {
-			bool: false,
-			message: `Unable to equip ${prettyTypeId(item.typeId)} in ${slot.name}`,
+			message: `Unable to equip ${prettyTypeId(item.typeId)} in ${slot}`,
+			status: CustomCommandStatus.Failure,
 		};
 	}
-	let oldItemGiveResult: BooleanWithMessage | undefined;
+	let oldItemGiveResult: CustomCommandResult | undefined;
 	if (oldItem) {
 		const inventory: EntityInventoryComponent | undefined = entity.getComponent(
 			EntityComponentTypes.Inventory,
 		);
-		let addItemsResult: BooleanWithMessage | undefined;
-		if (inventory?.isValid && inventory.container.isValid) {
+		let addItemsResult: CustomCommandResult | undefined;
+		if (inventory !== undefined) {
 			addItemsResult = addItemsToContainer(entity, inventory.container, item, item.amount);
 		}
-		if (inventory === undefined || (addItemsResult && !addItemsResult.bool)) {
+		if (
+			inventory === undefined ||
+			(addItemsResult !== undefined && addItemsResult.status === CustomCommandStatus.Failure)
+		) {
 			oldItemGiveResult = {
-				bool: true,
 				message: "Spawned old item as entity",
+				status: CustomCommandStatus.Success,
 			};
 			try {
 				entity.dimension.spawnItem(item, entity.location);
@@ -284,85 +297,93 @@ function setItemEquippable(entity: Entity, item: ItemStack, slot: SlotData): Boo
 				if (error instanceof Error) {
 					message += `: ${error.message}`;
 				}
-				oldItemGiveResult.bool = false;
+				oldItemGiveResult.status = CustomCommandStatus.Failure;
 				oldItemGiveResult.message = message;
 			}
 		}
 	}
-	let message: string = `Equipped ${item.typeId} in slot ${slot.name}`;
-	if (oldItemGiveResult && !oldItemGiveResult.bool) {
+	let message: string = `Equipped ${item.typeId} in slot ${slot}`;
+	if (
+		oldItemGiveResult !== undefined &&
+		oldItemGiveResult.status === CustomCommandStatus.Failure
+	) {
 		message += `\nHowever, ${oldItemGiveResult.message}`;
 	}
 	return {
-		bool: true,
 		message: message,
+		status: CustomCommandStatus.Success,
 	};
 }
 
-function setItemEndChest(entity: Entity, item: ItemStack, slot: SlotData): BooleanWithMessage {
+function setItemEndChest(
+	entity: Entity,
+	item: ItemStack,
+	slot: SlotName,
+	slotId: number | undefined,
+	replaceMode: "keep" | "destroy",
+): CustomCommandResult {
 	const enderInventory: EntityEnderInventoryComponent | undefined = entity.getComponent(
 		EntityComponentTypes.EnderInventory,
 	);
-	if (
-		enderInventory === undefined ||
-		!enderInventory.isValid ||
-		!enderInventory.container.isValid
-	) {
+	if (enderInventory === undefined) {
 		return {
-			bool: false,
 			message: `Unable to get valid ender inventory from ${getSelectorName(entity)}`,
+			status: CustomCommandStatus.Failure,
 		};
 	}
-	return setItemInContainerSlot(entity, enderInventory.container, item, slot);
+	return setItemInContainerSlot(
+		entity,
+		enderInventory.container,
+		item,
+		slot,
+		slotId,
+		replaceMode,
+	);
 }
 
 export function giveItemToEntity(
 	entity: Entity,
 	item: ItemStack,
 	amount: number,
-	slot: SlotData | undefined,
-): BooleanWithMessage {
-	if (!entity.isValid) {
-		return {
-			bool: false,
-			message: `Entity ${getSelectorName(entity)} is invalid (Might be unloaded)`,
-		};
-	}
+	slot: SlotName | undefined,
+	slotId: number | undefined,
+	replaceMode: "keep" | "destroy",
+): CustomCommandResult {
 	if (slot === undefined) {
 		// Just add item to free slots in inventory
 		const inventory: EntityInventoryComponent | undefined = entity.getComponent(
 			EntityComponentTypes.Inventory,
 		);
-		if (inventory === undefined || !inventory.isValid || !inventory.container.isValid) {
+		if (inventory === undefined) {
 			return {
-				bool: false,
 				message: `Unable to get ${entity.typeId} inventory`,
+				status: CustomCommandStatus.Failure,
 			};
 		}
 		return addItemsToContainer(entity, inventory.container, item, amount);
 	}
-	switch (slot.name) {
+	switch (slot) {
 		case SlotName.Inventory:
-			return setItemInventory(entity, item, slot);
+			return setItemInventory(entity, item, slot, slotId, replaceMode);
 		case SlotName.Hotbar:
-			return setItemHotbar(entity, item, slot);
+			return setItemHotbar(entity, item, slot, slotId, replaceMode);
 		case SlotName.Saddle:
 		case SlotName.Armor:
 		case SlotName.MobChest:
-			return setItemTameable(entity, item, slot);
+			return setItemTameable(entity, item, slot, slotId, replaceMode);
 		case SlotName.Head:
 		case SlotName.Chest:
 		case SlotName.Legs:
 		case SlotName.Feet:
 		case SlotName.Mainhand:
 		case SlotName.Offhand:
-			return setItemEquippable(entity, item, slot);
+			return setItemEquippable(entity, item, slot, replaceMode);
 		case SlotName.EndChest:
-			return setItemEndChest(entity, item, slot);
+			return setItemEndChest(entity, item, slot, slotId, replaceMode);
 		default:
 			return {
-				bool: false,
-				message: `Invalid slot name "${slot.name}"`,
+				message: `Invalid slot "${slot}"`,
+				status: CustomCommandStatus.Failure,
 			};
 	}
 }
@@ -371,41 +392,31 @@ export function giveItemToBlock(
 	block: Block,
 	item: ItemStack,
 	amount: number,
-	slot: SlotData | undefined,
-): BooleanWithMessage {
-	if (!block.isValid) {
-		return {
-			bool: false,
-			message: `Block at location ${vector3ToString(block.location, 0)} is invalid.`,
-		};
-	}
+	slotId: number | undefined,
+	replaceMode: "keep" | "destroy",
+): CustomCommandResult {
 	const inventory: BlockInventoryComponent | undefined = block.getComponent(
 		BlockComponentTypes.Inventory,
 	);
-	if (inventory === undefined || !inventory.isValid || inventory.container === undefined) {
+	if (inventory === undefined || inventory.container === undefined) {
 		let message: string = `${prettyTypeId(block.typeId)} at location ${vector3ToString(block.location, 0)} does not have a valid inventory`;
 		if (block.typeId === "minecraft:ender_chest") {
 			message += `\nTo access Ender Chest slots, use /givex:givex with slot ${SlotName.EndChest}`;
 		}
 		return {
-			bool: false,
 			message: message,
+			status: CustomCommandStatus.Failure,
 		};
 	}
-	if (slot !== undefined && slot.name !== SlotName.Inventory) {
-		let message: string = `${getSelectorName(block)} does not have ${slot.name}`;
-		if (slot.name === SlotName.Chest) {
-			message += `: ${SlotName.Chest} is used for mobs such as donkeys`;
-		} else if (slot.name === SlotName.EndChest) {
-			message += `: to use ${SlotName.EndChest}, target a player with /givex:givex`;
-		}
-		return {
-			bool: false,
-			message: message,
-		};
-	}
-	if (slot) {
-		return setItemInContainerSlot(block, inventory.container, item, slot);
+	if (slotId !== undefined) {
+		return setItemInContainerSlot(
+			block,
+			inventory.container,
+			item,
+			SlotName.Inventory,
+			slotId,
+			replaceMode,
+		);
 	} else {
 		return addItemsToContainer(block, inventory.container, item, amount);
 	}
@@ -415,7 +426,7 @@ export function spawnItemAtDimensionLocation(
 	location: DimensionLocation,
 	itemStack: ItemStack,
 	itemAmount: number,
-): BooleanWithMessage {
+): CustomCommandResult {
 	try {
 		itemStack.amount = itemAmount;
 		location.dimension.spawnItem(itemStack, {
@@ -429,12 +440,11 @@ export function spawnItemAtDimensionLocation(
 			message += `: ${error.message}`;
 		}
 		return {
-			bool: false,
 			message: message,
+			status: CustomCommandStatus.Failure,
 		};
 	}
 	return {
-		bool: true,
-		message: "",
+		status: CustomCommandStatus.Success,
 	};
 }
