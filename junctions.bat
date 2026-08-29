@@ -7,7 +7,7 @@ setlocal
 :: (Suggestion from ai, rest was me tho fr)
 set "runCommands="
 
-set /P "runCommands=Would you like to create pack symlinks in the shared com.mojang folder? (y/n): "
+set /P "runCommands=Would you like to create pack junctions in the shared com.mojang folder? (y/n): "
 if /I "%runCommands%"=="y" (
 	echo Running commands...
 	:: %~dp0 represents directory of batch file

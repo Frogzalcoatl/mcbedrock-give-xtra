@@ -1,5 +1,5 @@
 # mcbedrock-gametest-starter
-A template repository for getting started with scripting gametest modules for Minecraft: Bedrock Edition. This template has been edited for addon development. To view the original, click [here](https://github.com/sunshinekitsune/mcbedrock-gametest-starter).
+This project uses [sunshinekitsune's scripting template](https://github.com/sunshinekitsune/mcbedrock-gametest-starter) for Minecraft: Bedrock Edition, slightly modified to include a resource pack.
 
 ## Features
 * Typescript configured for ES2023.
@@ -30,11 +30,11 @@ You need the following utilities installed: [pnpm](https://pnpm.io/), [node LTS]
 
 3. Link this project to the com.mojang folder.
 
-	Open `symlinks.bat` and enter "y" to create symlinks in the com.mojang folder.
+	Open `junctions.bat` and enter "y" to create junctions in the com.mojang folder.
 
 4. Open your IDE.
 
-	After installing the packages, open the folder in VSCode.
+	After creating junctions, open the folder in VSCode.
 	* If you have already opened VSCode, restart so Biome can initialize properly.
 
 5. Install the recommended extensions.
