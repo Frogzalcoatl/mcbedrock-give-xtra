@@ -78,7 +78,7 @@ function setItemInContainerSlot(
 	item: ItemStack,
 	slot: SlotName,
 	slotId: number | undefined,
-	replaceMode: "keep" | "destroy",
+	replaceMode: string,
 ): CustomCommandResult {
 	if (slotId === undefined) {
 		if (slot !== SlotName.Hotbar) {
@@ -125,7 +125,7 @@ function setItemInventory(
 	item: ItemStack,
 	slot: SlotName,
 	slotId: number | undefined,
-	replaceMode: "keep" | "destroy",
+	replaceMode: string,
 ): CustomCommandResult {
 	const inventory: EntityInventoryComponent | undefined = entity.getComponent(
 		EntityComponentTypes.Inventory,
@@ -144,7 +144,7 @@ function setItemHotbar(
 	item: ItemStack,
 	slot: SlotName,
 	slotId: number | undefined,
-	replaceMode: "keep" | "destroy",
+	replaceMode: string,
 ): CustomCommandResult {
 	if (!(entity instanceof Player)) {
 		return {
@@ -170,7 +170,7 @@ function setItemTameable(
 	item: ItemStack,
 	slot: SlotName,
 	slotId: number | undefined,
-	replaceMode: "keep" | "destroy",
+	replaceMode: string,
 ): CustomCommandResult {
 	const inventory: EntityInventoryComponent | undefined = entity.getComponent(
 		EntityComponentTypes.Inventory,
@@ -244,7 +244,7 @@ function setItemEquippable(
 	entity: Entity,
 	item: ItemStack,
 	slot: SlotName,
-	replaceMode: "keep" | "destroy",
+	replaceMode: string,
 ): CustomCommandResult {
 	const equippable: EntityEquippableComponent | undefined = entity.getComponent(
 		EntityComponentTypes.Equippable,
@@ -320,7 +320,7 @@ function setItemEndChest(
 	item: ItemStack,
 	slot: SlotName,
 	slotId: number | undefined,
-	replaceMode: "keep" | "destroy",
+	replaceMode: string,
 ): CustomCommandResult {
 	const enderInventory: EntityEnderInventoryComponent | undefined = entity.getComponent(
 		EntityComponentTypes.EnderInventory,
@@ -347,7 +347,7 @@ export function giveItemToEntity(
 	amount: number,
 	slot: SlotName | undefined,
 	slotId: number | undefined,
-	replaceMode: "keep" | "destroy",
+	replaceMode: string,
 ): CustomCommandResult {
 	if (slot === undefined) {
 		// Just add item to free slots in inventory
@@ -393,7 +393,7 @@ export function giveItemToBlock(
 	item: ItemStack,
 	amount: number,
 	slotId: number | undefined,
-	replaceMode: "keep" | "destroy",
+	replaceMode: string,
 ): CustomCommandResult {
 	const inventory: BlockInventoryComponent | undefined = block.getComponent(
 		BlockComponentTypes.Inventory,

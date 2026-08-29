@@ -8,6 +8,7 @@ import {
 	type ItemType,
 	type Vector3,
 } from "@minecraft/server";
+import type { GivexJson } from "../commands/params/json";
 import { getDataValueItem } from "./dataValues";
 import { setDurability } from "./durability";
 import { applyEnchants } from "./enchants";
@@ -17,24 +18,17 @@ export interface GetItemStackResult {
 	item: ItemStack | undefined;
 }
 
-export function getItemStack(
+export function getItemFromJson(
 	originDimension: Dimension,
 	originLocation: Vector3,
-	type: ItemType,
-	nameTag?: string,
-	lockMode?: ItemLockMode,
-	data?: number,
-	keepOnDeath?: boolean,
-	canPlaceOn?: string[],
-	canDestroy?: string[],
-	durability?: number | "unbreakable" | "max",
+	json: GivexJson,
 	enchants?: Enchantment[],
 ): GetItemStackResult {
 	let item: ItemStack;
-	if (data !== undefined && data !== 0) {
+	if (json.data !== undefined && json.data !== 0) {
 		const result: ItemStack | undefined = getDataValueItem(
-			type,
-			data,
+			json.typeId,
+			json.data,
 			originDimension,
 			originLocation,
 		);
@@ -49,25 +43,25 @@ export function getItemStack(
 		}
 		item = result;
 	} else {
-		item = new ItemStack(type);
+		item = new ItemStack(json.typeId);
 	}
-	if (nameTag !== undefined) {
-		item.nameTag = nameTag;
+	if (json.nameTag !== undefined) {
+		item.nameTag = json.nameTag;
 	}
-	if (lockMode !== undefined) {
-		item.lockMode = lockMode;
+	if (json.lockMode !== undefined) {
+		item.lockMode = json.lockMode;
 	}
-	if (keepOnDeath !== undefined) {
-		item.keepOnDeath = keepOnDeath;
+	if (json.keepOnDeath !== undefined) {
+		item.keepOnDeath = json.keepOnDeath;
 	}
-	if (canPlaceOn !== undefined) {
-		item.setCanPlaceOn(canPlaceOn);
+	if (json.canPlaceOn !== undefined) {
+		item.setCanPlaceOn(json.canPlaceOn);
 	}
-	if (canDestroy !== undefined) {
-		item.setCanDestroy(canDestroy);
+	if (json.canDestroy !== undefined) {
+		item.setCanDestroy(json.canDestroy);
 	}
-	if (durability !== undefined) {
-		setDurability(item, durability);
+	if (json.durability !== undefined) {
+		setDurability(item, json.durability);
 	}
 	if (enchants !== undefined) {
 		const invalidIndex: number | undefined = applyEnchants(enchants, item);

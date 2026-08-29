@@ -3,140 +3,97 @@ import {
 	CustomCommandStatus,
 	type Enchantment,
 	ItemLockMode,
+	type ItemType,
+	ItemTypes,
 } from "@minecraft/server";
 import { MAX_AMOUNT, MAX_NAMETAG_LENGTH } from "../../constants";
-import { SlotName } from "../../items/slot";
+import type { GivexJson } from "./json";
 import { getEnchantsFromList, parseList, validBlockTypes } from "./lists";
 
 export interface ValidateParamsResult {
 	commandResult: CustomCommandResult;
-	canPlaceOn?: string[];
-	canDestroy?: string[];
 	enchants?: Enchantment[];
-	durability?: number | "unbreakable" | "max";
-	replaceMode?: "keep" | "destroy";
 }
 
-export function validateParams(
-	amount: number,
-	nameTag?: string,
-	lockMode?: ItemLockMode,
-	data: number = 0,
-	canPlaceOn?: string,
-	canDestroy?: string,
-	durability?: string,
-	enchants?: string,
-	slot?: SlotName,
-	slotId?: number,
-	replaceMode?: string,
-): ValidateParamsResult {
+export function validateParams(json: GivexJson): ValidateParamsResult {
 	const result: ValidateParamsResult = {
 		commandResult: {
-			status: CustomCommandStatus.Success,
+			status: CustomCommandStatus.Failure,
 		},
 	};
-	if (amount <= 0 || amount > MAX_AMOUNT) {
+	if (json.typeId.indexOf(":") === -1) {
+		json.typeId = `minecraft:${json.typeId}`;
+	}
+	const itemType: ItemType | undefined = ItemTypes.get(json.typeId);
+	if (itemType === undefined) {
+		result.commandResult.message = `Invalid typeId "${json.typeId}"`;
+		return result;
+	}
+	if (json.amount <= 0 || json.amount > MAX_AMOUNT) {
+		result.commandResult.message = `Amount must be within range 0-${MAX_AMOUNT}.`;
+		return result;
+	}
+	if (json.nameTag !== undefined && json.nameTag.length > MAX_NAMETAG_LENGTH) {
+		result.commandResult.message = `Nametag cannot exceed ${MAX_NAMETAG_LENGTH} characters.`;
+		return result;
+	}
+	if (json.data !== undefined && json.data < 0) {
+		result.commandResult.message = `Invalid data value "${json.data}"`;
+		return result;
+	}
+	if (json.lockMode !== undefined && !Object.values(ItemLockMode).includes(json.lockMode)) {
 		result.commandResult = {
-			message: `Amount must be within range 0-${MAX_AMOUNT}.`,
+			message: `Invalid lock mode "${json.lockMode}". Valid values: ${Object.values(ItemLockMode)}`,
 			status: CustomCommandStatus.Failure,
 		};
 		return result;
 	}
-	if (nameTag !== undefined && nameTag.length > MAX_NAMETAG_LENGTH) {
-		result.commandResult = {
-			message: `Nametag cannot exceed ${MAX_NAMETAG_LENGTH} characters.`,
-			status: CustomCommandStatus.Failure,
-		};
-		return result;
-	}
-	if (lockMode !== undefined && !Object.values(ItemLockMode).includes(lockMode)) {
-		result.commandResult = {
-			message: `Invalid lock mode "${lockMode}"`,
-			status: CustomCommandStatus.Failure,
-		};
-		return result;
-	}
-	if (data < 0) {
-		result.commandResult = {
-			message: `Invalid data value "${data}"`,
-			status: CustomCommandStatus.Failure,
-		};
-		return result;
-	}
-	if (canPlaceOn !== undefined) {
-		result.canPlaceOn = parseList(canPlaceOn);
-		const invalidIndex: number | undefined = validBlockTypes(result.canPlaceOn);
+	if (json.canPlaceOn !== undefined) {
+		const invalidIndex: number | undefined = validBlockTypes(json.canPlaceOn);
 		if (invalidIndex !== undefined) {
-			result.commandResult = {
-				message: `Invalid canPlaceOn at "${result.canPlaceOn[invalidIndex]}"`,
-				status: CustomCommandStatus.Failure,
-			};
+			result.commandResult.message = `Invalid canPlaceOn at "${json.canPlaceOn[invalidIndex]}"`;
 			return result;
 		}
 	}
-	if (canDestroy !== undefined) {
-		result.canDestroy = parseList(canDestroy);
-		const invalidIndex: number | undefined = validBlockTypes(result.canDestroy);
+	if (json.canDestroy !== undefined) {
+		const invalidIndex: number | undefined = validBlockTypes(json.canDestroy);
 		if (invalidIndex !== undefined) {
-			result.commandResult = {
-				message: `Invalid canDestroy at "${result.canDestroy[invalidIndex]}"`,
-				status: CustomCommandStatus.Failure,
-			};
+			result.commandResult.message = `Invalid canDestroy at "${json.canDestroy[invalidIndex]}"`;
 			return result;
 		}
 	}
-	if (durability !== undefined) {
-		if (durability === "unbreakable" || durability === "max") {
-			result.durability = durability;
-		} else {
-			result.durability = parseInt(durability, 10);
-			if (Number.isNaN(result.durability)) {
-				result.commandResult = {
-					message: `Invalid durability "${durability}"`,
-					status: CustomCommandStatus.Failure,
-				};
-				return result;
-			}
+	if (json.durability !== undefined && typeof json.durability === "number") {
+		if (json.durability < 0) {
+			result.commandResult.message = `Durability must be a non negative integer`;
+			return result;
 		}
 	}
-	if (enchants !== undefined) {
-		const enchantList: string[] = parseList(enchants);
+	if (json.enchants !== undefined) {
 		const enchantResult: number | Enchantment[] = getEnchantsFromList(enchantList);
 		if (typeof enchantResult === "number") {
 			const invalidIndex = enchantResult;
-			result.commandResult = {
-				message: `Invalid enchant list at "${enchantList[invalidIndex]}"`,
-				status: CustomCommandStatus.Failure,
-			};
+			result.commandResult.message = `Invalid enchant list at "${enchantList[invalidIndex]}"`;
 			return result;
 		} else {
 			result.enchants = enchantResult;
 		}
 	}
-	if (slot !== undefined && !Object.values(SlotName).includes(slot)) {
-		result.commandResult = {
-			message: `Invalid slot "${slot}"`,
-			status: CustomCommandStatus.Failure,
-		};
+	if (json.slot !== undefined && !slotNames.includes(json.slot)) {
+		result.commandResult.message = `Invalid slot "${json.slot}"`;
 		return result;
 	}
-	if (slotId !== undefined && slotId < 0) {
-		result.commandResult = {
-			message: "slotId must be a non negative integer.",
-			status: CustomCommandStatus.Failure,
-		};
+	if (json.slotId !== undefined && json.slotId < 0) {
+		result.commandResult.message = "Slot id must be a non negative integer.";
 		return result;
 	}
-	if (replaceMode !== undefined) {
-		if (replaceMode === "keep" || replaceMode === "destroy") {
-			result.replaceMode = replaceMode;
-		} else {
-			result.commandResult = {
-				message: `Invalid replace mode "${replaceMode}"`,
-				status: CustomCommandStatus.Failure,
-			};
-			return result;
-		}
+	if (
+		json.replaceMode !== undefined &&
+		json.replaceMode !== "keep" &&
+		json.replaceMode !== "destroy"
+	) {
+		result.commandResult.message = `Invalid replace mode "${json.replaceMode}"`;
+		return result;
 	}
+	result.commandResult.status = CustomCommandStatus.Success;
 	return result;
 }

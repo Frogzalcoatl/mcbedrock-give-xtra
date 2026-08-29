@@ -4,7 +4,6 @@ import {
 	EntityComponentTypes,
 	type EntityInventoryComponent,
 	type ItemStack,
-	type ItemType,
 	type Vector3,
 } from "@minecraft/server";
 
@@ -12,7 +11,7 @@ const CONTAINER_TYPE_ID: string = "givex:custom_container";
 
 // Uses /give on a custom entity for command data value, applies components of itemstack, then returns new itemstack with data value attached internally.
 export function getDataValueItem(
-	itemType: ItemType,
+	typeId: string,
 	dataValue: number,
 	originDimension: Dimension,
 	originLocation: Vector3,
@@ -32,7 +31,7 @@ export function getDataValueItem(
 	}
 	try {
 		containerEntity.runCommand(
-			`/replaceitem entity @s slot.inventory 0 ${itemType} 1 ${dataValue}`,
+			`/replaceitem entity @s slot.inventory 0 ${typeId} 1 ${dataValue}`,
 		);
 	} catch (_error) {
 		containerEntity.remove();

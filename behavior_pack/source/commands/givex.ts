@@ -7,17 +7,15 @@ import {
 	CustomCommandStatus,
 	type Dimension,
 	type Entity,
-	type ItemLockMode,
 	type ItemType,
 	system,
 	type Vector3,
 } from "@minecraft/server";
 import { PACK_NAMESPACE } from "../constants";
 import { giveItemToEntity } from "../containers";
-import { type GetItemStackResult, getItemStack } from "../items/get";
-import type { SlotName } from "../items/slot";
+import { type GetItemStackResult, getItemFromJson } from "../items/get";
 import { afterTickCommandResultHandler } from "./afterTickResultHandler";
-import { commandEnums } from "./params/enums";
+import { type GivexJson, parseGivexJson } from "./params/json";
 import { getDimensionFromOrigin, getLocationFromOrigin } from "./params/origin";
 import { type ValidateParamsResult, validateParams } from "./params/validate";
 
@@ -28,40 +26,16 @@ export function registerGivex(registry: CustomCommandRegistry): void {
 			mandatoryParameters: [
 				{ name: "target", type: CustomCommandParamType.EntitySelector },
 				{ name: "itemName", type: CustomCommandParamType.ItemType },
+				{ name: "json", type: CustomCommandParamType.String },
 			],
-			name: `${PACK_NAMESPACE}:givex2`,
-			optionalParameters: [
-				{ name: "amount", type: CustomCommandParamType.Integer },
-				{ name: "nameTag", type: CustomCommandParamType.String },
-				{ name: commandEnums.lockMode, type: CustomCommandParamType.Enum },
-				{ name: "data", type: CustomCommandParamType.Integer },
-				{ name: "keepOnDeath", type: CustomCommandParamType.Boolean },
-				{ name: "canPlaceOn", type: CustomCommandParamType.String },
-				{ name: "canDestroy", type: CustomCommandParamType.String },
-				{ name: commandEnums.durability, type: CustomCommandParamType.Enum },
-				{ name: "enchants", type: CustomCommandParamType.String },
-				{ name: commandEnums.slot, type: CustomCommandParamType.Enum },
-				{ name: "slotId", type: CustomCommandParamType.Integer },
-				{ name: commandEnums.replaceMode, type: CustomCommandParamType.Enum },
-			],
+			name: `${PACK_NAMESPACE}:givex`,
 			permissionLevel: CommandPermissionLevel.GameDirectors,
 		},
 		(
 			origin: CustomCommandOrigin,
 			target: Entity[],
 			itemType: ItemType,
-			amount: number = 1,
-			nameTag?: string,
-			lockMode?: ItemLockMode,
-			data: number = 0,
-			keepOnDeath?: boolean,
-			canPlaceOn?: string,
-			canDestroy?: string,
-			durability?: string,
-			enchants?: string,
-			slot?: SlotName,
-			slotId?: number,
-			replaceMode?: string,
+			jsonStr: string,
 		): CustomCommandResult => {
 			if (target.length === 0) {
 				return {
@@ -69,19 +43,14 @@ export function registerGivex(registry: CustomCommandRegistry): void {
 					status: CustomCommandStatus.Failure,
 				};
 			}
-			const paramsResult: ValidateParamsResult = validateParams(
-				amount,
-				nameTag,
-				lockMode,
-				data,
-				canPlaceOn,
-				canDestroy,
-				durability,
-				enchants,
-				slot,
-				slotId,
-				replaceMode,
-			);
+			const json: GivexJson | undefined = parseGivexJson(jsonStr);
+			if (json === undefined) {
+				return {
+					message: "Invalid type in json",
+					status: CustomCommandStatus.Failure,
+				};
+			}
+			const paramsResult: ValidateParamsResult = validateParams(json);
 			if (paramsResult.commandResult.status === CustomCommandStatus.Failure) {
 				return paramsResult.commandResult;
 			}
@@ -100,28 +69,16 @@ export function registerGivex(registry: CustomCommandRegistry): void {
 				};
 			}
 			system.run(() => {
-				const itemResult: GetItemStackResult = getItemStack(
-					dimension,
-					location,
-					itemType,
-					nameTag,
-					lockMode,
-					data,
-					keepOnDeath,
-					paramsResult.canPlaceOn,
-					paramsResult.canDestroy,
-					paramsResult.durability,
-					paramsResult.enchants,
-				);
+				const itemResult: GetItemStackResult = getItemFromJson(json, paramsResult.enchants);
 				if (itemResult.item !== undefined) {
 					for (const entity of target) {
 						giveItemToEntity(
 							entity,
 							itemResult.item,
-							amount,
-							slot,
-							slotId,
-							paramsResult.replaceMode ?? "destroy",
+							json.amount,
+							json.slot,
+							json.slotId,
+							json.replaceMode,
 						);
 					}
 				}
