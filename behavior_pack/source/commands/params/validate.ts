@@ -7,16 +7,17 @@ import {
 	ItemTypes,
 } from "@minecraft/server";
 import { MAX_AMOUNT, MAX_NAMETAG_LENGTH } from "../../constants";
+import { SlotName } from "../../items/slot";
 import type { GivexJson } from "./json";
-import { getEnchantsFromList, parseList, validBlockTypes } from "./lists";
+import { getEnchantsFromList, validBlockTypes } from "./lists";
 
-export interface ValidateParamsResult {
+export interface GivexValidationResult {
 	commandResult: CustomCommandResult;
 	enchants?: Enchantment[];
 }
 
-export function validateParams(json: GivexJson): ValidateParamsResult {
-	const result: ValidateParamsResult = {
+export function validateGivex(json: GivexJson): GivexValidationResult {
+	const result: GivexValidationResult = {
 		commandResult: {
 			status: CustomCommandStatus.Failure,
 		},
@@ -69,16 +70,16 @@ export function validateParams(json: GivexJson): ValidateParamsResult {
 		}
 	}
 	if (json.enchants !== undefined) {
-		const enchantResult: number | Enchantment[] = getEnchantsFromList(enchantList);
+		const enchantResult: number | Enchantment[] = getEnchantsFromList(json.enchants);
 		if (typeof enchantResult === "number") {
 			const invalidIndex = enchantResult;
-			result.commandResult.message = `Invalid enchant list at "${enchantList[invalidIndex]}"`;
+			result.commandResult.message = `Invalid enchant list at "${json.enchants[invalidIndex]}"`;
 			return result;
 		} else {
 			result.enchants = enchantResult;
 		}
 	}
-	if (json.slot !== undefined && !slotNames.includes(json.slot)) {
+	if (json.slot !== undefined && Object.values(SlotName).includes(json.slot as SlotName)) {
 		result.commandResult.message = `Invalid slot "${json.slot}"`;
 		return result;
 	}

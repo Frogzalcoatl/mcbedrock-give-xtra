@@ -17,7 +17,7 @@ import { type GetItemStackResult, getItemFromJson } from "../items/get";
 import { afterTickCommandResultHandler } from "./afterTickResultHandler";
 import { type GivexJson, parseGivexJson } from "./params/json";
 import { getDimensionFromOrigin, getLocationFromOrigin } from "./params/origin";
-import { type ValidateParamsResult, validateParams } from "./params/validate";
+import { type GivexValidationResult, validateGivex } from "./params/validate";
 
 export function registerGivex(registry: CustomCommandRegistry): void {
 	registry.registerCommand(
@@ -50,7 +50,7 @@ export function registerGivex(registry: CustomCommandRegistry): void {
 					status: CustomCommandStatus.Failure,
 				};
 			}
-			const paramsResult: ValidateParamsResult = validateParams(json);
+			const paramsResult: GivexValidationResult = validateGivex(json);
 			if (paramsResult.commandResult.status === CustomCommandStatus.Failure) {
 				return paramsResult.commandResult;
 			}
@@ -69,7 +69,12 @@ export function registerGivex(registry: CustomCommandRegistry): void {
 				};
 			}
 			system.run(() => {
-				const itemResult: GetItemStackResult = getItemFromJson(json, paramsResult.enchants);
+				const itemResult: GetItemStackResult = getItemFromJson(
+					dimension,
+					location,
+					json,
+					paramsResult.enchants,
+				);
 				if (itemResult.item !== undefined) {
 					for (const entity of target) {
 						giveItemToEntity(
@@ -78,7 +83,7 @@ export function registerGivex(registry: CustomCommandRegistry): void {
 							json.amount,
 							json.slot,
 							json.slotId,
-							json.replaceMode,
+							json.replaceMode ?? "destroy",
 						);
 					}
 				}

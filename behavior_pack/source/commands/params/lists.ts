@@ -6,15 +6,10 @@ import {
 	EnchantmentTypes,
 } from "@minecraft/server";
 
-// Comma separated lists
-export function parseList(list: string): string[] {
-	return list.split(/\s*,\s*/);
-}
-
 // Returns invalid index (if it exists)
-export function validBlockTypes(list: string[]): number | undefined {
-	for (let i: number = 0; i < list.length; i++) {
-		let current: string | undefined = list[i];
+export function validBlockTypes(blockTypes: string[]): number | undefined {
+	for (let i: number = 0; i < blockTypes.length; i++) {
+		let current: string | undefined = blockTypes[i];
 		if (!current) {
 			return i;
 		}
@@ -37,32 +32,31 @@ export function getEnchantsFromList(list: (string | number)[]): Enchantment[] | 
 	let currentEnchantType: EnchantmentType | undefined;
 	for (let i: number = 0; i < list.length; i++) {
 		let currentVal: string | number | undefined = list[i];
-		if (currentVal === undefined) {
-			return i;
-		}
-		if (currentEnchantType !== undefined) {
-			if (typeof currentVal === "number") {
-			}
-			if (cu) {
+		if (typeof currentVal === "string") {
+			if (currentEnchantType !== undefined) {
 				enchantments.push({
 					level: 1,
 					type: currentEnchantType,
 				});
-			} else if (enchantLevel >= 1 && enchantLevel <= currentEnchantType.maxLevel) {
-				enchantments.push({
-					level: enchantLevel,
-					type: currentEnchantType,
-				});
-				currentEnchantType = undefined;
-			} else {
+			}
+			if (currentVal.indexOf(":") === -1) {
+				currentVal = `minecraft:${currentVal}`;
+			}
+			currentEnchantType = EnchantmentTypes.get(currentVal);
+			if (currentEnchantType === undefined) {
 				return i;
 			}
-		}
-		if (currentVal.indexOf(":") === -1) {
-			currentVal = `minecraft:${currentVal}`;
-		}
-		currentEnchantType = EnchantmentTypes.get(currentVal);
-		if (currentEnchantType === undefined) {
+		} else if (
+			typeof currentVal === "number" &&
+			currentEnchantType !== undefined &&
+			currentVal >= 1 &&
+			currentVal <= currentEnchantType.maxLevel
+		) {
+			enchantments.push({
+				level: 1,
+				type: currentEnchantType,
+			});
+		} else {
 			return i;
 		}
 	}

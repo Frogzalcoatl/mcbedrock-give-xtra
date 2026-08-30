@@ -76,7 +76,7 @@ function setItemInContainerSlot(
 	selector: Entity | Block,
 	container: Container,
 	item: ItemStack,
-	slot: SlotName,
+	slot: string,
 	slotId: number | undefined,
 	replaceMode: string,
 ): CustomCommandResult {
@@ -123,7 +123,7 @@ function setItemInContainerSlot(
 function setItemInventory(
 	entity: Entity,
 	item: ItemStack,
-	slot: SlotName,
+	slot: string,
 	slotId: number | undefined,
 	replaceMode: string,
 ): CustomCommandResult {
@@ -142,7 +142,7 @@ function setItemInventory(
 function setItemHotbar(
 	entity: Entity,
 	item: ItemStack,
-	slot: SlotName,
+	slot: string,
 	slotId: number | undefined,
 	replaceMode: string,
 ): CustomCommandResult {
@@ -168,7 +168,7 @@ const MobChestEntityTypes: string[] = ["minecraft:llama", "minecraft:donkey", "m
 function setItemTameable(
 	entity: Entity,
 	item: ItemStack,
-	slot: SlotName,
+	slot: string,
 	slotId: number | undefined,
 	replaceMode: string,
 ): CustomCommandResult {
@@ -243,7 +243,7 @@ function slotNameToEquipmentSlot(name: string): EquipmentSlot | undefined {
 function setItemEquippable(
 	entity: Entity,
 	item: ItemStack,
-	slot: SlotName,
+	slot: string,
 	replaceMode: string,
 ): CustomCommandResult {
 	const equippable: EntityEquippableComponent | undefined = entity.getComponent(
@@ -318,7 +318,7 @@ function setItemEquippable(
 function setItemEndChest(
 	entity: Entity,
 	item: ItemStack,
-	slot: SlotName,
+	slot: string,
 	slotId: number | undefined,
 	replaceMode: string,
 ): CustomCommandResult {
@@ -345,7 +345,7 @@ export function giveItemToEntity(
 	entity: Entity,
 	item: ItemStack,
 	amount: number,
-	slot: SlotName | undefined,
+	slot: string | undefined,
 	slotId: number | undefined,
 	replaceMode: string,
 ): CustomCommandResult {

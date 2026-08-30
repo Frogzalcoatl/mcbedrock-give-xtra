@@ -3,9 +3,7 @@ import {
 	CustomCommandStatus,
 	type Dimension,
 	type Enchantment,
-	type ItemLockMode,
 	ItemStack,
-	type ItemType,
 	type Vector3,
 } from "@minecraft/server";
 import type { GivexJson } from "../commands/params/json";
