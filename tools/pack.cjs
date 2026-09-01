@@ -4,17 +4,18 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { ZipArchive } = require("archiver");
 
-const MCADDON_FILENAME = "mcbedrock-give-xtra.mcaddon";
+const MCADDON_FILENAME = "GiveXtra.mcaddon";
 const OUTPUT_DIRECTORY_NAME = "_temp_mcaddon_directory";
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
-const BEHAVIOR_PACK_PATH = path.join(PROJECT_ROOT, "behavior_pack");
-const RESOURCE_PACK_PATH = path.join(PROJECT_ROOT, "resource_pack");
-const OUTPUT_DIRECTORY_PATH = path.join(PROJECT_ROOT, OUTPUT_DIRECTORY_NAME);
-const BEHAVIOR_PACK_OUTPUT_DIRECTORY_PATH = path.join(OUTPUT_DIRECTORY_PATH, "behavior_pack");
-const RESOURCE_PACK_OUTPUT_DIRECTORY_PATH = path.join(OUTPUT_DIRECTORY_PATH, "resource_pack");
+const BEHAVIORS_DIRECTORY = path.join(PROJECT_ROOT, "behaviors");
+const RESOURCES_DIRECTORY = path.join(PROJECT_ROOT, "resources");
+const OUTPUT_DIRECTORY = path.join(PROJECT_ROOT, OUTPUT_DIRECTORY_NAME);
+const BEHAVIOR_OUTPUT_DIRECTORY = path.join(OUTPUT_DIRECTORY, "behaviors");
+const RESOURCE_OUTPUT_DIRECTORY = path.join(OUTPUT_DIRECTORY, "resources");
 
 const SKIP_DIRECTORIES = ["source"];
+const LICENSE_PATH = path.join(PROJECT_ROOT, "LICENSE.md");
 
 async function copyDirectory(source, destination) {
 	await fs.promises.mkdir(destination, { recursive: true });
@@ -29,6 +30,13 @@ async function copyDirectory(source, destination) {
 			await fs.promises.copyFile(sourcePath, destinationPath);
 		}
 	}
+}
+
+async function copyFileToDirectory(filePath, destination) {
+	await fs.promises.mkdir(destination, { recursive: true });
+	const name = path.basename(filePath);
+	const destinationPath = path.join(destination, name);
+	await fs.promises.copyFile(filePath, destinationPath);
 }
 
 async function createZip(sourceDir, outputFilePath) {
@@ -47,29 +55,26 @@ async function createZip(sourceDir, outputFilePath) {
 
 async function build() {
 	try {
-		await fs.promises
-			.rm(OUTPUT_DIRECTORY_PATH, { force: true, recursive: true })
-			.catch(() => {});
+		await fs.promises.rm(OUTPUT_DIRECTORY, { force: true, recursive: true }).catch(() => {});
 
 		console.log(`Starting build in: ${PROJECT_ROOT}`);
 		console.log("Cleaning up old output directory...");
-		await fs.promises.rm(OUTPUT_DIRECTORY_PATH, { force: true, recursive: true });
+		await fs.promises.rm(OUTPUT_DIRECTORY, { force: true, recursive: true });
 
-		console.log(`Creating temporary directory at: ${OUTPUT_DIRECTORY_PATH}`);
-		await copyDirectory(BEHAVIOR_PACK_PATH, BEHAVIOR_PACK_OUTPUT_DIRECTORY_PATH);
-		await copyDirectory(RESOURCE_PACK_PATH, RESOURCE_PACK_OUTPUT_DIRECTORY_PATH);
-		/* No longer copying files from root directory. None are needed.
-		await copyDirectory(PROJECT_ROOT, OUTPUT_DIRECTORY_PATH);
-		*/
+		console.log(`Creating temporary directory at: ${OUTPUT_DIRECTORY}`);
+		await copyDirectory(BEHAVIORS_DIRECTORY, BEHAVIOR_OUTPUT_DIRECTORY);
+		await copyFileToDirectory(LICENSE_PATH, BEHAVIOR_OUTPUT_DIRECTORY);
+		await copyDirectory(RESOURCES_DIRECTORY, RESOURCE_OUTPUT_DIRECTORY);
+		await copyFileToDirectory(LICENSE_PATH, RESOURCE_OUTPUT_DIRECTORY);
 		console.log("Successfully copied files.");
 
 		const zipFilePath = path.join(PROJECT_ROOT, MCADDON_FILENAME);
 		console.log(`Zipping contents to ${MCADDON_FILENAME}...`);
-		await createZip(OUTPUT_DIRECTORY_PATH, zipFilePath);
+		await createZip(OUTPUT_DIRECTORY, zipFilePath);
 		console.log(`Successfully created ${MCADDON_FILENAME}.`);
 
 		console.log("Deleting temporary output directory...");
-		await fs.promises.rm(OUTPUT_DIRECTORY_PATH, { force: true, recursive: true });
+		await fs.promises.rm(OUTPUT_DIRECTORY, { force: true, recursive: true });
 		console.log("Cleanup complete.");
 
 		console.log("\nBuild finished successfully!");

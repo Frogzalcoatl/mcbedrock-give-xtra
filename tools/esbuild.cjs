@@ -6,12 +6,12 @@ const isWatch = args.includes("--watch");
 
 const options = {
 	bundle: true,
-	entryPoints: ["./behavior_pack/source/index.ts"],
+	entryPoints: ["./behaviors/source/index.ts"],
 	external: ["@minecraft/server", "@minecraft/server-ui"],
 	format: "esm",
 	logLevel: "info",
 	minify: false,
-	outfile: "behavior_pack/scripts/index.esm.js",
+	outfile: "behaviors/scripts/index.esm.js",
 	platform: "neutral",
 	sourcemap: false,
 	sourcesContent: false,
