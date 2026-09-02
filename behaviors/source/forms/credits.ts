@@ -1,8 +1,9 @@
-import { type Player, system } from "@minecraft/server";
-import { FormInfo } from "./info";
-import { type ActionForm, showActionForm } from "./types";
+import type { Player } from "@minecraft/server";
+import { ActionFormData, type ActionFormResponse } from "@minecraft/server-ui";
 
-const text: string = `
+const form = new ActionFormData();
+form.title("§0Givex Info");
+form.body(`
 §rProgramming: §eFrogzalcoatl
 §rProject Setup: §eSunnyTheFennec
 
@@ -13,29 +14,13 @@ mcbedrock-give-xtra
 §rVersion:
 §7Pre-Release v1.0.0 June 2026
 §r
-`; // Not trimmed for extra newline(s) at top and bottom
+`);
+form.divider();
+form.button("Back");
 
-export const FormCredits: ActionForm = {
-	body: text,
-	components: [
-		{
-			type: "divider",
-		},
-		{
-			addStyling: true,
-			async callback(player: Player): Promise<void> {
-				system.run(async () => {
-					showActionForm(FormInfo, player);
-				});
-			},
-			text: "Back",
-			type: "button",
-		},
-	],
-	async onClose(player): Promise<void> {
-		system.run(async () => {
-			showActionForm(FormInfo, player);
-		});
-	},
-	title: "Givex Info",
-};
+export async function formCredits(viewer: Player): Promise<void> {
+	const resp: ActionFormResponse = await form.show(viewer);
+	if (resp.selection === undefined || resp.selection === 0) {
+		// system.run(() => formInfo(viewer));
+	}
+}
