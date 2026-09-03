@@ -53,12 +53,19 @@ export function getEnchantsFromList(list: (string | number)[]): Enchantment[] | 
 			currentVal <= currentEnchantType.maxLevel
 		) {
 			enchantments.push({
-				level: 1,
+				level: currentVal,
 				type: currentEnchantType,
 			});
+			currentEnchantType = undefined;
 		} else {
 			return i;
 		}
+	}
+	if (currentEnchantType !== undefined) {
+		enchantments.push({
+			level: 1,
+			type: currentEnchantType,
+		});
 	}
 	return enchantments;
 }

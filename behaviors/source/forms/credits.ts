@@ -1,9 +1,11 @@
-import type { Player } from "@minecraft/server";
+import { type Player, system } from "@minecraft/server";
 import { ActionFormData, type ActionFormResponse } from "@minecraft/server-ui";
+import { formInfo } from "./info";
 
-const form = new ActionFormData();
-form.title("§0Givex Info");
-form.body(`
+export async function formCredits(viewer: Player): Promise<void> {
+	const form = new ActionFormData();
+	form.title("§0Givex Info");
+	form.body(`
 §rProgramming: §eFrogzalcoatl
 §rProject Setup: §eSunnyTheFennec
 
@@ -15,12 +17,10 @@ mcbedrock-give-xtra
 §7Pre-Release v1.0.0 June 2026
 §r
 `);
-form.divider();
-form.button("Back");
-
-export async function formCredits(viewer: Player): Promise<void> {
+	form.divider();
+	form.button("Back");
 	const resp: ActionFormResponse = await form.show(viewer);
 	if (resp.selection === undefined || resp.selection === 0) {
-		// system.run(() => formInfo(viewer));
+		system.run(() => formInfo(viewer));
 	}
 }

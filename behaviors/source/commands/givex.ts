@@ -14,12 +14,12 @@ import {
 import { PACK_NAMESPACE } from "../constants";
 import { giveItemToEntity } from "../containers";
 import { type GetItemStackResult, getItemFromJson } from "../items/get";
-import { afterTickCommandResultHandler } from "./afterTickResultHandler";
-import { type GivexJson, parseGivexJson } from "./params/json";
-import { getDimensionFromOrigin, getLocationFromOrigin } from "./params/origin";
-import { type GivexValidationResult, validateGivex } from "./params/validate";
+import { afterTickCommandResultHandler } from "./utils/afterTickResultHandler";
+import { type GivexJson, parseGivexJson } from "./utils/json";
+import { getDimensionFromOrigin, getLocationFromOrigin } from "./utils/origin";
+import { type GivexValidationResult, validateGivex } from "./utils/validate";
 
-export function registerGivex(registry: CustomCommandRegistry): void {
+export function registerCommandGivex(registry: CustomCommandRegistry): void {
 	registry.registerCommand(
 		{
 			description: "Give items with special properties.",
@@ -39,14 +39,20 @@ export function registerGivex(registry: CustomCommandRegistry): void {
 		): CustomCommandResult => {
 			if (target.length === 0) {
 				return {
-					message: "No valid target",
+					message: "No valid target.",
 					status: CustomCommandStatus.Failure,
 				};
 			}
-			const json: GivexJson | undefined = parseGivexJson(jsonStr);
-			if (json === undefined) {
+			let json: GivexJson;
+			try {
+				json = parseGivexJson(jsonStr, itemType.id);
+			} catch (error) {
+				let message: string = "Invalid type in json.";
+				if (error instanceof Error) {
+					message = error.message;
+				}
 				return {
-					message: "Invalid type in json",
+					message: message,
 					status: CustomCommandStatus.Failure,
 				};
 			}

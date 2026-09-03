@@ -1,6 +1,8 @@
 import { system } from "@minecraft/server";
-import { registerGivex } from "./commands/givex";
+import { registerCommandGivex } from "./commands/givex";
+import { registerCommandInfo } from "./commands/info";
 
 system.beforeEvents.startup.subscribe((event) => {
-	registerGivex(event.customCommandRegistry);
+	registerCommandGivex(event.customCommandRegistry);
+	registerCommandInfo(event.customCommandRegistry);
 });

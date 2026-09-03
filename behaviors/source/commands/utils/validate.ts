@@ -73,14 +73,14 @@ export function validateGivex(json: GivexJson): GivexValidationResult {
 		const enchantResult: number | Enchantment[] = getEnchantsFromList(json.enchants);
 		if (typeof enchantResult === "number") {
 			const invalidIndex = enchantResult;
-			result.commandResult.message = `Invalid enchant list at "${json.enchants[invalidIndex]}"`;
+			result.commandResult.message = `Invalid enchant value at "${json.enchants[invalidIndex]}"`;
 			return result;
 		} else {
 			result.enchants = enchantResult;
 		}
 	}
-	if (json.slot !== undefined && Object.values(SlotName).includes(json.slot as SlotName)) {
-		result.commandResult.message = `Invalid slot "${json.slot}"`;
+	if (json.slot !== undefined && !Object.values(SlotName).includes(json.slot as SlotName)) {
+		result.commandResult.message = `Invalid slot "${json.slot}"\nValid values:\n${Object.values(SlotName).join("\n")}`;
 		return result;
 	}
 	if (json.slotId !== undefined && json.slotId < 0) {
