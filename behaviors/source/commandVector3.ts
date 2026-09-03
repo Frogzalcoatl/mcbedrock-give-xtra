@@ -1,4 +1,4 @@
-import { stringToNumber, truncTo } from "../../prettyTypeId";
+import { stringToNumber, truncTo } from "./prettyTypeId";
 
 interface CommandVector3Value {
 	num?: number;

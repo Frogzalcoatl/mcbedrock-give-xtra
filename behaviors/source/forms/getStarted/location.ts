@@ -5,7 +5,7 @@ import {
 	type CommandVector3ParseResult,
 	commandVector3ToString,
 	parseCommandVector3,
-} from "./commandVector3";
+} from "../../commandVector3";
 import { formatLabel, type GetStartedContext, getStartedTitle } from "./getStarted";
 import { getStartedProperties } from "./properties";
 

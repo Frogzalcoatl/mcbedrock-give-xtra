@@ -11,13 +11,13 @@ import {
 	system,
 	type Vector3,
 } from "@minecraft/server";
-import { PACK_NAMESPACE } from "../constants";
-import { giveItemToEntity } from "../containers";
-import { type GetItemStackResult, getItemFromJson } from "../items/get";
-import { afterTickCommandResultHandler } from "./utils/afterTickResultHandler";
-import { type GivexJson, parseGivexJson } from "./utils/json";
-import { getDimensionFromOrigin, getLocationFromOrigin } from "./utils/origin";
-import { type GivexValidationResult, validateGivex } from "./utils/validate";
+import { PACK_NAMESPACE } from "../../constants";
+import { giveItemToEntity } from "../../containers";
+import { type GetItemStackResult, getItemFromJson } from "../../items/get";
+import { afterTickCommandResultHandler } from "../afterTickResultHandler";
+import { type GivexJson, parseGivexJson } from "../params/json";
+import { getDimensionFromOrigin, getLocationFromOrigin } from "../params/origin";
+import { type GivexValidationResult, validateGivex } from "../params/validate";
 
 export function registerCommandGivex(registry: CustomCommandRegistry): void {
 	registry.registerCommand(

@@ -9,10 +9,10 @@ import {
 	type Player,
 	system,
 } from "@minecraft/server";
-import { PACK_NAMESPACE } from "../constants";
-import { formGetStarted } from "../forms/getStarted/getStarted";
-import { formInfo } from "../forms/info";
-import { getPlayerFromOrigin } from "./utils/origin";
+import { PACK_NAMESPACE } from "../../constants";
+import { formGetStarted } from "../../forms/getStarted/getStarted";
+import { formInfo } from "../../forms/info";
+import { getPlayerFromOrigin } from "../params/origin";
 
 function callback(origin: CustomCommandOrigin, item?: ItemType): CustomCommandResult {
 	const player: Player | null = getPlayerFromOrigin(origin);

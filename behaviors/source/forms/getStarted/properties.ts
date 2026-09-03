@@ -12,10 +12,10 @@ import {
 	MessageFormData,
 	type MessageFormResponse,
 } from "@minecraft/server-ui";
-import { type GivexJson, validJsonKeys } from "../../commands/utils/json";
+import { type GivexJson, validJsonKeys } from "../../commands/params/json";
+import { commandVector3ToString } from "../../commandVector3";
 import { getIconPath } from "../iconPaths";
 import { getStartedAmount } from "./amount";
-import { commandVector3ToString } from "./commandVector3";
 import { formGetStarted, type GetStartedContext, getStartedTitle } from "./getStarted";
 import { getStartedLocation } from "./location";
 
