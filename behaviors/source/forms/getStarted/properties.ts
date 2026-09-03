@@ -14,9 +14,9 @@ import {
 } from "@minecraft/server-ui";
 import { type GivexJson, validJsonKeys } from "../../commands/params/json";
 import { commandVector3ToString } from "../../commandVector3";
-import { getIconPath } from "../iconPaths";
 import { getStartedAmount } from "./amount";
 import { formGetStarted, type GetStartedContext, getStartedTitle } from "./getStarted";
+import { getIconPath } from "./iconPaths";
 import { getStartedLocation } from "./location";
 
 function blockListToString(list: string[], maxLength: number): string {
