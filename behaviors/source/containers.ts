@@ -5,7 +5,7 @@ import {
 	type Container,
 	type CustomCommandResult,
 	CustomCommandStatus,
-	type DimensionLocation,
+	type Dimension,
 	type Entity,
 	EntityComponentTypes,
 	type EntityEnderInventoryComponent,
@@ -15,6 +15,7 @@ import {
 	EquipmentSlot,
 	type ItemStack,
 	Player,
+	type Vector3,
 } from "@minecraft/server";
 import { SlotName } from "./items/slot";
 import { getSelectorName, prettyTypeId, vector3ToString } from "./prettyTypeId";
@@ -422,29 +423,20 @@ export function giveItemToBlock(
 	}
 }
 
-export function spawnItemAtDimensionLocation(
-	location: DimensionLocation,
+export function spawnItemAt(
+	dimension: Dimension,
+	pos: Vector3,
 	itemStack: ItemStack,
 	itemAmount: number,
-): CustomCommandResult {
-	try {
-		itemStack.amount = itemAmount;
-		location.dimension.spawnItem(itemStack, {
-			x: location.x,
-			y: location.y,
-			z: location.z,
-		});
-	} catch (error) {
-		let message: string = "Unable to spawn item";
-		if (error instanceof Error) {
-			message += `: ${error.message}`;
+): void {
+	while (itemAmount > 0) {
+		if (itemAmount >= itemStack.maxAmount) {
+			itemStack.amount = itemStack.maxAmount;
+			itemAmount -= itemStack.maxAmount;
+		} else {
+			itemStack.amount = itemAmount;
+			itemAmount = 0;
 		}
-		return {
-			message: message,
-			status: CustomCommandStatus.Failure,
-		};
+		dimension.spawnItem(itemStack, pos);
 	}
-	return {
-		status: CustomCommandStatus.Success,
-	};
 }

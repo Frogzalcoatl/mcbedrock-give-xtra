@@ -54,7 +54,7 @@ export function truncTo(num: number, decimalPlaces: number) {
 	return Math.trunc(num * 10 ** decimalPlaces) / 10 ** decimalPlaces;
 }
 
-export function vector3ToString(vector: Vector3, decimalPlaces: number): string {
+export function vector3ToString(vector: Vector3, decimalPlaces: number = 0): string {
 	let str: string = "";
 	for (const value of Object.values(vector)) {
 		str += " ";
