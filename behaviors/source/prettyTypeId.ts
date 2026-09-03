@@ -96,7 +96,7 @@ export function stringToNumber(str: string): number | undefined {
 	}
 	const num: number = Number(trimmed);
 	// NaN === NaN -> false for whatever reason
-	if (Number.isNaN(num)) {
+	if (!Number.isFinite(num)) {
 		return undefined;
 	}
 	return num;

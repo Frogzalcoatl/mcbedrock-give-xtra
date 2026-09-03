@@ -27,7 +27,7 @@ export function commandVector3ToString(vector: CommandVector3, decimalPlaces: nu
 	return str;
 }
 
-interface CommandVector3ParseResult {
+export interface CommandVector3ParseResult {
 	vector: CommandVector3 | undefined;
 	message: string;
 }

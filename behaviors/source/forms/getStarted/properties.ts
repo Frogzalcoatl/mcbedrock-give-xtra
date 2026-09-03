@@ -17,6 +17,7 @@ import { getIconPath } from "../iconPaths";
 import { getStartedAmount } from "./amount";
 import { commandVector3ToString } from "./commandVector3";
 import { formGetStarted, type GetStartedContext, getStartedTitle } from "./getStarted";
+import { getStartedLocation } from "./location";
 
 function blockListToString(list: string[], maxLength: number): string {
 	let str: string = "";
@@ -175,11 +176,16 @@ export async function getStartedProperties(
 		return;
 	}
 	const keyIndex: number = resp.selection - 1;
-	switch (jsonKeys[keyIndex]) {
-		case "amount":
-			system.run(() => getStartedAmount(context));
-			break;
-		default:
-			system.run(() => getStartedProperties(context, "§cNot Finished"));
-	}
+	system.run(() => {
+		switch (jsonKeys[keyIndex]) {
+			case "amount":
+				getStartedAmount(context);
+				break;
+			case "location":
+				getStartedLocation(context);
+				break;
+			default:
+				getStartedProperties(context, "§cNot Finished");
+		}
+	});
 }
