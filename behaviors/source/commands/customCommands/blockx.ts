@@ -14,7 +14,7 @@ import {
 	type Vector3,
 } from "@minecraft/server";
 import { PACK_NAMESPACE } from "../../constants";
-import { giveItemToBlock } from "../../containers";
+import { giveItemToBlock } from "../../items/containers";
 import { type GetItemStackResult, getItemFromJson } from "../../items/get";
 import { vector3ToString } from "../../prettyTypeId";
 import { afterTickCommandResultHandler } from "../afterTickResultHandler";

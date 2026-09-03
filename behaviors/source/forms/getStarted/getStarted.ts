@@ -1,6 +1,6 @@
 import type { Enchantment, Player } from "@minecraft/server";
+import type { CommandVector3 } from "../../commands/params/commandVector3";
 import type { GivexJson } from "../../commands/params/json";
-import type { CommandVector3 } from "../../commandVector3";
 import { getStartedTypeId } from "./typeId";
 
 export const getStartedTitle: string = "§0Get Started";

@@ -17,8 +17,8 @@ import {
 	Player,
 	type Vector3,
 } from "@minecraft/server";
-import { SlotName } from "./items/slot";
-import { getSelectorName, prettyTypeId, vector3ToString } from "./prettyTypeId";
+import { getSelectorName, prettyTypeId, vector3ToString } from "../prettyTypeId";
+import { SlotName } from "./slot";
 
 function addItemsToContainer(
 	selector: Entity | Block,
@@ -31,7 +31,6 @@ function addItemsToContainer(
 		itemStack.amount = Math.min(itemStack.maxAmount, amountLeft);
 		let result: ItemStack | undefined;
 		try {
-			// Returns ItemStack on failure
 			result = container.addItem(itemStack);
 		} catch (error) {
 			let message: string = `Unable to add ${prettyTypeId(itemStack.typeId)} to container of ${getSelectorName(selector)}`;
@@ -53,18 +52,13 @@ function addItemsToContainer(
 	while (amountLeft > 0) {
 		// Spawn remaining items as entities
 		itemStack.amount = Math.min(itemStack.maxAmount, amountLeft);
-		try {
-			selector.dimension.spawnItem(itemStack, selector.location);
-		} catch (error) {
-			let message: string = `Unable to spawn ${prettyTypeId(itemStack.typeId)} on ${getSelectorName(selector)}`;
-			if (error instanceof Error) {
-				message += `: ${error.message}`;
-			}
+		if (!selector.dimension.isChunkLoaded(selector.location)) {
 			return {
-				message: message,
+				message: `Unable to spawn ${prettyTypeId(itemStack.typeId)} on ${getSelectorName(selector)} in unloaded chunks.`,
 				status: CustomCommandStatus.Failure,
 			};
 		}
+		selector.dimension.spawnItem(itemStack, selector.location);
 		amountLeft -= itemStack.amount;
 	}
 	return {
@@ -291,16 +285,13 @@ function setItemEquippable(
 				message: "Spawned old item as entity",
 				status: CustomCommandStatus.Success,
 			};
-			try {
-				entity.dimension.spawnItem(item, entity.location);
-			} catch (error) {
-				let message: string = "Unable to spawn old item as entity";
-				if (error instanceof Error) {
-					message += `: ${error.message}`;
-				}
-				oldItemGiveResult.status = CustomCommandStatus.Failure;
-				oldItemGiveResult.message = message;
+			if (!entity.dimension.isChunkLoaded(entity.location)) {
+				return {
+					message: "Unable to spawn old item as entity",
+					status: CustomCommandStatus.Failure,
+				};
 			}
+			entity.dimension.spawnItem(item, entity.location);
 		}
 	}
 	let message: string = `Equipped ${item.typeId} in slot ${slot}`;

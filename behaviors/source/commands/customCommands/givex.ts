@@ -12,7 +12,7 @@ import {
 	type Vector3,
 } from "@minecraft/server";
 import { PACK_NAMESPACE } from "../../constants";
-import { giveItemToEntity } from "../../containers";
+import { giveItemToEntity } from "../../items/containers";
 import { type GetItemStackResult, getItemFromJson } from "../../items/get";
 import { afterTickCommandResultHandler } from "../afterTickResultHandler";
 import { type GivexJson, type GivexJsonParseResult, parseGivexJson } from "../params/json";
