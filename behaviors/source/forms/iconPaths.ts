@@ -2,7 +2,7 @@ const itemsPath: string = "textures/items/";
 const blocksPath: string = "textures/blocks/";
 const uiPath: string = "textures/ui/";
 
-export function getItemPropertyIconPath(propertyType: string): string {
+export function getIconPath(propertyType: string): string {
 	switch (propertyType) {
 		case "location": {
 			return `${itemsPath}map_filled.png`;
@@ -31,11 +31,16 @@ export function getItemPropertyIconPath(propertyType: string): string {
 		case "nameTag": {
 			return `${itemsPath}name_tag.png`;
 		}
-		case "slot": {
+		case "slot":
+		case "slotId":
+		case "replaceMode": {
 			return `${blocksPath}chest_front.png`;
 		}
 		case "typeId": {
 			return `${itemsPath}spyglass.png`;
+		}
+		case "data": {
+			return `${blocksPath}command_block_side_mipmap.png`;
 		}
 		default: {
 			return "";

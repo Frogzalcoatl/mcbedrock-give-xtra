@@ -17,7 +17,7 @@ export interface GivexJson {
 	slotId?: number;
 	replaceMode?: string;
 }
-const validKeys: string[] = [
+export const validJsonKeys: string[] = [
 	"typeId",
 	"amount",
 	"nameTag",
@@ -57,7 +57,7 @@ function validatePropertyTypes(obj: any): obj is GivexJson {
 		throw new Error("Json must be an Object.");
 	}
 	for (const key of Object.keys(obj)) {
-		if (!validKeys.includes(key)) {
+		if (!validJsonKeys.includes(key)) {
 			throw new Error(`Invalid key "${key}".`);
 		}
 	}

@@ -22,7 +22,7 @@ function callback(origin: CustomCommandOrigin, item?: ItemType): CustomCommandRe
 		};
 	}
 	if (item !== undefined) {
-		system.run(() => formGetStarted(player, item));
+		system.run(() => formGetStarted(player, item.id));
 	} else {
 		system.run(() => formInfo(player));
 	}

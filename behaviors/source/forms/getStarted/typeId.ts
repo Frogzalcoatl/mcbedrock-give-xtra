@@ -1,6 +1,7 @@
 import { ItemTypes, system } from "@minecraft/server";
 import { ModalFormData, type ModalFormResponse } from "@minecraft/server-ui";
 import { formInfo } from "../info";
+import { getStartedCommandType } from "./commandType";
 import { formatLabel, type GetStartedContext, getStartedTitle } from "./getStarted";
 
 function getForm(input: string, error?: string): ModalFormData {
@@ -9,9 +10,10 @@ function getForm(input: string, error?: string): ModalFormData {
 	const top: string = "What item would you like to use?";
 	const bottom: string = "Enter item type ID:";
 	form.textField(formatLabel(top, bottom, error), "", { defaultValue: input });
-	form.label("§r");
 	form.divider();
-	form.label("§r");
+	form.label(
+		"Note: You can also run the command §e/givex:info <itemType>§r for auto completion.",
+	);
 	form.submitButton("Submit");
 	return form;
 }
@@ -35,5 +37,5 @@ export async function getStartedTypeId(context: GetStartedContext): Promise<void
 		formattedId = ItemTypes.get(input)?.id;
 	}
 	context.json.typeId = formattedId;
-	// system.run(() => promptCommandType());
+	system.run(() => getStartedCommandType(context));
 }

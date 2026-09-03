@@ -1,4 +1,4 @@
-import type { ItemType, Player } from "@minecraft/server";
+import type { Enchantment, Player } from "@minecraft/server";
 import type { GivexJson } from "../../commands/utils/json";
 import type { CommandVector3 } from "./commandVector3";
 import { getStartedTypeId } from "./typeId";
@@ -7,18 +7,20 @@ export const getStartedTitle: string = "§0Get Started";
 
 export interface GetStartedContext {
 	commandType: "givex" | "blockx" | "spawnx";
+	enchants: Enchantment[];
 	json: GivexJson;
 	location: CommandVector3;
 	openedFromInfo: boolean;
 	player: Player;
 }
 
-function getDefaultContext(player: Player, itemType?: ItemType): GetStartedContext {
+function getDefaultContext(player: Player, item?: string): GetStartedContext {
 	return {
 		commandType: "givex",
+		enchants: [],
 		json: {
 			amount: 1,
-			typeId: itemType?.id ?? "",
+			typeId: item ?? "",
 		},
 		location: {
 			x: {
@@ -31,7 +33,7 @@ function getDefaultContext(player: Player, itemType?: ItemType): GetStartedConte
 				includeSquiggly: true,
 			},
 		},
-		openedFromInfo: itemType === undefined,
+		openedFromInfo: item === undefined,
 		player: player,
 	};
 }
@@ -44,7 +46,7 @@ export function formatLabel(top: string, bottom: string, error?: string) {
 	}
 }
 
-export async function formGetStarted(viewer: Player, startingType?: ItemType): Promise<void> {
-	const context: GetStartedContext = getDefaultContext(viewer, startingType);
+export async function formGetStarted(viewer: Player, item?: string): Promise<void> {
+	const context: GetStartedContext = getDefaultContext(viewer, item);
 	getStartedTypeId(context);
 }
