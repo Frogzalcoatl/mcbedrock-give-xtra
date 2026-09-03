@@ -2,23 +2,23 @@ import {
 	type CustomCommandOrigin,
 	type CustomCommandResult,
 	CustomCommandStatus,
-	Player,
+	type Player,
 	world,
 } from "@minecraft/server";
+import { getPlayerFromOrigin } from "./params/origin";
 
 export function afterTickCommandResultHandler(
 	origin: CustomCommandOrigin,
 	result: CustomCommandResult,
 ): void {
-	if (!result.message) {
+	if (!result.message || !world.gameRules.sendCommandFeedback) {
 		return;
 	}
 	if (result.status === CustomCommandStatus.Failure) {
 		result.message = `§c${result.message}`;
 	}
-	if (origin.sourceEntity instanceof Player && world.gameRules.sendCommandFeedback) {
-		origin.sourceEntity.sendMessage(result.message);
-	} else if (origin.initiator instanceof Player && world.gameRules.sendCommandFeedback) {
-		origin.initiator.sendMessage(result.message);
+	const player: Player | null = getPlayerFromOrigin(origin);
+	if (player !== null) {
+		player.sendMessage(result.message);
 	}
 }

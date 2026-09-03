@@ -21,11 +21,10 @@ export function applyEnchants(enchants: Enchantment[], item: ItemStack): number 
 		if (current === undefined) {
 			return i;
 		}
-		try {
-			enchantable.addEnchantment(current);
-		} catch (_error) {
+		if (current.level > current.type.maxLevel || !enchantable.canAddEnchantment(current)) {
 			return i;
 		}
+		enchantable.addEnchantment(current);
 	}
 	return undefined;
 }

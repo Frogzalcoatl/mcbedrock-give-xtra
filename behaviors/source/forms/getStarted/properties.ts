@@ -116,7 +116,7 @@ async function backConfirmation(context: GetStartedContext): Promise<void> {
 }
 
 function getExcludedProperties(context: GetStartedContext): string[] {
-	const arr: string[] = [];
+	const arr: string[] = ["typeId"];
 	if (context.commandType === "spawnx") {
 		arr.push("slot");
 		arr.push("slotId");
@@ -148,7 +148,7 @@ export async function getStartedProperties(
 	}
 	const exclude: string[] = getExcludedProperties(context);
 	for (const key of validJsonKeys) {
-		if (key === "typeId" || exclude.includes(key)) {
+		if (exclude.includes(key)) {
 			continue;
 		}
 		jsonKeys.push(key);

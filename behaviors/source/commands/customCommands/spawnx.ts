@@ -15,7 +15,7 @@ import { spawnItemAt } from "../../containers";
 import { type GetItemStackResult, getItemFromJson } from "../../items/get";
 import { vector3ToString } from "../../prettyTypeId";
 import { afterTickCommandResultHandler } from "../afterTickResultHandler";
-import { type GivexJson, parseGivexJson } from "../params/json";
+import { type GivexJson, type GivexJsonParseResult, parseGivexJson } from "../params/json";
 import { getDimensionFromOrigin } from "../params/origin";
 import { type GivexValidationResult, validateGivex } from "../params/validate";
 
@@ -57,18 +57,14 @@ export function registerCommandSpawnx(registry: CustomCommandRegistry): void {
 					typeId: item.id,
 				};
 			} else {
-				try {
-					json = parseGivexJson(jsonStr, item.id);
-				} catch (error) {
-					let message: string = "Invalid type in json.";
-					if (error instanceof Error) {
-						message = error.message;
-					}
+				const parseResult: GivexJsonParseResult = parseGivexJson(jsonStr, item.id);
+				if (parseResult.json === null) {
 					return {
-						message: message,
+						message: parseResult.message,
 						status: CustomCommandStatus.Failure,
 					};
 				}
+				json = parseResult.json;
 			}
 			const paramsResult: GivexValidationResult = validateGivex(json);
 			if (paramsResult.commandResult.status === CustomCommandStatus.Failure) {

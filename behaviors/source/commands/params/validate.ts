@@ -43,10 +43,7 @@ export function validateGivex(json: GivexJson): GivexValidationResult {
 		return result;
 	}
 	if (json.lockMode !== undefined && !Object.values(ItemLockMode).includes(json.lockMode)) {
-		result.commandResult = {
-			message: `Invalid lock mode "${json.lockMode}". Valid values: ${Object.values(ItemLockMode)}`,
-			status: CustomCommandStatus.Failure,
-		};
+		result.commandResult.message = `Invalid lock mode "${json.lockMode}". Valid values: ${Object.values(ItemLockMode).join(", ")}`;
 		return result;
 	}
 	if (json.canPlaceOn !== undefined) {

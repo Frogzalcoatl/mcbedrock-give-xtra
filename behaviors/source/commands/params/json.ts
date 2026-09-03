@@ -110,15 +110,36 @@ function validatePropertyTypes(obj: any): obj is GivexJson {
 	return true;
 }
 
-export function parseGivexJson(str: string, typeId: string): GivexJson {
-	const obj = JSON.parse(str);
-	obj.typeId = typeId;
-	if (obj.amount === undefined) {
-		obj.amount = 1;
-	}
-	if (validatePropertyTypes(obj)) {
-		return obj;
-	} else {
-		throw new Error("Invalid type in json.");
+export interface GivexJsonParseResult {
+	json: GivexJson | null;
+	message: string;
+}
+export function parseGivexJson(str: string, typeId: string): GivexJsonParseResult {
+	try {
+		const obj = JSON.parse(str);
+		obj.typeId = typeId;
+		if (obj.amount === undefined) {
+			obj.amount = 1;
+		}
+		if (validatePropertyTypes(obj)) {
+			return {
+				json: obj,
+				message: "",
+			};
+		} else {
+			return {
+				json: null,
+				message: "Invalid type in json.",
+			};
+		}
+	} catch (error) {
+		const result: GivexJsonParseResult = {
+			json: null,
+			message: "Invalid type in json.",
+		};
+		if (error instanceof Error) {
+			result.message = error.message;
+		}
+		return result;
 	}
 }
