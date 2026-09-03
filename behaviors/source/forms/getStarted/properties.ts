@@ -1,4 +1,11 @@
-import { type Enchantment, system } from "@minecraft/server";
+import {
+	type Enchantment,
+	ItemComponentTypes,
+	type ItemDurabilityComponent,
+	type ItemEnchantableComponent,
+	ItemStack,
+	system,
+} from "@minecraft/server";
 import {
 	ActionFormData,
 	type ActionFormResponse,
@@ -100,11 +107,34 @@ async function backConfirmation(context: GetStartedContext): Promise<void> {
 	form.button1("I'm Sure!");
 	form.button2("Cancel");
 	const resp: MessageFormResponse = await form.show(context.player);
-	if (resp.selection === undefined || resp.selection === 1) {
+	if (resp.selection === 1) {
 		system.run(() => getStartedProperties(context));
 	} else {
 		system.run(() => formGetStarted(context.player, context.json.typeId));
 	}
+}
+
+function getExcludedProperties(context: GetStartedContext): string[] {
+	const arr: string[] = [];
+	if (context.commandType === "spawnx") {
+		arr.push("slot");
+		arr.push("slotId");
+		arr.push("replaceMode");
+	}
+	const item = new ItemStack(context.json.typeId);
+	const durability: ItemDurabilityComponent | undefined = item.getComponent(
+		ItemComponentTypes.Durability,
+	);
+	if (durability === undefined) {
+		arr.push("durability");
+	}
+	const enchantable: ItemEnchantableComponent | undefined = item.getComponent(
+		ItemComponentTypes.Enchantable,
+	);
+	if (enchantable === undefined) {
+		arr.push("enchants");
+	}
+	return arr;
 }
 
 export async function getStartedProperties(
@@ -115,12 +145,9 @@ export async function getStartedProperties(
 	if (context.commandType !== "givex") {
 		jsonKeys.push("location");
 	}
-	const excludedForSpawnx: string[] = ["slot", "slotId", "replaceMode"];
+	const exclude: string[] = getExcludedProperties(context);
 	for (const key of validJsonKeys) {
-		if (
-			key === "typeId" ||
-			(context.commandType === "spawnx" && excludedForSpawnx.includes(key))
-		) {
+		if (key === "typeId" || exclude.includes(key)) {
 			continue;
 		}
 		jsonKeys.push(key);
