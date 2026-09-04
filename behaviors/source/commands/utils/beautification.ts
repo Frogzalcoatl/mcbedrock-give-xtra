@@ -1,4 +1,4 @@
-import { Block, type DimensionLocation, Entity, Player, type Vector3 } from "@minecraft/server";
+import { Block, Entity, Player, type Vector3 } from "@minecraft/server";
 
 export function prettyTypeId(typeId: string): string {
 	const namespaceColonIndex: number = typeId.indexOf(":");
@@ -20,31 +20,15 @@ export function prettyTypeId(typeId: string): string {
 	return words.join(" ");
 }
 
-export function getSelectorName(selector: Entity | Block | DimensionLocation): string {
+export function getSelectorName(selector: Entity | Block): string {
 	if (selector instanceof Block) {
-		if (!selector.isValid) {
-			return "selector";
-		}
 		return prettyTypeId(selector.typeId);
-	} else if (selector instanceof Entity) {
-		if (!selector.isValid) {
-			return "selector";
-		}
-		if (selector instanceof Player) {
-			return `${selector.name}§r`;
-		} else if (selector.nameTag) {
-			return `${selector.nameTag}§r`;
-		} else {
-			return prettyTypeId(selector.typeId);
-		}
-	} else {
-		return `location ${vector3ToString({ x: selector.x, y: selector.y, z: selector.z }, 0)}`;
-	}
-}
-
-// Since names are trailed with §r, if I want to maintain the color of the message, i need to append a color after each §r
-export function appendColorAfterResets(str: string, colorCode: string): string {
-	return str.replaceAll("§r", `§r${colorCode}`);
+	} else selector instanceof Entity;
+	return selector.nameTag
+		? selector.nameTag
+		: selector instanceof Player
+			? selector.name
+			: prettyTypeId(selector.typeId);
 }
 
 export function truncTo(num: number, decimalPlaces: number) {
@@ -86,18 +70,4 @@ export function camelToTitleCase(str: string): string {
 		}
 	}
 	return splitStr.join("");
-}
-
-export function stringToFiniteNumber(str: string): number | null {
-	const trimmed: string = str.trim();
-	// Number() would return zero for an empty string, or a string with only white space
-	if (trimmed === "") {
-		return null;
-	}
-	const num: number = Number(trimmed);
-	// NaN === NaN -> false for whatever reason
-	if (!Number.isFinite(num)) {
-		return null;
-	}
-	return num;
 }

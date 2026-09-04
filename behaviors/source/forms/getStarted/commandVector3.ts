@@ -1,4 +1,18 @@
-import { stringToFiniteNumber, truncTo } from "./beautification";
+import { truncTo } from "../../commands/utils/beautification";
+
+export function stringToFiniteNumber(str: string): number | null {
+	const trimmed: string = str.trim();
+	// Number() would return zero for an empty string, or a string with only white space
+	if (trimmed === "") {
+		return null;
+	}
+	const num: number = Number(trimmed);
+	// NaN === NaN -> false for whatever reason
+	if (!Number.isFinite(num)) {
+		return null;
+	}
+	return num;
+}
 
 interface CommandVector3Value {
 	num: number | null;

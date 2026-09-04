@@ -12,9 +12,9 @@ import {
 	MessageFormData,
 	type MessageFormResponse,
 } from "@minecraft/server-ui";
-import { commandVector3ToString } from "../../commands/utils/commandVector3";
 import { type GivexJson, validJsonKeys } from "../../commands/utils/json";
 import { getStartedAmount } from "./amount";
+import { commandVector3ToString } from "./commandVector3";
 import { getStartedData } from "./data";
 import { getStartedDurability } from "./durability";
 import { formGetStarted, type GetStartedContext, getStartedTitle } from "./getStarted";

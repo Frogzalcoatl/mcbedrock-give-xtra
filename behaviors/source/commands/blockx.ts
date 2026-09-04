@@ -14,13 +14,17 @@ import {
 	type Vector3,
 } from "@minecraft/server";
 import { PACK_NAMESPACE } from "../constants";
-import { giveItemToBlock } from "../items/containers";
-import { type GetItemStackResult, getItemFromJson } from "../items/get";
-import { afterTickCommandResultHandler } from "./utils/afterTickResultHandler";
+import { giveItemToBlock } from "../items/container";
+import { type GetItemStackResult, getItemFromJson } from "../items/json";
 import { vector3ToString } from "./utils/beautification";
-import { type GivexJson, type GivexJsonParseResult, parseGivexJson } from "./utils/json";
-import { getDimensionFromOrigin } from "./utils/origin";
-import { type GivexValidationResult, validateGivex } from "./utils/validateJson";
+import {
+	type GivexJson,
+	type GivexJsonParseResult,
+	type GivexValidationResult,
+	parseGivexJson,
+	validateGivex,
+} from "./utils/json";
+import { getDimensionFromOrigin, sendCommandFeedbackToOrigin } from "./utils/origin";
 
 export function registerCommandBlockx(registry: CustomCommandRegistry): void {
 	registry.registerCommand(
@@ -98,9 +102,9 @@ export function registerCommandBlockx(registry: CustomCommandRegistry): void {
 					);
 				}
 				if (itemResult.commandResult.status === CustomCommandStatus.Failure) {
-					afterTickCommandResultHandler(origin, itemResult.commandResult);
+					sendCommandFeedbackToOrigin(origin, itemResult.commandResult);
 				} else {
-					afterTickCommandResultHandler(origin, {
+					sendCommandFeedbackToOrigin(origin, {
 						message: `Gave ${item.id} * ${json.amount} to ${block.typeId} at ${vector3ToString(at)}`,
 						status: CustomCommandStatus.Success,
 					});
