@@ -5,17 +5,17 @@ import type { ItemLockMode } from "@minecraft/server";
 export interface GivexJson {
 	typeId: string;
 	amount: number;
-	nameTag?: string;
-	data?: number;
-	lockMode?: ItemLockMode;
-	keepOnDeath?: boolean;
-	canPlaceOn?: string[];
-	canDestroy?: string[];
-	durability?: "unbreakable" | "max" | number;
-	enchants?: (string | number)[];
-	slot?: string;
-	slotId?: number;
-	replaceMode?: string;
+	nameTag: string | null;
+	data: number | null;
+	lockMode: ItemLockMode | null;
+	keepOnDeath: boolean | null;
+	canPlaceOn: string[] | null;
+	canDestroy: string[] | null;
+	durability: "unbreakable" | "max" | number | null;
+	enchants: (string | number)[] | null;
+	slot: string | null;
+	slotId: number | null;
+	replaceMode: string | null;
 }
 export const validJsonKeys: string[] = [
 	"typeId",
@@ -67,44 +67,57 @@ function validatePropertyTypes(obj: any): obj is GivexJson {
 	if (typeof obj.amount !== "number") {
 		throw new Error("amount must be a number.");
 	}
-	if (obj.nameTag !== undefined && typeof obj.nameTag !== "string") {
+	if (obj.nameTag === undefined) {
+		obj.nameTag = null;
+	} else if (typeof obj.nameTag !== "string") {
 		throw new Error("nameTag must be a string.");
 	}
-	if (obj.lockMode !== undefined && typeof obj.lockMode !== "string") {
+	if (obj.lockMode === undefined) {
+		obj.lockMode = null;
+	} else if (typeof obj.lockMode !== "string") {
 		throw new Error("lockMode must be a string.");
 	}
-	if (obj.data !== undefined && (typeof obj.data !== "number" || !Number.isInteger(obj.data))) {
-		throw new Error("data must be an integer.");
+	if (obj.data === undefined) {
+		obj.data = null;
+	} else if (typeof obj.data !== "number") {
+		throw new Error("data must be a number.");
 	}
-	if (obj.keepOnDeath !== undefined && typeof obj.keepOnDeath !== "boolean") {
+	if (obj.keepOnDeath === undefined) {
+		obj.keepOnDeath = null;
+	} else if (typeof obj.keepOnDeath !== "boolean") {
 		throw new Error("keepOnDeath must be a boolean.");
 	}
-	if (obj.canPlaceOn !== undefined && !isStringArray(obj.canPlaceOn)) {
+	if (obj.canPlaceOn === undefined) {
+		obj.canPlaceOn = null;
+	} else if (!isStringArray(obj.canPlaceOn)) {
 		throw new Error("canPlaceOn must be an array of strings.");
 	}
 	if (obj.canDestroy !== undefined && !isStringArray(obj.canDestroy)) {
 		throw new Error("canDestroy must be an array of strings.");
 	}
-	if (
-		obj.durability !== undefined &&
-		typeof obj.durability !== "string" &&
-		typeof obj.durability !== "number"
-	) {
+	if (obj.durability === undefined) {
+		obj.durability = null;
+	} else if (typeof obj.durability !== "string" && typeof obj.durability !== "number") {
 		throw new Error("durability must be a string or number.");
 	}
-	if (obj.enchants !== undefined && !isStringIntegerArray(obj.enchants)) {
+	if (obj.enchants === undefined) {
+		obj.enchants = null;
+	} else if (!isStringIntegerArray(obj.enchants)) {
 		throw new Error("enchants must be an array of strings/integers.");
 	}
-	if (obj.slot !== undefined && typeof obj.slot !== "string") {
+	if (obj.slot === undefined) {
+		obj.slot = null;
+	} else if (typeof obj.slot !== "string") {
 		throw new Error("slot must be a string.");
 	}
-	if (
-		obj.slotId !== undefined &&
-		(typeof obj.slotId !== "number" || !Number.isInteger(obj.slotId))
-	) {
-		throw new Error("slotId must be an integer.");
+	if (obj.slotId === undefined) {
+		obj.slotId = null;
+	} else if (typeof obj.slotId !== "number") {
+		throw new Error("slotId must be a number.");
 	}
-	if (obj.replaceMode !== undefined && typeof obj.replaceMode !== "string") {
+	if (obj.replaceMode === undefined) {
+		obj.replaceMode = null;
+	} else if (typeof obj.replaceMode !== "string") {
 		throw new Error("replaceMode must be a string.");
 	}
 	return true;

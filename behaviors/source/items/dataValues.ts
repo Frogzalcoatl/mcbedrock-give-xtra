@@ -15,9 +15,9 @@ export function getDataValueItem(
 	dataValue: number,
 	originDimension: Dimension,
 	originLocation: Vector3,
-): ItemStack | undefined {
+): ItemStack | null {
 	if (!originDimension.isChunkLoaded(originLocation)) {
-		return undefined;
+		return null;
 	}
 	const containerEntity: Entity = originDimension.spawnEntity(CONTAINER_TYPE_ID, originLocation);
 	const inventory: EntityInventoryComponent | undefined = containerEntity.getComponent(
@@ -25,13 +25,13 @@ export function getDataValueItem(
 	);
 	if (inventory === undefined) {
 		containerEntity.remove();
-		return undefined;
+		return null;
 	}
 	containerEntity.runCommand(`/replaceitem entity @s slot.inventory 0 ${typeId} 1 ${dataValue}`);
 	const dataValueItem: ItemStack | undefined = inventory.container.getItem(0);
 	containerEntity.remove();
 	if (dataValueItem === undefined) {
-		return undefined;
+		return null;
 	}
 	return dataValueItem;
 }

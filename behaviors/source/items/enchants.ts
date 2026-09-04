@@ -6,9 +6,9 @@ import {
 } from "@minecraft/server";
 
 // Returns index of incompatible enchant if applicable
-export function applyEnchants(enchants: Enchantment[], item: ItemStack): number | undefined {
+export function applyEnchants(enchants: Enchantment[], item: ItemStack): number | null {
 	if (enchants.length === 0) {
-		return undefined;
+		return null;
 	}
 	const enchantable: ItemEnchantableComponent | undefined = item.getComponent(
 		ItemComponentTypes.Enchantable,
@@ -26,5 +26,5 @@ export function applyEnchants(enchants: Enchantment[], item: ItemStack): number 
 		}
 		enchantable.addEnchantment(current);
 	}
-	return undefined;
+	return null;
 }

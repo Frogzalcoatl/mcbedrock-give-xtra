@@ -13,7 +13,7 @@ import { applyEnchants } from "./enchants";
 
 export interface GetItemStackResult {
 	commandResult: CustomCommandResult;
-	item: ItemStack | undefined;
+	item: ItemStack | null;
 }
 
 export function getItemFromJson(
@@ -23,47 +23,47 @@ export function getItemFromJson(
 	enchants?: Enchantment[],
 ): GetItemStackResult {
 	let item: ItemStack;
-	if (json.data !== undefined && json.data !== 0) {
-		const result: ItemStack | undefined = getDataValueItem(
+	if (json.data !== null && json.data !== 0) {
+		const result: ItemStack | null = getDataValueItem(
 			json.typeId,
 			json.data,
 			originDimension,
 			originLocation,
 		);
-		if (result === undefined) {
+		if (result === null) {
 			return {
 				commandResult: {
 					message: "Unable to get data value item.",
 					status: CustomCommandStatus.Failure,
 				},
-				item: undefined,
+				item: null,
 			};
 		}
 		item = result;
 	} else {
 		item = new ItemStack(json.typeId);
 	}
-	if (json.nameTag !== undefined) {
+	if (json.nameTag !== null) {
 		item.nameTag = json.nameTag;
 	}
-	if (json.lockMode !== undefined) {
+	if (json.lockMode !== null) {
 		item.lockMode = json.lockMode;
 	}
-	if (json.keepOnDeath !== undefined) {
+	if (json.keepOnDeath !== null) {
 		item.keepOnDeath = json.keepOnDeath;
 	}
-	if (json.canPlaceOn !== undefined) {
+	if (json.canPlaceOn !== null) {
 		item.setCanPlaceOn(json.canPlaceOn);
 	}
-	if (json.canDestroy !== undefined) {
+	if (json.canDestroy !== null) {
 		item.setCanDestroy(json.canDestroy);
 	}
-	if (json.durability !== undefined) {
+	if (json.durability !== null) {
 		setDurability(item, json.durability);
 	}
 	if (enchants !== undefined) {
-		const invalidIndex: number | undefined = applyEnchants(enchants, item);
-		if (invalidIndex !== undefined) {
+		const invalidIndex: number | null = applyEnchants(enchants, item);
+		if (invalidIndex !== null) {
 			return {
 				commandResult: {
 					message: `Unable to apply enchant "${enchants[invalidIndex]?.type.id}"`,

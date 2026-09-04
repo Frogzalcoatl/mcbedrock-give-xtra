@@ -88,16 +88,16 @@ export function camelToTitleCase(str: string): string {
 	return splitStr.join("");
 }
 
-export function stringToNumber(str: string): number | undefined {
+export function stringToFiniteNumber(str: string): number | null {
 	const trimmed: string = str.trim();
 	// Number() would return zero for an empty string, or a string with only white space
 	if (trimmed === "") {
-		return undefined;
+		return null;
 	}
 	const num: number = Number(trimmed);
 	// NaN === NaN -> false for whatever reason
 	if (!Number.isFinite(num)) {
-		return undefined;
+		return null;
 	}
 	return num;
 }

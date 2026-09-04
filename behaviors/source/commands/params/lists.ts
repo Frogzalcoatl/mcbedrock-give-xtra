@@ -7,7 +7,7 @@ import {
 } from "@minecraft/server";
 
 // Returns invalid index (if it exists)
-export function validBlockTypes(blockTypes: string[]): number | undefined {
+export function validBlockTypes(blockTypes: string[]): number | null {
 	for (let i: number = 0; i < blockTypes.length; i++) {
 		let current: string | undefined = blockTypes[i];
 		if (!current) {
@@ -21,7 +21,7 @@ export function validBlockTypes(blockTypes: string[]): number | undefined {
 			return i;
 		}
 	}
-	return undefined;
+	return null;
 }
 
 // Ex valid enchant list: "protection, 4, mending, feather_falling"
@@ -29,11 +29,11 @@ export function validBlockTypes(blockTypes: string[]): number | undefined {
 // Returns enchantments or invalid index
 export function getEnchantsFromList(list: (string | number)[]): Enchantment[] | number {
 	const enchantments: Enchantment[] = [];
-	let currentEnchantType: EnchantmentType | undefined;
+	let currentEnchantType: EnchantmentType | null = null;
 	for (let i: number = 0; i < list.length; i++) {
 		let currentVal: string | number | undefined = list[i];
 		if (typeof currentVal === "string") {
-			if (currentEnchantType !== undefined) {
+			if (currentEnchantType !== null) {
 				enchantments.push({
 					level: 1,
 					type: currentEnchantType,
@@ -42,13 +42,13 @@ export function getEnchantsFromList(list: (string | number)[]): Enchantment[] | 
 			if (currentVal.indexOf(":") === -1) {
 				currentVal = `minecraft:${currentVal}`;
 			}
-			currentEnchantType = EnchantmentTypes.get(currentVal);
-			if (currentEnchantType === undefined) {
+			currentEnchantType = EnchantmentTypes.get(currentVal) ?? null;
+			if (currentEnchantType === null) {
 				return i;
 			}
 		} else if (
 			typeof currentVal === "number" &&
-			currentEnchantType !== undefined &&
+			currentEnchantType !== null &&
 			currentVal >= 1 &&
 			currentVal <= currentEnchantType.maxLevel
 		) {
@@ -56,12 +56,12 @@ export function getEnchantsFromList(list: (string | number)[]): Enchantment[] | 
 				level: currentVal,
 				type: currentEnchantType,
 			});
-			currentEnchantType = undefined;
+			currentEnchantType = null;
 		} else {
 			return i;
 		}
 	}
-	if (currentEnchantType !== undefined) {
+	if (currentEnchantType !== null) {
 		enchantments.push({
 			level: 1,
 			type: currentEnchantType,

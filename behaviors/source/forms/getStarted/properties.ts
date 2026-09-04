@@ -15,9 +15,12 @@ import {
 import { commandVector3ToString } from "../../commands/params/commandVector3";
 import { type GivexJson, validJsonKeys } from "../../commands/params/json";
 import { getStartedAmount } from "./amount";
+import { getStartedData } from "./data";
 import { formGetStarted, type GetStartedContext, getStartedTitle } from "./getStarted";
 import { getIconPath } from "./iconPaths";
 import { getStartedLocation } from "./location";
+import { getStartedLockMode } from "./lockMode";
+import { getStartedNameTag } from "./nameTag";
 
 function blockListToString(list: string[], maxLength: number): string {
 	let str: string = "";
@@ -62,38 +65,38 @@ function contextToString(context: GetStartedContext): string {
 	if (context.commandType !== "givex") {
 		str += `\n§rLocation: §e${commandVector3ToString(context.location)}`;
 	}
-	if (j.nameTag !== undefined) {
+	if (j.nameTag !== null) {
 		str += `\n§rName Tag: §e${j.nameTag}`;
 	}
-	if (j.data !== undefined) {
+	if (j.data !== null) {
 		str += `\n§rData: §e${j.data}`;
 	}
-	if (j.lockMode !== undefined) {
+	if (j.lockMode !== null) {
 		str += `\n§rLock Mode: §e${j.lockMode}`;
 	}
-	if (j.keepOnDeath !== undefined) {
+	if (j.keepOnDeath !== null) {
 		str += `\n§rKeep on Death: §e${j.keepOnDeath}`;
 	}
-	if (j.canPlaceOn !== undefined) {
+	if (j.canPlaceOn !== null) {
 		str += `\n§rCan Place On:\n§e${blockListToString(j.canPlaceOn, 16)}`;
 	}
-	if (j.canDestroy !== undefined) {
+	if (j.canDestroy !== null) {
 		str += `\n§rCan Destroy:\n§e${blockListToString(j.canDestroy, 16)}`;
 	}
-	if (j.durability !== undefined) {
+	if (j.durability !== null) {
 		str += `\n§rKeep on Death: §e${j.durability}`;
 	}
 	if (context.enchants.length > 0) {
 		str += `\n§rEnchants:§e\n${enchantsToString(context.enchants, 16)}`;
 		for (let i: number = 0; i < context.enchants.length; i++) {}
 	}
-	if (j.slot !== undefined) {
+	if (j.slot !== null) {
 		str += `\n§rSlot: §e${j.slot}`;
 	}
-	if (j.slotId !== undefined) {
+	if (j.slotId !== null) {
 		str += `\n§rSlot ID: §e${j.slotId}`;
 	}
-	if (j.replaceMode !== undefined) {
+	if (j.replaceMode !== null) {
 		str += `\n§rReplace Mode: §e${j.replaceMode}`;
 	}
 	return str;
@@ -183,6 +186,15 @@ export async function getStartedProperties(
 				break;
 			case "location":
 				getStartedLocation(context);
+				break;
+			case "nameTag":
+				getStartedNameTag(context);
+				break;
+			case "lockMode":
+				getStartedLockMode(context);
+				break;
+			case "data":
+				getStartedData(context);
 				break;
 			default:
 				getStartedProperties(context, "§cNot Finished");

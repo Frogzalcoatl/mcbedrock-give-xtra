@@ -1,7 +1,7 @@
-import { stringToNumber, truncTo } from "../../prettyTypeId";
+import { stringToFiniteNumber, truncTo } from "../../prettyTypeId";
 
 interface CommandVector3Value {
-	num?: number;
+	num: number | null;
 	includeSquiggly: boolean;
 }
 const MaxCommandVector3Value: number = 2 ** 30 - 1;
@@ -14,7 +14,7 @@ export interface CommandVector3 {
 
 function valueToString(value: CommandVector3Value, decimalPlaces: number): string {
 	let str = `${value.includeSquiggly ? "~" : ""}`;
-	if (value.num !== undefined) {
+	if (value.num !== null) {
 		str += `${truncTo(value.num, decimalPlaces)}`;
 	}
 	return str;
@@ -28,7 +28,7 @@ export function commandVector3ToString(vector: CommandVector3, decimalPlaces: nu
 }
 
 export interface CommandVector3ParseResult {
-	vector: CommandVector3 | undefined;
+	vector: CommandVector3 | null;
 	message: string;
 }
 export function parseCommandVector3(str: string): CommandVector3ParseResult {
@@ -41,11 +41,11 @@ export function parseCommandVector3(str: string): CommandVector3ParseResult {
 			continue;
 		}
 		if (!value.startsWith("~")) {
-			const numResult: number | undefined = stringToNumber(value);
-			if (numResult === undefined) {
+			const numResult: number | null = stringToFiniteNumber(value);
+			if (numResult === null) {
 				return {
 					message: `Invalid entry "${value}"`,
-					vector: undefined,
+					vector: null,
 				};
 			}
 			vectorValues.push({ includeSquiggly: false, num: numResult });
@@ -53,11 +53,11 @@ export function parseCommandVector3(str: string): CommandVector3ParseResult {
 		// Minecraft allows for no spaces between values with squigglys. e.g. "~2~10~2" is valid
 		while (value.startsWith("~")) {
 			if (value.length === 1) {
-				vectorValues.push({ includeSquiggly: true });
+				vectorValues.push({ includeSquiggly: true, num: null });
 				break;
 			}
 			if (value[1] === "~") {
-				vectorValues.push({ includeSquiggly: true });
+				vectorValues.push({ includeSquiggly: true, num: null });
 				value = value.slice(1);
 				continue;
 			}
@@ -65,11 +65,13 @@ export function parseCommandVector3(str: string): CommandVector3ParseResult {
 			if (nextSquigglyIndex === 0) {
 				nextSquigglyIndex = undefined;
 			}
-			const numResult: number | undefined = stringToNumber(value.slice(1, nextSquigglyIndex));
-			if (numResult === undefined || numResult > MaxCommandVector3Value) {
+			const numResult: number | null = stringToFiniteNumber(
+				value.slice(1, nextSquigglyIndex),
+			);
+			if (numResult === null || numResult > MaxCommandVector3Value) {
 				return {
 					message: `Invalid entry "${value}"`,
-					vector: undefined,
+					vector: null,
 				};
 			}
 			vectorValues.push({ includeSquiggly: true, num: numResult });
@@ -87,7 +89,7 @@ export function parseCommandVector3(str: string): CommandVector3ParseResult {
 	) {
 		return {
 			message: `Must have exactly three values`,
-			vector: undefined,
+			vector: null,
 		};
 	}
 	return {

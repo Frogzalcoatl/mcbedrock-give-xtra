@@ -27,8 +27,8 @@ function getForm(context: GetStartedContext, input: string, error?: string): Mod
 export async function getStartedLocation(context: GetStartedContext): Promise<void> {
 	let form: ModalFormData = getForm(context, commandVector3ToString(context.location));
 	let input: string = "";
-	let location: CommandVector3 | undefined;
-	while (location === undefined) {
+	let location: CommandVector3 | null = null;
+	while (location === null) {
 		const resp: ModalFormResponse = await form.show(context.player);
 		if (resp.formValues === undefined || typeof resp.formValues[0] !== "string") {
 			system.run(() => getStartedProperties(context, "§cLocation unchanged"));
@@ -37,7 +37,7 @@ export async function getStartedLocation(context: GetStartedContext): Promise<vo
 		input = resp.formValues[0];
 		const result: CommandVector3ParseResult = parseCommandVector3(input);
 		location = result.vector;
-		if (location === undefined) {
+		if (location === null) {
 			form = getForm(context, input, result.message);
 		}
 	}

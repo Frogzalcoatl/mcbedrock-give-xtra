@@ -21,8 +21,8 @@ function getForm(input: string, error?: string): ModalFormData {
 export async function getStartedTypeId(context: GetStartedContext): Promise<void> {
 	let form: ModalFormData = getForm(context.json.typeId);
 	let input: string = "";
-	let formattedId: string | undefined;
-	while (formattedId === undefined) {
+	let formattedId: string | null = null;
+	while (formattedId === null) {
 		if (input) {
 			form = getForm(input, `Invalid Type ID "${input}"`);
 		}
@@ -34,7 +34,7 @@ export async function getStartedTypeId(context: GetStartedContext): Promise<void
 			return;
 		}
 		input = resp.formValues[0];
-		formattedId = ItemTypes.get(input)?.id;
+		formattedId = ItemTypes.get(input)?.id ?? null;
 	}
 	context.json.typeId = formattedId;
 	system.run(() => getStartedCommandType(context));

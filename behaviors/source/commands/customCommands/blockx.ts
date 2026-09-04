@@ -38,7 +38,7 @@ export function registerCommandBlockx(registry: CustomCommandRegistry): void {
 			origin: CustomCommandOrigin,
 			at: Vector3,
 			item: ItemType,
-			jsonStr?: string,
+			jsonStr: string = "{}",
 		): CustomCommandResult => {
 			const dimension: Dimension | null = getDimensionFromOrigin(origin);
 			if (dimension === null) {
@@ -69,22 +69,14 @@ export function registerCommandBlockx(registry: CustomCommandRegistry): void {
 					status: CustomCommandStatus.Failure,
 				};
 			}
-			let json: GivexJson;
-			if (jsonStr === undefined) {
-				json = {
-					amount: 1,
-					typeId: item.id,
+			const parseResult: GivexJsonParseResult = parseGivexJson(jsonStr, item.id);
+			if (parseResult.json === null) {
+				return {
+					message: parseResult.message,
+					status: CustomCommandStatus.Failure,
 				};
-			} else {
-				const parseResult: GivexJsonParseResult = parseGivexJson(jsonStr, item.id);
-				if (parseResult.json === null) {
-					return {
-						message: parseResult.message,
-						status: CustomCommandStatus.Failure,
-					};
-				}
-				json = parseResult.json;
 			}
+			const json: GivexJson = parseResult.json;
 			const paramsResult: GivexValidationResult = validateGivex(json);
 			if (paramsResult.commandResult.status === CustomCommandStatus.Failure) {
 				return paramsResult.commandResult;
@@ -94,15 +86,15 @@ export function registerCommandBlockx(registry: CustomCommandRegistry): void {
 					dimension,
 					at,
 					json,
-					paramsResult.enchants,
+					paramsResult.enchants ?? undefined,
 				);
-				if (itemResult.item !== undefined) {
+				if (itemResult.item !== null) {
 					giveItemToBlock(
 						block,
 						itemResult.item,
 						json.amount,
 						json.slotId,
-						json.replaceMode ?? "destroy",
+						json.replaceMode ?? undefined,
 					);
 				}
 				if (itemResult.commandResult.status === CustomCommandStatus.Failure) {

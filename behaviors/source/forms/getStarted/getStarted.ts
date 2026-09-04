@@ -20,17 +20,31 @@ function getDefaultContext(player: Player, item?: string): GetStartedContext {
 		enchants: [],
 		json: {
 			amount: 1,
+			canDestroy: null,
+			canPlaceOn: null,
+			data: null,
+			durability: null,
+			enchants: null,
+			keepOnDeath: null,
+			lockMode: null,
+			nameTag: null,
+			replaceMode: null,
+			slot: null,
+			slotId: null,
 			typeId: item ?? "",
 		},
 		location: {
 			x: {
 				includeSquiggly: true,
+				num: null,
 			},
 			y: {
 				includeSquiggly: true,
+				num: null,
 			},
 			z: {
 				includeSquiggly: true,
+				num: null,
 			},
 		},
 		openedFromInfo: item === undefined,

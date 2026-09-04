@@ -72,10 +72,10 @@ function setItemInContainerSlot(
 	container: Container,
 	item: ItemStack,
 	slot: string,
-	slotId: number | undefined,
+	slotId: number | null,
 	replaceMode: string,
 ): CustomCommandResult {
-	if (slotId === undefined) {
+	if (slotId === null) {
 		if (slot !== SlotName.Hotbar) {
 			return addItemsToContainer(selector, container, item, item.amount);
 		} else {
@@ -119,7 +119,7 @@ function setItemInventory(
 	entity: Entity,
 	item: ItemStack,
 	slot: string,
-	slotId: number | undefined,
+	slotId: number | null,
 	replaceMode: string,
 ): CustomCommandResult {
 	const inventory: EntityInventoryComponent | undefined = entity.getComponent(
@@ -138,7 +138,7 @@ function setItemHotbar(
 	entity: Entity,
 	item: ItemStack,
 	slot: string,
-	slotId: number | undefined,
+	slotId: number | null,
 	replaceMode: string,
 ): CustomCommandResult {
 	if (!(entity instanceof Player)) {
@@ -147,7 +147,7 @@ function setItemHotbar(
 			status: CustomCommandStatus.Failure,
 		};
 	}
-	if (slotId !== undefined && (slotId < 0 || slotId > 8)) {
+	if (slotId !== null && (slotId < 0 || slotId > 8)) {
 		return {
 			message: `Invalid hotbar slot id "${slotId}". Must be between 0 and 8.`,
 			status: CustomCommandStatus.Failure,
@@ -164,7 +164,7 @@ function setItemTameable(
 	entity: Entity,
 	item: ItemStack,
 	slot: string,
-	slotId: number | undefined,
+	slotId: number | null,
 	replaceMode: string,
 ): CustomCommandResult {
 	const inventory: EntityInventoryComponent | undefined = entity.getComponent(
@@ -186,7 +186,7 @@ function setItemTameable(
 				status: CustomCommandStatus.Failure,
 			};
 		}
-		if (slotId) {
+		if (slotId !== null) {
 			// Account for saddle/carpet slot (slot 0);
 			slotId++;
 		}
@@ -216,7 +216,7 @@ function setItemTameable(
 	};
 }
 
-function slotNameToEquipmentSlot(name: string): EquipmentSlot | undefined {
+function slotNameToEquipmentSlot(name: string): EquipmentSlot | null {
 	switch (name) {
 		case SlotName.Mainhand:
 			return EquipmentSlot.Mainhand;
@@ -231,7 +231,7 @@ function slotNameToEquipmentSlot(name: string): EquipmentSlot | undefined {
 		case SlotName.Feet:
 			return EquipmentSlot.Feet;
 		default:
-			return undefined;
+			return null;
 	}
 }
 
@@ -250,8 +250,8 @@ function setItemEquippable(
 			status: CustomCommandStatus.Failure,
 		};
 	}
-	const equipmentSlot: EquipmentSlot | undefined = slotNameToEquipmentSlot(slot);
-	if (equipmentSlot === undefined) {
+	const equipmentSlot: EquipmentSlot | null = slotNameToEquipmentSlot(slot);
+	if (equipmentSlot === null) {
 		return {
 			message: `Unable to convert ${slot} to EquipmentSlot for ${getSelectorName(entity)}`,
 			status: CustomCommandStatus.Failure,
@@ -311,7 +311,7 @@ function setItemEndChest(
 	entity: Entity,
 	item: ItemStack,
 	slot: string,
-	slotId: number | undefined,
+	slotId: number | null,
 	replaceMode: string,
 ): CustomCommandResult {
 	const enderInventory: EntityEnderInventoryComponent | undefined = entity.getComponent(
@@ -337,11 +337,11 @@ export function giveItemToEntity(
 	entity: Entity,
 	item: ItemStack,
 	amount: number,
-	slot: string | undefined,
-	slotId: number | undefined,
-	replaceMode: string,
+	slot: string | null,
+	slotId: number | null = null,
+	replaceMode: string = "destroy",
 ): CustomCommandResult {
-	if (slot === undefined) {
+	if (slot === null) {
 		// Just add item to free slots in inventory
 		const inventory: EntityInventoryComponent | undefined = entity.getComponent(
 			EntityComponentTypes.Inventory,
@@ -384,8 +384,8 @@ export function giveItemToBlock(
 	block: Block,
 	item: ItemStack,
 	amount: number,
-	slotId: number | undefined,
-	replaceMode: string,
+	slotId: number | null,
+	replaceMode: string = "destroy",
 ): CustomCommandResult {
 	const inventory: BlockInventoryComponent | undefined = block.getComponent(
 		BlockComponentTypes.Inventory,
@@ -400,7 +400,7 @@ export function giveItemToBlock(
 			status: CustomCommandStatus.Failure,
 		};
 	}
-	if (slotId !== undefined) {
+	if (slotId !== null) {
 		return setItemInContainerSlot(
 			block,
 			inventory.container,
