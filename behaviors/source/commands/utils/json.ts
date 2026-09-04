@@ -303,9 +303,14 @@ export function validateGivex(json: GivexJson): GivexValidationResult {
 		result.commandResult.message = `Invalid slot "${json.slot}"\nValid values:\n${Object.values(SlotName).join("\n")}`;
 		return result;
 	}
-	if (json.slotId !== null && (json.slotId < 0 || !Number.isInteger(json.slotId))) {
-		result.commandResult.message = "Slot id must be a non negative integer.";
-		return result;
+	if (json.slotId !== null) {
+		if (json.slotId < 0 || !Number.isInteger(json.slotId)) {
+			result.commandResult.message = "Slot id must be a non negative integer.";
+			return result;
+		}
+		if (json.slot === null) {
+			json.slot = SlotName.Inventory;
+		}
 	}
 	if (
 		json.replaceMode !== null &&
