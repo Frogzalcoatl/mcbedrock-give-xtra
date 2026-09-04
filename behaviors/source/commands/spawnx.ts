@@ -11,7 +11,7 @@ import {
 	type Vector3,
 } from "@minecraft/server";
 import { PACK_NAMESPACE } from "../constants";
-import { spawnItemAt } from "../items/container";
+import { spawnx } from "../items/container";
 import { type GetItemFromJsonResult, getItemFromJson } from "../items/json";
 import { vector3ToString } from "./utils/beautification";
 import {
@@ -74,7 +74,7 @@ export function registerCommandSpawnx(registry: CustomCommandRegistry): void {
 					validation.enchants ?? undefined,
 				);
 				if (itemResult.item !== null) {
-					spawnItemAt(dimension, at, itemResult.item, json.amount);
+					spawnx(dimension, at, itemResult.item, json.amount);
 				}
 				if (itemResult.commandResult.status === CustomCommandStatus.Failure) {
 					sendCommandFeedbackToOrigin(origin, itemResult.commandResult);

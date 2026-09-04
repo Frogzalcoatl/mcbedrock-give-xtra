@@ -14,7 +14,7 @@ import {
 	type Vector3,
 } from "@minecraft/server";
 import { PACK_NAMESPACE } from "../constants";
-import { giveItemToBlock } from "../items/container";
+import { blockx } from "../items/container";
 import { type GetItemFromJsonResult, getItemFromJson } from "../items/json";
 import { vector3ToString } from "./utils/beautification";
 import {
@@ -93,7 +93,7 @@ export function registerCommandBlockx(registry: CustomCommandRegistry): void {
 					validation.enchants ?? undefined,
 				);
 				if (itemResult.item !== null) {
-					giveItemToBlock(
+					blockx(
 						block,
 						itemResult.item,
 						json.amount,

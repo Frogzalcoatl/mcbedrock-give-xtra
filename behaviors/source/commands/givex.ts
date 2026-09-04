@@ -12,7 +12,7 @@ import {
 	type Vector3,
 } from "@minecraft/server";
 import { PACK_NAMESPACE } from "../constants";
-import { giveItemToEntity } from "../items/container";
+import { givex } from "../items/container";
 import { type GetItemFromJsonResult, getItemFromJson } from "../items/json";
 import {
 	type GivexJson,
@@ -86,7 +86,7 @@ export function registerCommandGivex(registry: CustomCommandRegistry): void {
 				);
 				if (itemResult.item !== null) {
 					for (const entity of target) {
-						giveItemToEntity(
+						givex(
 							entity,
 							itemResult.item,
 							json.amount,
