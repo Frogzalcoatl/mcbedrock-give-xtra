@@ -105,7 +105,9 @@ function validatePropertyTypes(obj: any): obj is GivexJson {
 	} else if (!isStringArray(obj.canPlaceOn)) {
 		throw new Error("canPlaceOn must be an array of strings.");
 	}
-	if (obj.canDestroy !== undefined && !isStringArray(obj.canDestroy)) {
+	if (obj.canDestroy === undefined) {
+		obj.canDestroy = null;
+	} else if (!isStringArray(obj.canDestroy)) {
 		throw new Error("canDestroy must be an array of strings.");
 	}
 	if (obj.durability === undefined) {
@@ -173,12 +175,9 @@ export function parseGivexJson(str: string, typeId: string): GivexJsonParseResul
 // Returns invalid index (if it exists)
 function validBlockTypes(blockTypes: string[]): number | null {
 	for (let i: number = 0; i < blockTypes.length; i++) {
-		let current: string | undefined = blockTypes[i];
+		const current: string | undefined = blockTypes[i];
 		if (!current) {
 			return i;
-		}
-		if (current.indexOf(":") === -1) {
-			current = `minecraft:${current}`;
 		}
 		const blockType: BlockType | undefined = BlockTypes.get(current);
 		if (blockType === undefined) {
@@ -188,23 +187,20 @@ function validBlockTypes(blockTypes: string[]): number | null {
 	return null;
 }
 
-// Ex valid enchant list: "protection, 4, mending, feather_falling"
+// Ex valid enchant list: ["protection", 4, "mending", "feather_falling"]
 // If level is not included, assume level 1
 // Returns enchantments or invalid index
 function getEnchantsFromList(list: (string | number)[]): Enchantment[] | number {
 	const enchantments: Enchantment[] = [];
 	let currentEnchantType: EnchantmentType | null = null;
 	for (let i: number = 0; i < list.length; i++) {
-		let currentVal: string | number | undefined = list[i];
+		const currentVal: string | number | undefined = list[i];
 		if (typeof currentVal === "string") {
 			if (currentEnchantType !== null) {
 				enchantments.push({
 					level: 1,
 					type: currentEnchantType,
 				});
-			}
-			if (currentVal.indexOf(":") === -1) {
-				currentVal = `minecraft:${currentVal}`;
 			}
 			currentEnchantType = EnchantmentTypes.get(currentVal) ?? null;
 			if (currentEnchantType === null) {
