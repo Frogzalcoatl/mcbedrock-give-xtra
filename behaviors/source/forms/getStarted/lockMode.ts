@@ -1,5 +1,6 @@
 import { ItemLockMode, system } from "@minecraft/server";
 import { ModalFormData, type ModalFormResponse } from "@minecraft/server-ui";
+import { camelToTitleCase } from "../../commands/utils/beautification";
 import { type GetStartedContext, getStartedTitle } from "./getStarted";
 import { getStartedProperties } from "./properties";
 
@@ -38,6 +39,9 @@ export async function getStartedLockMode(context: GetStartedContext): Promise<vo
 		context.json.lockMode = lockMode;
 	}
 	system.run(() =>
-		getStartedProperties(context, `Lock Mode set to: §e${context.json.lockMode}§r`),
+		getStartedProperties(
+			context,
+			`Lock Mode set to: §e${camelToTitleCase(context.json.lockMode ?? "None")}§r`,
+		),
 	);
 }

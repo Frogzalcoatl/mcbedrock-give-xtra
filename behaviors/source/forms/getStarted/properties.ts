@@ -12,17 +12,20 @@ import {
 	MessageFormData,
 	type MessageFormResponse,
 } from "@minecraft/server-ui";
+import { camelToTitleCase, prettyTypeId } from "../../commands/utils/beautification";
 import { type GivexJson, validJsonKeys } from "../../commands/utils/json";
 import { getStartedAmount } from "./amount";
 import { commandVector3ToString } from "./commandVector3";
 import { getStartedData } from "./data";
 import { getStartedDurability } from "./durability";
+import { getStartedEnchants } from "./enchants";
 import { formGetStarted, type GetStartedContext, getStartedTitle } from "./getStarted";
 import { getIconPath } from "./iconPaths";
 import { getStartedKeepOnDeath } from "./keepOnDeath";
 import { getStartedLocation } from "./location";
 import { getStartedLockMode } from "./lockMode";
 import { getStartedNameTag } from "./nameTag";
+import { getStartedSubmit } from "./submit";
 
 function blockListToString(list: string[], maxLength: number): string {
 	let str: string = "";
@@ -33,7 +36,7 @@ function blockListToString(list: string[], maxLength: number): string {
 		length = maxLength;
 	}
 	for (let i = 0; i < length; i++) {
-		str += `\n${list[i]}`;
+		str += `\n${prettyTypeId(list[i] ?? "undefined")}`;
 	}
 	if (exceedsMaxLength) {
 		str += "\n...";
@@ -50,7 +53,11 @@ function enchantsToString(enchants: Enchantment[], maxLength: number): string {
 		length = maxLength;
 	}
 	for (let i = 0; i < length; i++) {
-		str += `\n-${enchants[i]?.type.id} ${enchants[i]?.level}`;
+		const current: Enchantment | undefined = enchants[i];
+		if (current === undefined) {
+			continue;
+		}
+		str += `\n-${prettyTypeId(current.type.id)} ${current.level}`;
 	}
 	if (exceedsMaxLength) {
 		str += "\n...";
@@ -74,22 +81,22 @@ function contextToString(context: GetStartedContext): string {
 		str += `\n§rData: §e${j.data}`;
 	}
 	if (j.lockMode !== null) {
-		str += `\n§rLock Mode: §e${j.lockMode}`;
+		str += `\n§rLock Mode: §e${camelToTitleCase(j.lockMode)}`;
 	}
 	if (j.keepOnDeath !== null) {
 		str += `\n§rKeep on Death: §e${j.keepOnDeath}`;
 	}
 	if (j.canPlaceOn !== null) {
-		str += `\n§rCan Place On:\n§e${blockListToString(j.canPlaceOn, 16)}`;
+		str += `\n§rCan Place On:§e${blockListToString(j.canPlaceOn, 16)}`;
 	}
 	if (j.canDestroy !== null) {
-		str += `\n§rCan Destroy:\n§e${blockListToString(j.canDestroy, 16)}`;
+		str += `\n§rCan Destroy:§e${blockListToString(j.canDestroy, 16)}`;
 	}
 	if (j.durability !== null) {
-		str += `\n§rDurability: §e${j.durability}`;
+		str += `\n§rDurability: §e${j.durability === "unbreakable" ? "Unbreakable" : j.durability}`;
 	}
 	if (context.enchants.length > 0) {
-		str += `\n§rEnchants:§e\n${enchantsToString(context.enchants, 16)}`;
+		str += `\n§rEnchants:§e${enchantsToString(context.enchants, 16)}`;
 		for (let i: number = 0; i < context.enchants.length; i++) {}
 	}
 	if (j.slot !== null) {
@@ -99,7 +106,7 @@ function contextToString(context: GetStartedContext): string {
 		str += `\n§rSlot ID: §e${j.slotId}`;
 	}
 	if (j.replaceMode !== null) {
-		str += `\n§rReplace Mode: §e${j.replaceMode}`;
+		str += `\n§rReplace Mode: §e${camelToTitleCase(j.replaceMode)}`;
 	}
 	return str;
 }
@@ -161,7 +168,7 @@ export async function getStartedProperties(
 	const submitButtonIndex: number = jsonKeys.length + 1;
 	const form = new ActionFormData();
 	form.title(getStartedTitle);
-	let body: string = `Select property to edit for:\n§e${context.json.typeId}`;
+	let body: string = `Select property to edit for:\n§e${prettyTypeId(context.json.typeId)}`;
 	if (optionalMessage) {
 		body = `${optionalMessage}§r\n\n${body}`;
 	}
@@ -169,7 +176,7 @@ export async function getStartedProperties(
 	form.divider();
 	form.button("Back");
 	for (const key of jsonKeys) {
-		form.button(key, getIconPath(key));
+		form.button(camelToTitleCase(key), getIconPath(key));
 	}
 	form.button("Submit");
 	form.label(`Selected Properties:${contextToString(context)}`);
@@ -178,6 +185,7 @@ export async function getStartedProperties(
 		system.run(() => backConfirmation(context));
 		return;
 	} else if (resp.selection === submitButtonIndex) {
+		system.run(() => getStartedSubmit(context));
 		return;
 	}
 	const keyIndex: number = resp.selection - 1;
@@ -203,6 +211,9 @@ export async function getStartedProperties(
 				break;
 			case "durability":
 				getStartedDurability(context);
+				break;
+			case "enchants":
+				getStartedEnchants(context);
 				break;
 			default:
 				getStartedProperties(context, "§cNot Finished");

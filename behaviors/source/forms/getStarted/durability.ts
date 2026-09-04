@@ -76,7 +76,7 @@ export async function getStartedDurability(context: GetStartedContext): Promise<
 		infiniteDurability = resp.formValues[1];
 		if (infiniteDurability) {
 			context.json.durability = "unbreakable";
-			system.run(() => getStartedProperties(context, `Durability set to: §eunbreakable§r`));
+			system.run(() => getStartedProperties(context, `Durability set to: §eUnbreakable§r`));
 			return;
 		}
 	}
