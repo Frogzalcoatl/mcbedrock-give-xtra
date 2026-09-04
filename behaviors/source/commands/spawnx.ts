@@ -6,6 +6,7 @@ import {
 	type CustomCommandResult,
 	CustomCommandStatus,
 	type Dimension,
+	ItemStack,
 	type ItemType,
 	system,
 	type Vector3,
@@ -39,7 +40,7 @@ export function registerCommandSpawnx(registry: CustomCommandRegistry): void {
 			origin: CustomCommandOrigin,
 			at: Vector3,
 			item: ItemType,
-			jsonStr: string = "{}",
+			jsonStr?: string,
 		): CustomCommandResult => {
 			const dimension: Dimension | null = getDimensionFromOrigin(origin);
 			if (dimension === null) {
@@ -52,6 +53,19 @@ export function registerCommandSpawnx(registry: CustomCommandRegistry): void {
 				return {
 					message: "Cannot access block outside of world.",
 					status: CustomCommandStatus.Failure,
+				};
+			}
+			if (jsonStr === undefined) {
+				system.run(() => {
+					const itemStack = new ItemStack(item);
+					dimension.spawnItem(itemStack, at);
+					sendCommandFeedbackToOrigin(origin, {
+						message: `Spawned ${prettyTypeId(item.id)} * 1 at ${vector3ToString(at)}`,
+						status: CustomCommandStatus.Success,
+					});
+				});
+				return {
+					status: CustomCommandStatus.Success,
 				};
 			}
 			const parseResult: GivexJsonParseResult = parseGivexJson(jsonStr, item.id);

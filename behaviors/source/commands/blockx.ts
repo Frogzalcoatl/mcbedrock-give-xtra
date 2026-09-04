@@ -1,7 +1,5 @@
 import {
 	type Block,
-	BlockComponentTypes,
-	type BlockInventoryComponent,
 	CommandPermissionLevel,
 	type CustomCommandOrigin,
 	CustomCommandParamType,
@@ -9,6 +7,7 @@ import {
 	type CustomCommandResult,
 	CustomCommandStatus,
 	type Dimension,
+	ItemStack,
 	type ItemType,
 	system,
 	type Vector3,
@@ -42,7 +41,7 @@ export function registerCommandBlockx(registry: CustomCommandRegistry): void {
 			origin: CustomCommandOrigin,
 			at: Vector3,
 			item: ItemType,
-			jsonStr: string = "{}",
+			jsonStr?: string,
 		): CustomCommandResult => {
 			const dimension: Dimension | null = getDimensionFromOrigin(origin);
 			if (dimension === null) {
@@ -64,13 +63,13 @@ export function registerCommandBlockx(registry: CustomCommandRegistry): void {
 					status: CustomCommandStatus.Failure,
 				};
 			}
-			const inventory: BlockInventoryComponent | undefined = block.getComponent(
-				BlockComponentTypes.Inventory,
-			);
-			if (inventory === undefined) {
+			if (jsonStr === undefined) {
+				system.run(() => {
+					const result: CustomCommandResult = blockx(block, new ItemStack(item), 1, null);
+					sendCommandFeedbackToOrigin(origin, result);
+				});
 				return {
-					message: `Block at ${vector3ToString(at)} does not have an inventory.`,
-					status: CustomCommandStatus.Failure,
+					status: CustomCommandStatus.Success,
 				};
 			}
 			const parseResult: GivexJsonParseResult = parseGivexJson(jsonStr, item.id);

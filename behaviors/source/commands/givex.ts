@@ -7,6 +7,7 @@ import {
 	CustomCommandStatus,
 	type Dimension,
 	type Entity,
+	ItemStack,
 	type ItemType,
 	system,
 	type Vector3,
@@ -43,7 +44,7 @@ export function registerCommandGivex(registry: CustomCommandRegistry): void {
 			origin: CustomCommandOrigin,
 			target: Entity[],
 			item: ItemType,
-			jsonStr: string = "{}",
+			jsonStr?: string,
 		): CustomCommandResult => {
 			if (target.length === 0) {
 				return {
@@ -63,6 +64,17 @@ export function registerCommandGivex(registry: CustomCommandRegistry): void {
 				return {
 					message: "Unable to get location from origin.",
 					status: CustomCommandStatus.Failure,
+				};
+			}
+			if (jsonStr === undefined) {
+				system.run(() => {
+					const itemStack = new ItemStack(item);
+					for (const entity of target) {
+						givex(entity, itemStack, 1, null);
+					}
+				});
+				return {
+					status: CustomCommandStatus.Success,
 				};
 			}
 			const parseResult: GivexJsonParseResult = parseGivexJson(jsonStr, item.id);
