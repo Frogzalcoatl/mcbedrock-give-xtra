@@ -11,7 +11,7 @@ export interface GivexJson {
 	keepOnDeath: boolean | null;
 	canPlaceOn: string[] | null;
 	canDestroy: string[] | null;
-	durability: "unbreakable" | "max" | number | null;
+	durability: "unbreakable" | number | null;
 	enchants: (string | number)[] | null;
 	slot: string | null;
 	slotId: number | null;

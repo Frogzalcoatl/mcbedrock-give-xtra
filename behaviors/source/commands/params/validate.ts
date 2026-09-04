@@ -72,7 +72,10 @@ export function validateGivex(json: GivexJson): GivexValidationResult {
 			return result;
 		}
 	}
-	if (json.durability !== null && typeof json.durability === "number") {
+	if (
+		json.durability !== null &&
+		(typeof json.durability === "number" || json.durability !== "unbreakable")
+	) {
 		if (json.durability < 0) {
 			result.commandResult.message = `Durability must be a non negative integer`;
 			return result;

@@ -16,8 +16,10 @@ import { commandVector3ToString } from "../../commands/params/commandVector3";
 import { type GivexJson, validJsonKeys } from "../../commands/params/json";
 import { getStartedAmount } from "./amount";
 import { getStartedData } from "./data";
+import { getStartedDurability } from "./durability";
 import { formGetStarted, type GetStartedContext, getStartedTitle } from "./getStarted";
 import { getIconPath } from "./iconPaths";
+import { getStartedKeepOnDeath } from "./keepOnDeath";
 import { getStartedLocation } from "./location";
 import { getStartedLockMode } from "./lockMode";
 import { getStartedNameTag } from "./nameTag";
@@ -66,7 +68,7 @@ function contextToString(context: GetStartedContext): string {
 		str += `\n§rLocation: §e${commandVector3ToString(context.location)}`;
 	}
 	if (j.nameTag !== null) {
-		str += `\n§rName Tag: §e${j.nameTag}`;
+		str += `\n§rName Tag: "§o${j.nameTag}§r"`;
 	}
 	if (j.data !== null) {
 		str += `\n§rData: §e${j.data}`;
@@ -84,7 +86,7 @@ function contextToString(context: GetStartedContext): string {
 		str += `\n§rCan Destroy:\n§e${blockListToString(j.canDestroy, 16)}`;
 	}
 	if (j.durability !== null) {
-		str += `\n§rKeep on Death: §e${j.durability}`;
+		str += `\n§rDurability: §e${j.durability}`;
 	}
 	if (context.enchants.length > 0) {
 		str += `\n§rEnchants:§e\n${enchantsToString(context.enchants, 16)}`;
@@ -195,6 +197,12 @@ export async function getStartedProperties(
 				break;
 			case "data":
 				getStartedData(context);
+				break;
+			case "keepOnDeath":
+				getStartedKeepOnDeath(context);
+				break;
+			case "durability":
+				getStartedDurability(context);
 				break;
 			default:
 				getStartedProperties(context, "§cNot Finished");

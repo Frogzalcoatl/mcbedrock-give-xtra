@@ -37,10 +37,12 @@ export async function getStartedNameTag(context: GetStartedContext): Promise<voi
 		const useDefaultNameTag: boolean = resp.formValues[1];
 		if (useDefaultNameTag) {
 			context.json.nameTag = null;
-			system.run(() => getStartedProperties(context, "Using default nametag"));
+			system.run(() => getStartedProperties(context, "Name Tag set to: §eDefault"));
 			return;
 		}
 	}
 	context.json.nameTag = input;
-	system.run(() => getStartedProperties(context, `Name Tag set to: §o${context.json.nameTag}§r`));
+	system.run(() =>
+		getStartedProperties(context, `Name Tag set to: "§o${context.json.nameTag}§r"`),
+	);
 }

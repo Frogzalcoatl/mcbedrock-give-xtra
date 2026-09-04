@@ -31,10 +31,13 @@ export async function getStartedData(context: GetStartedContext): Promise<void> 
 		}
 		input = stringToFiniteNumber(resp.formValues[0]);
 	}
-	if (input === 0) {
-		context.json.data = null;
-	} else {
-		context.json.data = input;
-	}
-	system.run(() => getStartedProperties(context, `Data set to: §e${input}`));
+	system.run(() => {
+		if (input === 0) {
+			context.json.data = null;
+			getStartedProperties(context, `Data set to: §eDefault (${input})`);
+		} else {
+			context.json.data = input;
+			getStartedProperties(context, `Data set to: §e${input}`);
+		}
+	});
 }
