@@ -13,7 +13,7 @@ import {
 import { PACK_NAMESPACE } from "../constants";
 import { spawnx } from "../items/container";
 import { type GetItemFromJsonResult, getItemFromJson } from "../items/json";
-import { vector3ToString } from "./utils/beautification";
+import { prettyTypeId, vector3ToString } from "./utils/beautification";
 import {
 	type GivexJson,
 	type GivexJsonParseResult,
@@ -73,17 +73,15 @@ export function registerCommandSpawnx(registry: CustomCommandRegistry): void {
 					json,
 					validation.enchants ?? undefined,
 				);
+				let spawnxResult: CustomCommandResult = itemResult.commandResult;
 				if (itemResult.item !== null) {
 					spawnx(dimension, at, itemResult.item, json.amount);
-				}
-				if (itemResult.commandResult.status === CustomCommandStatus.Failure) {
-					sendCommandFeedbackToOrigin(origin, itemResult.commandResult);
-				} else {
-					sendCommandFeedbackToOrigin(origin, {
-						message: `Spawned ${item.id} * ${json.amount} at ${vector3ToString(at)}`,
+					spawnxResult = {
+						message: `Spawned ${prettyTypeId(json.typeId)} * ${json.amount} at ${vector3ToString(at)}`,
 						status: CustomCommandStatus.Success,
-					});
+					};
 				}
+				sendCommandFeedbackToOrigin(origin, spawnxResult);
 			});
 			return {
 				status: CustomCommandStatus.Success,

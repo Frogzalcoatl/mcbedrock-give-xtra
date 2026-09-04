@@ -92,8 +92,9 @@ export function registerCommandBlockx(registry: CustomCommandRegistry): void {
 					json,
 					validation.enchants ?? undefined,
 				);
+				let blockxResult: CustomCommandResult = itemResult.commandResult;
 				if (itemResult.item !== null) {
-					blockx(
+					blockxResult = blockx(
 						block,
 						itemResult.item,
 						json.amount,
@@ -101,14 +102,7 @@ export function registerCommandBlockx(registry: CustomCommandRegistry): void {
 						json.replaceMode ?? undefined,
 					);
 				}
-				if (itemResult.commandResult.status === CustomCommandStatus.Failure) {
-					sendCommandFeedbackToOrigin(origin, itemResult.commandResult);
-				} else {
-					sendCommandFeedbackToOrigin(origin, {
-						message: `Gave ${item.id} * ${json.amount} to ${block.typeId} at ${vector3ToString(at)}`,
-						status: CustomCommandStatus.Success,
-					});
-				}
+				sendCommandFeedbackToOrigin(origin, blockxResult);
 			});
 			return {
 				status: CustomCommandStatus.Success,
