@@ -1,4 +1,5 @@
-Info command (server-ui)
-	Come up with a better way to generate prompt edit ui
+* Finish get started ui
 
-Add item lore
+* Write wiki in readme, then copy to
+
+* Add lore to givex json

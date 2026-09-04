@@ -6,37 +6,43 @@ import {
 	type CustomCommandResult,
 	CustomCommandStatus,
 	type Dimension,
+	type Entity,
 	type ItemType,
 	system,
 	type Vector3,
 } from "@minecraft/server";
-import { PACK_NAMESPACE } from "../../constants";
-import { spawnItemAt } from "../../items/containers";
-import { type GetItemStackResult, getItemFromJson } from "../../items/get";
-import { vector3ToString } from "../../prettyTypeId";
-import { afterTickCommandResultHandler } from "../afterTickResultHandler";
-import { type GivexJson, type GivexJsonParseResult, parseGivexJson } from "../params/json";
-import { getDimensionFromOrigin } from "../params/origin";
-import { type GivexValidationResult, validateGivex } from "../params/validate";
+import { PACK_NAMESPACE } from "../constants";
+import { giveItemToEntity } from "../items/containers";
+import { type GetItemStackResult, getItemFromJson } from "../items/get";
+import { afterTickCommandResultHandler } from "./utils/afterTickResultHandler";
+import { type GivexJson, type GivexJsonParseResult, parseGivexJson } from "./utils/json";
+import { getDimensionFromOrigin, getLocationFromOrigin } from "./utils/origin";
+import { type GivexValidationResult, validateGivex } from "./utils/validateJson";
 
-export function registerCommandSpawnx(registry: CustomCommandRegistry): void {
+export function registerCommandGivex(registry: CustomCommandRegistry): void {
 	registry.registerCommand(
 		{
-			description: "Spawn items with special properties.",
+			description: "Give items with special properties to entities.",
 			mandatoryParameters: [
-				{ name: "at", type: CustomCommandParamType.Location },
+				{ name: "target", type: CustomCommandParamType.EntitySelector },
 				{ name: "itemName", type: CustomCommandParamType.ItemType },
 			],
-			name: `${PACK_NAMESPACE}:spawnx`,
+			name: `${PACK_NAMESPACE}:givex`,
 			optionalParameters: [{ name: "json", type: CustomCommandParamType.String }],
 			permissionLevel: CommandPermissionLevel.GameDirectors,
 		},
 		(
 			origin: CustomCommandOrigin,
-			at: Vector3,
+			target: Entity[],
 			item: ItemType,
 			jsonStr: string = "{}",
 		): CustomCommandResult => {
+			if (target.length === 0) {
+				return {
+					message: "No valid target.",
+					status: CustomCommandStatus.Failure,
+				};
+			}
 			const dimension: Dimension | null = getDimensionFromOrigin(origin);
 			if (dimension === null) {
 				return {
@@ -44,9 +50,10 @@ export function registerCommandSpawnx(registry: CustomCommandRegistry): void {
 					status: CustomCommandStatus.Failure,
 				};
 			}
-			if (!dimension.isChunkLoaded(at)) {
+			const location: Vector3 | null = getLocationFromOrigin(origin);
+			if (location === null) {
 				return {
-					message: "Cannot access block outside of world.",
+					message: "Unable to get location from origin.",
 					status: CustomCommandStatus.Failure,
 				};
 			}
@@ -65,18 +72,27 @@ export function registerCommandSpawnx(registry: CustomCommandRegistry): void {
 			system.run(() => {
 				const itemResult: GetItemStackResult = getItemFromJson(
 					dimension,
-					at,
+					location,
 					json,
 					paramsResult.enchants ?? undefined,
 				);
 				if (itemResult.item !== null) {
-					spawnItemAt(dimension, at, itemResult.item, json.amount);
+					for (const entity of target) {
+						giveItemToEntity(
+							entity,
+							itemResult.item,
+							json.amount,
+							json.slot,
+							json.slotId,
+							json.replaceMode ?? undefined,
+						);
+					}
 				}
 				if (itemResult.commandResult.status === CustomCommandStatus.Failure) {
 					afterTickCommandResultHandler(origin, itemResult.commandResult);
 				} else {
 					afterTickCommandResultHandler(origin, {
-						message: `Spawned ${item.id} * ${json.amount} at ${vector3ToString(at)}`,
+						message: `Gave ${item.id} * ${json.amount} to target(s)`,
 						status: CustomCommandStatus.Success,
 					});
 				}

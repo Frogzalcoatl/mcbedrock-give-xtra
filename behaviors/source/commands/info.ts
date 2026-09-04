@@ -9,10 +9,10 @@ import {
 	type Player,
 	system,
 } from "@minecraft/server";
-import { PACK_NAMESPACE } from "../../constants";
-import { formGetStarted } from "../../forms/getStarted/getStarted";
-import { formInfo } from "../../forms/info";
-import { getPlayerFromOrigin } from "../params/origin";
+import { PACK_NAMESPACE } from "../constants";
+import { formGetStarted } from "../forms/getStarted/getStarted";
+import { formInfo } from "../forms/info";
+import { getPlayerFromOrigin } from "./utils/origin";
 
 export function registerCommandInfo(registry: CustomCommandRegistry): void {
 	registry.registerCommand(

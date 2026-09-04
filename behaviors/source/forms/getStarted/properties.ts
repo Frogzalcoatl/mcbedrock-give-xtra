@@ -12,8 +12,8 @@ import {
 	MessageFormData,
 	type MessageFormResponse,
 } from "@minecraft/server-ui";
-import { commandVector3ToString } from "../../commands/params/commandVector3";
-import { type GivexJson, validJsonKeys } from "../../commands/params/json";
+import { commandVector3ToString } from "../../commands/utils/commandVector3";
+import { type GivexJson, validJsonKeys } from "../../commands/utils/json";
 import { getStartedAmount } from "./amount";
 import { getStartedData } from "./data";
 import { getStartedDurability } from "./durability";

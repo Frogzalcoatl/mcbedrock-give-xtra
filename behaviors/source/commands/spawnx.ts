@@ -1,7 +1,4 @@
 import {
-	type Block,
-	BlockComponentTypes,
-	type BlockInventoryComponent,
 	CommandPermissionLevel,
 	type CustomCommandOrigin,
 	CustomCommandParamType,
@@ -13,24 +10,24 @@ import {
 	system,
 	type Vector3,
 } from "@minecraft/server";
-import { PACK_NAMESPACE } from "../../constants";
-import { giveItemToBlock } from "../../items/containers";
-import { type GetItemStackResult, getItemFromJson } from "../../items/get";
-import { vector3ToString } from "../../prettyTypeId";
-import { afterTickCommandResultHandler } from "../afterTickResultHandler";
-import { type GivexJson, type GivexJsonParseResult, parseGivexJson } from "../params/json";
-import { getDimensionFromOrigin } from "../params/origin";
-import { type GivexValidationResult, validateGivex } from "../params/validate";
+import { PACK_NAMESPACE } from "../constants";
+import { spawnItemAt } from "../items/containers";
+import { type GetItemStackResult, getItemFromJson } from "../items/get";
+import { afterTickCommandResultHandler } from "./utils/afterTickResultHandler";
+import { vector3ToString } from "./utils/beautification";
+import { type GivexJson, type GivexJsonParseResult, parseGivexJson } from "./utils/json";
+import { getDimensionFromOrigin } from "./utils/origin";
+import { type GivexValidationResult, validateGivex } from "./utils/validateJson";
 
-export function registerCommandBlockx(registry: CustomCommandRegistry): void {
+export function registerCommandSpawnx(registry: CustomCommandRegistry): void {
 	registry.registerCommand(
 		{
-			description: "Give items with special properties to blocks.",
+			description: "Spawn items with special properties.",
 			mandatoryParameters: [
 				{ name: "at", type: CustomCommandParamType.Location },
 				{ name: "itemName", type: CustomCommandParamType.ItemType },
 			],
-			name: `${PACK_NAMESPACE}:blockx`,
+			name: `${PACK_NAMESPACE}:spawnx`,
 			optionalParameters: [{ name: "json", type: CustomCommandParamType.String }],
 			permissionLevel: CommandPermissionLevel.GameDirectors,
 		},
@@ -50,22 +47,6 @@ export function registerCommandBlockx(registry: CustomCommandRegistry): void {
 			if (!dimension.isChunkLoaded(at)) {
 				return {
 					message: "Cannot access block outside of world.",
-					status: CustomCommandStatus.Failure,
-				};
-			}
-			const block: Block | undefined = dimension.getBlock(at);
-			if (block === undefined) {
-				return {
-					message: `No valid block at ${vector3ToString(at)}.`,
-					status: CustomCommandStatus.Failure,
-				};
-			}
-			const inventory: BlockInventoryComponent | undefined = block.getComponent(
-				BlockComponentTypes.Inventory,
-			);
-			if (inventory === undefined) {
-				return {
-					message: `Block at ${vector3ToString(at)} does not have an inventory.`,
 					status: CustomCommandStatus.Failure,
 				};
 			}
@@ -89,19 +70,13 @@ export function registerCommandBlockx(registry: CustomCommandRegistry): void {
 					paramsResult.enchants ?? undefined,
 				);
 				if (itemResult.item !== null) {
-					giveItemToBlock(
-						block,
-						itemResult.item,
-						json.amount,
-						json.slotId,
-						json.replaceMode ?? undefined,
-					);
+					spawnItemAt(dimension, at, itemResult.item, json.amount);
 				}
 				if (itemResult.commandResult.status === CustomCommandStatus.Failure) {
 					afterTickCommandResultHandler(origin, itemResult.commandResult);
 				} else {
 					afterTickCommandResultHandler(origin, {
-						message: `Gave ${item.id} * ${json.amount} to ${block.typeId} at ${vector3ToString(at)}`,
+						message: `Spawned ${item.id} * ${json.amount} at ${vector3ToString(at)}`,
 						status: CustomCommandStatus.Success,
 					});
 				}

@@ -1,4 +1,4 @@
-import { stringToFiniteNumber, truncTo } from "../../prettyTypeId";
+import { stringToFiniteNumber, truncTo } from "./beautification";
 
 interface CommandVector3Value {
 	num: number | null;

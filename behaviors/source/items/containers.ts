@@ -17,7 +17,7 @@ import {
 	Player,
 	type Vector3,
 } from "@minecraft/server";
-import { getSelectorName, prettyTypeId, vector3ToString } from "../prettyTypeId";
+import { getSelectorName, prettyTypeId, vector3ToString } from "../commands/utils/beautification";
 import { SlotName } from "./slot";
 
 function addItemsToContainer(

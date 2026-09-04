@@ -5,7 +5,7 @@ import {
 	type Player,
 	world,
 } from "@minecraft/server";
-import { getPlayerFromOrigin } from "./params/origin";
+import { getPlayerFromOrigin } from "./origin";
 
 export function afterTickCommandResultHandler(
 	origin: CustomCommandOrigin,

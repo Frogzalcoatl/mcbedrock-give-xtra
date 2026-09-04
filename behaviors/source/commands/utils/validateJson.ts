@@ -1,7 +1,11 @@
 import {
+	type BlockType,
+	BlockTypes,
 	type CustomCommandResult,
 	CustomCommandStatus,
 	type Enchantment,
+	type EnchantmentType,
+	EnchantmentTypes,
 	ItemLockMode,
 	type ItemType,
 	ItemTypes,
@@ -9,13 +13,75 @@ import {
 import { MAX_AMOUNT, MAX_DATA, MAX_NAMETAG_LENGTH } from "../../constants";
 import { SlotName } from "../../items/slot";
 import type { GivexJson } from "./json";
-import { getEnchantsFromList, validBlockTypes } from "./lists";
+
+// Returns invalid index (if it exists)
+function validBlockTypes(blockTypes: string[]): number | null {
+	for (let i: number = 0; i < blockTypes.length; i++) {
+		let current: string | undefined = blockTypes[i];
+		if (!current) {
+			return i;
+		}
+		if (current.indexOf(":") === -1) {
+			current = `minecraft:${current}`;
+		}
+		const blockType: BlockType | undefined = BlockTypes.get(current);
+		if (blockType === undefined) {
+			return i;
+		}
+	}
+	return null;
+}
+
+// Ex valid enchant list: "protection, 4, mending, feather_falling"
+// If level is not included, assume level 1
+// Returns enchantments or invalid index
+function getEnchantsFromList(list: (string | number)[]): Enchantment[] | number {
+	const enchantments: Enchantment[] = [];
+	let currentEnchantType: EnchantmentType | null = null;
+	for (let i: number = 0; i < list.length; i++) {
+		let currentVal: string | number | undefined = list[i];
+		if (typeof currentVal === "string") {
+			if (currentEnchantType !== null) {
+				enchantments.push({
+					level: 1,
+					type: currentEnchantType,
+				});
+			}
+			if (currentVal.indexOf(":") === -1) {
+				currentVal = `minecraft:${currentVal}`;
+			}
+			currentEnchantType = EnchantmentTypes.get(currentVal) ?? null;
+			if (currentEnchantType === null) {
+				return i;
+			}
+		} else if (
+			typeof currentVal === "number" &&
+			currentEnchantType !== null &&
+			currentVal >= 1 &&
+			currentVal <= currentEnchantType.maxLevel
+		) {
+			enchantments.push({
+				level: currentVal,
+				type: currentEnchantType,
+			});
+			currentEnchantType = null;
+		} else {
+			return i;
+		}
+	}
+	if (currentEnchantType !== null) {
+		enchantments.push({
+			level: 1,
+			type: currentEnchantType,
+		});
+	}
+	return enchantments;
+}
 
 export interface GivexValidationResult {
 	commandResult: CustomCommandResult;
 	enchants: Enchantment[] | null;
 }
-
 export function validateGivex(json: GivexJson): GivexValidationResult {
 	const result: GivexValidationResult = {
 		commandResult: {

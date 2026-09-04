@@ -6,7 +6,7 @@ import {
 	ItemStack,
 	type Vector3,
 } from "@minecraft/server";
-import type { GivexJson } from "../commands/params/json";
+import type { GivexJson } from "../commands/utils/json";
 import { getDataValueItem } from "./dataValues";
 import { setDurability } from "./durability";
 import { applyEnchants } from "./enchants";

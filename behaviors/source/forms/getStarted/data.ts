@@ -1,7 +1,7 @@
 import { system } from "@minecraft/server";
 import { ModalFormData, type ModalFormResponse } from "@minecraft/server-ui";
+import { stringToFiniteNumber } from "../../commands/utils/beautification";
 import { MAX_DATA } from "../../constants";
-import { stringToFiniteNumber } from "../../prettyTypeId";
 import { formatLabel, type GetStartedContext, getStartedTitle } from "./getStarted";
 import { getStartedProperties } from "./properties";
 
