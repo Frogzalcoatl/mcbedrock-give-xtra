@@ -13,7 +13,7 @@ import {
 } from "@minecraft/server";
 import { PACK_NAMESPACE } from "../constants";
 import { giveItemToEntity } from "../items/container";
-import { type GetItemStackResult, getItemFromJson } from "../items/json";
+import { type GetItemFromJsonResult, getItemFromJson } from "../items/json";
 import {
 	type GivexJson,
 	type GivexJsonParseResult,
@@ -73,16 +73,16 @@ export function registerCommandGivex(registry: CustomCommandRegistry): void {
 				};
 			}
 			const json: GivexJson = parseResult.json;
-			const paramsResult: GivexValidationResult = validateGivex(json);
-			if (paramsResult.commandResult.status === CustomCommandStatus.Failure) {
-				return paramsResult.commandResult;
+			const validation: GivexValidationResult = validateGivex(json);
+			if (validation.commandResult.status === CustomCommandStatus.Failure) {
+				return validation.commandResult;
 			}
 			system.run(() => {
-				const itemResult: GetItemStackResult = getItemFromJson(
+				const itemResult: GetItemFromJsonResult = getItemFromJson(
 					dimension,
 					location,
 					json,
-					paramsResult.enchants ?? undefined,
+					validation.enchants ?? undefined,
 				);
 				if (itemResult.item !== null) {
 					for (const entity of target) {

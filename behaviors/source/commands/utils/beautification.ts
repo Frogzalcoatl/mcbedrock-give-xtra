@@ -1,4 +1,4 @@
-import { Block, Entity, Player, type Vector3 } from "@minecraft/server";
+import { Block, type Entity, Player, type Vector3 } from "@minecraft/server";
 
 export function prettyTypeId(typeId: string): string {
 	const namespaceColonIndex: number = typeId.indexOf(":");
@@ -23,12 +23,13 @@ export function prettyTypeId(typeId: string): string {
 export function getSelectorName(selector: Entity | Block): string {
 	if (selector instanceof Block) {
 		return prettyTypeId(selector.typeId);
-	} else selector instanceof Entity;
-	return selector.nameTag
-		? selector.nameTag
-		: selector instanceof Player
-			? selector.name
-			: prettyTypeId(selector.typeId);
+	} else {
+		return selector.nameTag
+			? selector.nameTag
+			: selector instanceof Player
+				? selector.name
+				: prettyTypeId(selector.typeId);
+	}
 }
 
 export function truncTo(num: number, decimalPlaces: number) {

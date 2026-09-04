@@ -11,19 +11,20 @@ import { getDataValueItem } from "./dataValues";
 import { setDurability } from "./durability";
 import { applyEnchants } from "./enchants";
 
-export interface GetItemStackResult {
+export interface GetItemFromJsonResult {
 	commandResult: CustomCommandResult;
 	item: ItemStack | null;
 }
-
 export function getItemFromJson(
 	originDimension: Dimension,
 	originLocation: Vector3,
 	json: GivexJson,
 	enchants?: Enchantment[],
-): GetItemStackResult {
+): GetItemFromJsonResult {
 	let item: ItemStack;
-	if (json.data !== null && json.data !== 0) {
+	if (json.data === null || json.data === 0) {
+		item = new ItemStack(json.typeId);
+	} else {
 		const result: ItemStack | null = getDataValueItem(
 			json.typeId,
 			json.data,
@@ -40,8 +41,6 @@ export function getItemFromJson(
 			};
 		}
 		item = result;
-	} else {
-		item = new ItemStack(json.typeId);
 	}
 	if (json.nameTag !== null) {
 		item.nameTag = json.nameTag;

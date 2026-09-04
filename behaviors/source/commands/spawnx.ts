@@ -12,7 +12,7 @@ import {
 } from "@minecraft/server";
 import { PACK_NAMESPACE } from "../constants";
 import { spawnItemAt } from "../items/container";
-import { type GetItemStackResult, getItemFromJson } from "../items/json";
+import { type GetItemFromJsonResult, getItemFromJson } from "../items/json";
 import { vector3ToString } from "./utils/beautification";
 import {
 	type GivexJson,
@@ -62,16 +62,16 @@ export function registerCommandSpawnx(registry: CustomCommandRegistry): void {
 				};
 			}
 			const json: GivexJson = parseResult.json;
-			const paramsResult: GivexValidationResult = validateGivex(json);
-			if (paramsResult.commandResult.status === CustomCommandStatus.Failure) {
-				return paramsResult.commandResult;
+			const validation: GivexValidationResult = validateGivex(json);
+			if (validation.commandResult.status === CustomCommandStatus.Failure) {
+				return validation.commandResult;
 			}
 			system.run(() => {
-				const itemResult: GetItemStackResult = getItemFromJson(
+				const itemResult: GetItemFromJsonResult = getItemFromJson(
 					dimension,
 					at,
 					json,
-					paramsResult.enchants ?? undefined,
+					validation.enchants ?? undefined,
 				);
 				if (itemResult.item !== null) {
 					spawnItemAt(dimension, at, itemResult.item, json.amount);

@@ -245,20 +245,13 @@ export function validateGivex(json: GivexJson): GivexValidationResult {
 		},
 		enchants: null,
 	};
-	if (json.typeId.indexOf(":") === -1) {
-		json.typeId = `minecraft:${json.typeId}`;
-	}
 	const itemType: ItemType | undefined = ItemTypes.get(json.typeId);
 	if (itemType === undefined) {
 		result.commandResult.message = `Invalid typeId "${json.typeId}"`;
 		return result;
 	}
-	if (
-		json.amount <= 0 ||
-		json.amount > MAX_AMOUNT ||
-		!Number.isFinite(json.amount) ||
-		!Number.isInteger(json.amount)
-	) {
+	json.typeId = itemType.id;
+	if (json.amount <= 0 || json.amount > MAX_AMOUNT || !Number.isInteger(json.amount)) {
 		result.commandResult.message = `Amount must be an integer within range 0-${MAX_AMOUNT}.`;
 		return result;
 	}
@@ -268,10 +261,7 @@ export function validateGivex(json: GivexJson): GivexValidationResult {
 	}
 	if (
 		json.data !== null &&
-		(json.data < 0 ||
-			json.data > MAX_DATA ||
-			!Number.isFinite(json.amount) ||
-			!Number.isInteger(json.amount))
+		(json.data < 0 || json.data > MAX_DATA || !Number.isInteger(json.amount))
 	) {
 		result.commandResult.message = `Invalid data value "${json.data}"`;
 		return result;
@@ -296,12 +286,12 @@ export function validateGivex(json: GivexJson): GivexValidationResult {
 	}
 	if (
 		json.durability !== null &&
-		(typeof json.durability === "number" || json.durability !== "unbreakable")
+		(json.durability !== "unbreakable" ||
+			(typeof json.durability === "number" &&
+				(json.durability < 0 || !Number.isInteger(json.durability))))
 	) {
-		if (json.durability < 0) {
-			result.commandResult.message = `Durability must be a non negative integer`;
-			return result;
-		}
+		result.commandResult.message = `Durability must be a non negative integer or "unbreakable"`;
+		return result;
 	}
 	if (json.enchants !== null) {
 		const enchantResult: number | Enchantment[] = getEnchantsFromList(json.enchants);
@@ -317,7 +307,7 @@ export function validateGivex(json: GivexJson): GivexValidationResult {
 		result.commandResult.message = `Invalid slot "${json.slot}"\nValid values:\n${Object.values(SlotName).join("\n")}`;
 		return result;
 	}
-	if (json.slotId !== null && json.slotId < 0) {
+	if (json.slotId !== null && (json.slotId < 0 || !Number.isInteger(json.slotId))) {
 		result.commandResult.message = "Slot id must be a non negative integer.";
 		return result;
 	}
@@ -326,7 +316,7 @@ export function validateGivex(json: GivexJson): GivexValidationResult {
 		json.replaceMode !== "keep" &&
 		json.replaceMode !== "destroy"
 	) {
-		result.commandResult.message = `Invalid replace mode "${json.replaceMode}"`;
+		result.commandResult.message = `Invalid replace mode "${json.replaceMode}\nValid values:\nkeep\ndestroy"`;
 		return result;
 	}
 	result.commandResult.status = CustomCommandStatus.Success;
