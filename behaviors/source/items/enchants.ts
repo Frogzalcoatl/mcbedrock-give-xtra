@@ -21,10 +21,15 @@ export function applyEnchants(enchants: Enchantment[], item: ItemStack): number 
 		if (current === undefined) {
 			return i;
 		}
-		if (current.level > current.type.maxLevel || !enchantable.canAddEnchantment(current)) {
+		try {
+			if (current.level > current.type.maxLevel || !enchantable.canAddEnchantment(current)) {
+				return i;
+			}
+			enchantable.addEnchantment(current);
+		} catch (_error) {
+			// canAddEnchantment does not consider enchant conflicts (ex: sharpness and smite)
 			return i;
 		}
-		enchantable.addEnchantment(current);
 	}
 	return null;
 }
