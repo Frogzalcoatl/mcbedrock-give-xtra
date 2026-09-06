@@ -15,7 +15,7 @@ import {
 } from "@minecraft/server";
 import { PACK_NAMESPACE } from "../constants";
 import { givex } from "../items/container";
-import { type GetItemFromJsonResult, getItemFromJson } from "../items/json";
+import { type GetItemFromJsonResult, getItemFromJson } from "../items/getItemFromJson";
 import { getSelectorName, prettyTypeId } from "./utils/beautification";
 import {
 	type GivexJson,

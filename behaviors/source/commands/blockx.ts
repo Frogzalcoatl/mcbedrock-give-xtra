@@ -14,7 +14,7 @@ import {
 } from "@minecraft/server";
 import { PACK_NAMESPACE } from "../constants";
 import { blockx } from "../items/container";
-import { type GetItemFromJsonResult, getItemFromJson } from "../items/json";
+import { type GetItemFromJsonResult, getItemFromJson } from "../items/getItemFromJson";
 import { vector3ToString } from "./utils/beautification";
 import {
 	type GivexJson,
