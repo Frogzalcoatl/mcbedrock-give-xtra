@@ -4,14 +4,15 @@ import type { GivexJson } from "../../commands/utils/json";
 import { commandVector3ToString } from "./commandVector3";
 import { type GetStartedContext, getStartedTitle } from "./getStarted";
 
-function enchantsToList(enchants: Enchantment[]): (string | number)[] {
-	const list: (string | number)[] = [];
+function enchantsToList(enchants: Enchantment[]): string {
+	let list: string = "[";
 	for (const enchant of enchants) {
-		list.push(enchant.type.id);
+		list += `\\"${enchant.type.id}\\",`;
 		if (enchant.level > 1) {
-			list.push(enchant.level);
+			list += `${enchant.level},`;
 		}
 	}
+	list = `${list.slice(0, list.length - 1)}]`;
 	return list;
 }
 
@@ -33,13 +34,13 @@ function contextToCommand(context: GetStartedContext): string {
 		str += `\\"lockMode\\":\\"${j.lockMode}\\",`;
 	}
 	if (j.keepOnDeath !== null) {
-		str += `\\"nameTag\\":${j.keepOnDeath},`;
+		str += `\\"keepOnDeath\\":${j.keepOnDeath},`;
 	}
 	if (j.canPlaceOn !== null) {
-		str += `\\"canPlaceOn\\":[\\"${j.canPlaceOn.join('\\", \\"')}\\"],`;
+		str += `\\"canPlaceOn\\":[\\"${j.canPlaceOn.join('\\",\\"')}\\"],`;
 	}
 	if (j.canDestroy !== null) {
-		str += `\\"canDestroy\\":[\\"${j.canDestroy.join('\\", \\"')}\\"],`;
+		str += `\\"canDestroy\\":[\\"${j.canDestroy.join('\\",\\"')}\\"],`;
 	}
 	if (j.durability !== null) {
 		if (j.durability === "unbreakable") {
@@ -49,8 +50,7 @@ function contextToCommand(context: GetStartedContext): string {
 		}
 	}
 	if (context.enchants.length > 0) {
-		const enchantList: (string | number)[] = enchantsToList(context.enchants);
-		str += `\\"enchants\\":[\\"${enchantList.join('\\", \\"')}\\"],`;
+		str += `\\"enchants\\":${enchantsToList(context.enchants)},`;
 	}
 	if (j.slot !== null) {
 		str += `\\"slot\\":\\"${j.slot}\\",`;
