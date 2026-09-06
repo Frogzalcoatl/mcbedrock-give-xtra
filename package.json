@@ -2,9 +2,9 @@
 	"author": "sunshinekitsune",
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.16",
-		"@minecraft/server": "^2.8.0",
+		"@minecraft/server": "^2.9.0",
 		"@minecraft/server-ui": "^2.1.0",
-		"@minecraft/vanilla-data": "^1.26.30",
+		"@minecraft/vanilla-data": "^1.26.44",
 		"archiver": "^8.0.0",
 		"esbuild": "^0.28.0",
 		"rimraf": "^6.1.3",
