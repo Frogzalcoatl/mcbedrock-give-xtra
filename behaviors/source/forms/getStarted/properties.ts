@@ -14,6 +14,7 @@ import {
 } from "@minecraft/server-ui";
 import { camelToTitleCase, prettyTypeId } from "../../commands/utils/beautification";
 import { type GivexJson, validJsonKeys } from "../../commands/utils/json";
+import { safeActionFormShow } from "../safeShow";
 import { getStartedAmount } from "./amount";
 import { commandVector3ToString } from "./commandVector3";
 import { getStartedData } from "./data";
@@ -129,8 +130,10 @@ async function backConfirmation(context: GetStartedContext): Promise<void> {
 
 function getExcludedProperties(context: GetStartedContext): string[] {
 	const arr: string[] = ["typeId"];
-	if (context.commandType === "spawnx") {
+	if (context.commandType !== "givex") {
 		arr.push("slot");
+	}
+	if (context.commandType === "spawnx") {
 		arr.push("slotId");
 		arr.push("replaceMode");
 	}
@@ -180,7 +183,10 @@ export async function getStartedProperties(
 	}
 	form.button("Submit");
 	form.label(`Selected Properties:${contextToString(context)}`);
-	const resp: ActionFormResponse = await form.show(context.player);
+	const resp: ActionFormResponse = await safeActionFormShow(form, context.player);
+	if (!context.player.isValid) {
+		return;
+	}
 	if (resp.selection === undefined || resp.selection === 0) {
 		system.run(() => backConfirmation(context));
 		return;

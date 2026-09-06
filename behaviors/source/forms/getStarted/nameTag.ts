@@ -1,6 +1,7 @@
 import { system } from "@minecraft/server";
 import { ModalFormData, type ModalFormResponse } from "@minecraft/server-ui";
 import { MAX_NAMETAG_LENGTH } from "../../constants";
+import { safeModalFormShow } from "../safeShow";
 import { formatLabel, type GetStartedContext, getStartedTitle } from "./getStarted";
 import { getStartedProperties } from "./properties";
 
@@ -24,7 +25,10 @@ export async function getStartedNameTag(context: GetStartedContext): Promise<voi
 		if (input !== null) {
 			form = getForm(input, `Invalid Name Tag "${input}"`);
 		}
-		const resp: ModalFormResponse = await form.show(context.player);
+		const resp: ModalFormResponse = await safeModalFormShow(form, context.player);
+		if (!context.player.isValid) {
+			return;
+		}
 		if (
 			resp.formValues === undefined ||
 			typeof resp.formValues[0] !== "string" ||

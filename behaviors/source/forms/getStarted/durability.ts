@@ -5,6 +5,7 @@ import {
 	system,
 } from "@minecraft/server";
 import { ModalFormData, type ModalFormResponse } from "@minecraft/server-ui";
+import { safeModalFormShow } from "../safeShow";
 import { stringToFiniteNumber } from "./commandVector3";
 import { formatLabel, type GetStartedContext, getStartedTitle } from "./getStarted";
 import { getStartedProperties } from "./properties";
@@ -63,7 +64,10 @@ export async function getStartedDurability(context: GetStartedContext): Promise<
 				`Invalid durability "${input}"`,
 			);
 		}
-		const resp: ModalFormResponse = await form.show(context.player);
+		const resp: ModalFormResponse = await safeModalFormShow(form, context.player);
+		if (!context.player.isValid) {
+			return;
+		}
 		if (
 			resp.formValues === undefined ||
 			typeof resp.formValues[0] !== "string" ||

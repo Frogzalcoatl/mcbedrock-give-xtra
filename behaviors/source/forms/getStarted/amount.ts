@@ -2,6 +2,7 @@ import { ItemStack, system } from "@minecraft/server";
 import { ModalFormData, type ModalFormResponse } from "@minecraft/server-ui";
 import { MAX_AMOUNT } from "../../constants";
 import { containerSlots } from "../../items/slot";
+import { safeModalFormShow } from "../safeShow";
 import { stringToFiniteNumber } from "./commandVector3";
 import { formatLabel, type GetStartedContext, getStartedTitle } from "./getStarted";
 import { getStartedProperties } from "./properties";
@@ -43,7 +44,10 @@ export async function getStartedAmount(context: GetStartedContext): Promise<void
 		if (input !== null) {
 			form = getForm(context, input, maxAmount, `Invalid amount "${input}"`);
 		}
-		const resp: ModalFormResponse = await form.show(context.player);
+		const resp: ModalFormResponse = await safeModalFormShow(form, context.player);
+		if (!context.player.isValid) {
+			return;
+		}
 		if (resp.formValues === undefined || typeof resp.formValues[0] !== "string") {
 			system.run(() => getStartedProperties(context, "§cAmount unchanged"));
 			return;

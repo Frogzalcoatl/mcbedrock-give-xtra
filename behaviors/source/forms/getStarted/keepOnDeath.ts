@@ -1,5 +1,6 @@
 import { system } from "@minecraft/server";
 import { ModalFormData, type ModalFormResponse } from "@minecraft/server-ui";
+import { safeModalFormShow } from "../safeShow";
 import { type GetStartedContext, getStartedTitle } from "./getStarted";
 import { getStartedProperties } from "./properties";
 
@@ -11,7 +12,10 @@ export async function getStartedKeepOnDeath(context: GetStartedContext): Promise
 	form.divider();
 	form.label("§r");
 	form.submitButton("Submit");
-	const resp: ModalFormResponse = await form.show(context.player);
+	const resp: ModalFormResponse = await safeModalFormShow(form, context.player);
+	if (!context.player.isValid) {
+		return;
+	}
 	if (resp.formValues === undefined || typeof resp.formValues[1] !== "boolean") {
 		system.run(() => getStartedProperties(context, "§cKeep on Death unchanged"));
 		return;

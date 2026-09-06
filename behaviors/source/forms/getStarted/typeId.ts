@@ -1,6 +1,7 @@
 import { ItemTypes, system } from "@minecraft/server";
 import { ModalFormData, type ModalFormResponse } from "@minecraft/server-ui";
 import { formInfo } from "../info";
+import { safeModalFormShow } from "../safeShow";
 import { getStartedCommandType } from "./commandType";
 import { formatLabel, type GetStartedContext, getStartedTitle } from "./getStarted";
 
@@ -26,7 +27,10 @@ export async function getStartedTypeId(context: GetStartedContext): Promise<void
 		if (input) {
 			form = getForm(input, `Invalid Type ID "${input}"`);
 		}
-		const resp: ModalFormResponse = await form.show(context.player);
+		const resp: ModalFormResponse = await safeModalFormShow(form, context.player);
+		if (!context.player.isValid) {
+			return;
+		}
 		if (resp.formValues === undefined || typeof resp.formValues[0] !== "string") {
 			if (context.openedFromInfo) {
 				system.run(() => formInfo(context.player));

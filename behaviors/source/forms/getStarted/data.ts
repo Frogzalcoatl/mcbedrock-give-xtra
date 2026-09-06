@@ -1,6 +1,7 @@
 import { system } from "@minecraft/server";
 import { ModalFormData, type ModalFormResponse } from "@minecraft/server-ui";
 import { MAX_DATA } from "../../constants";
+import { safeModalFormShow } from "../safeShow";
 import { stringToFiniteNumber } from "./commandVector3";
 import { formatLabel, type GetStartedContext, getStartedTitle } from "./getStarted";
 import { getStartedProperties } from "./properties";
@@ -24,7 +25,10 @@ export async function getStartedData(context: GetStartedContext): Promise<void> 
 		if (input !== null) {
 			form = getForm(input, `Invalid data value "${input}"`);
 		}
-		const resp: ModalFormResponse = await form.show(context.player);
+		const resp: ModalFormResponse = await safeModalFormShow(form, context.player);
+		if (!context.player.isValid) {
+			return;
+		}
 		if (resp.formValues === undefined || typeof resp.formValues[0] !== "string") {
 			system.run(() => getStartedProperties(context, "§cData unchanged"));
 			return;

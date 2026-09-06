@@ -1,5 +1,6 @@
 import { system } from "@minecraft/server";
 import { ModalFormData, type ModalFormResponse } from "@minecraft/server-ui";
+import { safeModalFormShow } from "../safeShow";
 import {
 	type CommandVector3,
 	type CommandVector3ParseResult,
@@ -29,7 +30,10 @@ export async function getStartedLocation(context: GetStartedContext): Promise<vo
 	let input: string = "";
 	let location: CommandVector3 | null = null;
 	while (location === null) {
-		const resp: ModalFormResponse = await form.show(context.player);
+		const resp: ModalFormResponse = await safeModalFormShow(form, context.player);
+		if (!context.player.isValid) {
+			return;
+		}
 		if (resp.formValues === undefined || typeof resp.formValues[0] !== "string") {
 			system.run(() => getStartedProperties(context, "§cLocation unchanged"));
 			return;

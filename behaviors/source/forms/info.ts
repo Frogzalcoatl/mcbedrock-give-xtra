@@ -2,6 +2,7 @@ import { type Player, system } from "@minecraft/server";
 import { ActionFormData, type ActionFormResponse } from "@minecraft/server-ui";
 import { formCredits } from "./credits";
 import { formGetStarted } from "./getStarted/getStarted";
+import { safeActionFormShow } from "./safeShow";
 import { formWiki } from "./wiki";
 
 export async function formInfo(viewer: Player): Promise<void> {
@@ -14,7 +15,10 @@ export async function formInfo(viewer: Player): Promise<void> {
 	form.divider();
 	form.button("Wiki");
 	form.button("Credits");
-	const resp: ActionFormResponse = await form.show(viewer);
+	const resp: ActionFormResponse = await safeActionFormShow(form, viewer);
+	if (!viewer.isValid) {
+		return;
+	}
 	if (resp.selection === 0) {
 		system.run(() => formGetStarted(viewer));
 	} else if (resp.selection === 1) {

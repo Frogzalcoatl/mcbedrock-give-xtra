@@ -9,6 +9,7 @@ import {
 } from "@minecraft/server";
 import { ModalFormData, type ModalFormResponse } from "@minecraft/server-ui";
 import { applyEnchants } from "../../items/enchants";
+import { safeModalFormShow } from "../safeShow";
 import { type GetStartedContext, getStartedTitle } from "./getStarted";
 import { getStartedProperties } from "./properties";
 
@@ -84,7 +85,10 @@ export async function getStartedEnchants(
 	}
 	const selected: EnchantmentType[] = selectedTypes ?? context.enchants.map((e) => e.type);
 	let form: ModalFormData = getFormTypes(allowed, selected, error);
-	let resp: ModalFormResponse = await form.show(context.player);
+	let resp: ModalFormResponse = await safeModalFormShow(form, context.player);
+	if (!context.player.isValid) {
+		return;
+	}
 	if (resp.formValues === undefined) {
 		system.run(() => getStartedProperties(context, `§cEnchants unchanged`));
 		return;
