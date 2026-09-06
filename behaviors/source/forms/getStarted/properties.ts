@@ -14,6 +14,7 @@ import {
 } from "@minecraft/server-ui";
 import { camelToTitleCase, prettyTypeId } from "../../commands/utils/beautification";
 import { type GivexJson, validJsonKeys } from "../../commands/utils/json";
+import { getStartedReplaceMode } from "../replaceMode";
 import { safeActionFormShow } from "../safeShow";
 import { getStartedAmount } from "./amount";
 import { commandVector3ToString } from "./commandVector3";
@@ -26,6 +27,8 @@ import { getStartedKeepOnDeath } from "./keepOnDeath";
 import { getStartedLocation } from "./location";
 import { getStartedLockMode } from "./lockMode";
 import { getStartedNameTag } from "./nameTag";
+import { getStartedSlot } from "./slot";
+import { getStartedSlotId } from "./slotId";
 import { getStartedSubmit } from "./submit";
 
 function blockListToString(list: string[], maxLength: number): string {
@@ -107,7 +110,7 @@ function contextToString(context: GetStartedContext): string {
 		str += `\n§rSlot ID: §e${j.slotId}`;
 	}
 	if (j.replaceMode !== null) {
-		str += `\n§rReplace Mode: §e${camelToTitleCase(j.replaceMode)}`;
+		str += `\n§rReplace Mode: §e${j.replaceMode}`;
 	}
 	return str;
 }
@@ -220,6 +223,15 @@ export async function getStartedProperties(
 				break;
 			case "enchants":
 				getStartedEnchants(context);
+				break;
+			case "slot":
+				getStartedSlot(context);
+				break;
+			case "slotId":
+				getStartedSlotId(context);
+				break;
+			case "replaceMode":
+				getStartedReplaceMode(context);
 				break;
 			default:
 				getStartedProperties(context, "§cNot Finished");

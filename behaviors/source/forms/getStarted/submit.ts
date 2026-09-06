@@ -59,7 +59,8 @@ function contextToCommand(context: GetStartedContext): string {
 	if (j.slotId !== null) {
 		str += `\\"slotId\\":${j.slotId},`;
 	}
-	if (j.replaceMode !== null) {
+	if (j.replaceMode !== null && j.replaceMode !== "destroy") {
+		// destroy is default
 		str += `\\"replaceMode\\":\\"${j.replaceMode}\\",`;
 	}
 	str = `${str.slice(0, str.length - 1)}}"`;
