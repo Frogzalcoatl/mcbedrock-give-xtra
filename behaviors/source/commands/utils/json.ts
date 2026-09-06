@@ -26,7 +26,7 @@ export interface GivexJson {
 	canDestroy: string[] | null;
 	durability: "unbreakable" | number | null;
 	enchants: (string | number)[] | null;
-	slot: string | null;
+	slot: SlotName | null;
 	slotId: number | null;
 	replaceMode: string | null;
 }
@@ -87,8 +87,10 @@ function validatePropertyTypes(obj: any): obj is GivexJson {
 	}
 	if (obj.lockMode === undefined) {
 		obj.lockMode = null;
-	} else if (typeof obj.lockMode !== "string") {
-		throw new Error("lockMode must be a string.");
+	} else if (!Object.values(ItemLockMode).includes(obj.lockMode)) {
+		throw new Error(
+			`invalid lockMode "${obj.lockMode}"\nValid values:\n${Object.values(ItemLockMode).join("\n")}`,
+		);
 	}
 	if (obj.data === undefined) {
 		obj.data = null;
@@ -122,8 +124,10 @@ function validatePropertyTypes(obj: any): obj is GivexJson {
 	}
 	if (obj.slot === undefined) {
 		obj.slot = null;
-	} else if (typeof obj.slot !== "string") {
-		throw new Error("slot must be a string.");
+	} else if (!Object.values(SlotName).includes(obj.slot)) {
+		throw new Error(
+			`invalid slot "${obj.slot}"\nValid values:\n${Object.values(SlotName).join("\n")}`,
+		);
 	}
 	if (obj.slotId === undefined) {
 		obj.slotId = null;
@@ -262,10 +266,6 @@ export function validateGivex(json: GivexJson): GivexValidationResult {
 		result.commandResult.message = `Invalid data value "${json.data}"`;
 		return result;
 	}
-	if (json.lockMode !== null && !Object.values(ItemLockMode).includes(json.lockMode)) {
-		result.commandResult.message = `Invalid lock mode "${json.lockMode}". Valid values: ${Object.values(ItemLockMode).join(", ")}`;
-		return result;
-	}
 	if (json.canPlaceOn !== null) {
 		const invalidIndex: number | null = validBlockTypes(json.canPlaceOn);
 		if (invalidIndex !== null) {
@@ -289,20 +289,6 @@ export function validateGivex(json: GivexJson): GivexValidationResult {
 		result.commandResult.message = `Durability must be a non negative integer or "unbreakable"`;
 		return result;
 	}
-	if (json.enchants !== null) {
-		const enchantResult: number | Enchantment[] = getEnchantsFromList(json.enchants);
-		if (typeof enchantResult === "number") {
-			const invalidIndex = enchantResult;
-			result.commandResult.message = `Invalid enchant value at "${json.enchants[invalidIndex]}"`;
-			return result;
-		} else {
-			result.enchants = enchantResult;
-		}
-	}
-	if (json.slot !== null && !Object.values(SlotName).includes(json.slot as SlotName)) {
-		result.commandResult.message = `Invalid slot "${json.slot}"\nValid values:\n${Object.values(SlotName).join("\n")}`;
-		return result;
-	}
 	if (json.slotId !== null) {
 		if (json.slotId < 0 || !Number.isInteger(json.slotId)) {
 			result.commandResult.message = "Slot id must be a non negative integer.";
@@ -312,13 +298,28 @@ export function validateGivex(json: GivexJson): GivexValidationResult {
 			json.slot = SlotName.Inventory;
 		}
 	}
+	if (json.slot === SlotName.Hotbar && json.slotId === null) {
+		result.commandResult.message = `Slot id must be specified when using ${SlotName.Hotbar}`;
+		return result;
+	}
 	if (
 		json.replaceMode !== null &&
 		json.replaceMode !== "keep" &&
-		json.replaceMode !== "destroy"
+		json.replaceMode !== "destroy" &&
+		json.replaceMode !== "move"
 	) {
-		result.commandResult.message = `Invalid replace mode "${json.replaceMode}\nValid values:\nkeep\ndestroy"`;
+		result.commandResult.message = `Invalid replace mode "${json.replaceMode}\nValid values:\nkeep\ndestroy\nmove"`;
 		return result;
+	}
+	if (json.enchants !== null) {
+		const enchantResult: number | Enchantment[] = getEnchantsFromList(json.enchants);
+		if (typeof enchantResult === "number") {
+			const invalidIndex = enchantResult;
+			result.commandResult.message = `Invalid enchant value at "${json.enchants[invalidIndex]}"`;
+			return result;
+		} else {
+			result.enchants = enchantResult;
+		}
 	}
 	result.commandResult.status = CustomCommandStatus.Success;
 	return result;

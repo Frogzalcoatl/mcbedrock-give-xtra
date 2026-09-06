@@ -3,6 +3,7 @@ import {
 	BlockComponentTypes,
 	type BlockInventoryComponent,
 	type Container,
+	ContainerRulesError,
 	type CustomCommandResult,
 	CustomCommandStatus,
 	type Dimension,
@@ -22,113 +23,91 @@ import { SlotName } from "./slot";
 import "@minecraft/vanilla-data";
 import { MinecraftBlockTypes, MinecraftEntityTypes } from "@minecraft/vanilla-data";
 
-function addItemsInContainer(
+// spawnOverflowItems: When true, spawns item as entity if container is full
+function giveItem(
+	item: ItemStack,
+	container: Container,
+	location: Vector3,
+	dimension: Dimension,
+	spawnOverflowItems: boolean,
+): boolean {
+	try {
+		const overflow: ItemStack | undefined = container.addItem(item);
+		if (spawnOverflowItems && overflow !== undefined && dimension.isChunkLoaded(location)) {
+			// Avoids LocationOutOfWorldBoundariesError
+			const spawnLocation: Vector3 = {
+				x: location.x,
+				y: dimension.heightRange.min,
+				z: location.z,
+			};
+			dimension.spawnItem(overflow, spawnLocation).teleport(location);
+		}
+	} catch (error) {
+		// I don't feel like setting up a func to check whether adding an item follows the container's rules.
+		if (error instanceof ContainerRulesError) {
+			return false;
+		} else {
+			throw error;
+		}
+	}
+	return true;
+}
+
+function addItems(
 	selector: Entity | Block,
 	container: Container,
-	itemStack: ItemStack,
-	amountToGive: number,
+	item: ItemStack,
+	amount: number,
 ): CustomCommandResult {
-	let amountLeft: number = amountToGive;
-	while (amountLeft > 0) {
-		itemStack.amount = Math.min(itemStack.maxAmount, amountLeft);
-		let result: ItemStack | undefined;
-		try {
-			// I don't feel like setting up a func to check whether adding an item follows the container's rules.
-			result = container.addItem(itemStack);
-		} catch (error) {
-			let message: string = `Unable to add ${prettyTypeId(itemStack.typeId)} to container of ${getSelectorName(selector)}`;
-			if (error instanceof Error) {
-				message += `: ${error.message}`;
-			}
+	let remaining: number = amount;
+	while (remaining > 0) {
+		item.amount = Math.min(item.maxAmount, remaining);
+		if (!giveItem(item, container, selector.location, selector.dimension, true)) {
 			return {
-				message: message,
+				message: `Unable to add ${prettyTypeId(item.typeId)} to container of ${getSelectorName(selector)}`,
 				status: CustomCommandStatus.Failure,
 			};
 		}
-		if (result !== undefined) {
-			// Inventory is full
-			amountLeft -= itemStack.amount - result.amount; // In case a partial itemStack was given
-			break;
-		}
-		amountLeft -= itemStack.amount;
-	}
-	while (amountLeft > 0) {
-		// Spawn remaining items as entities
-		itemStack.amount = Math.min(itemStack.maxAmount, amountLeft);
-		if (!selector.dimension.isChunkLoaded(selector.location)) {
-			return {
-				message: `Unable to spawn ${prettyTypeId(itemStack.typeId)} on ${getSelectorName(selector)} in unloaded chunks.`,
-				status: CustomCommandStatus.Failure,
-			};
-		}
-		selector.dimension.spawnItem(itemStack, selector.location);
-		amountLeft -= itemStack.amount;
+		remaining -= item.amount;
 	}
 	return {
-		message: `Gave ${prettyTypeId(itemStack.type.id)} * ${amountToGive} to ${getSelectorName(selector)}`,
+		message: `Gave ${prettyTypeId(item.type.id)} * ${amount} to ${getSelectorName(selector)}`,
 		status: CustomCommandStatus.Success,
 	};
 }
 
-function inContainer(
+function setItem(
 	selector: Entity | Block,
 	container: Container,
 	item: ItemStack,
 	slot: string,
-	slotId: number | null,
+	slotId: number,
 	replaceMode: string,
 ): CustomCommandResult {
-	if (slotId === null) {
-		if (slot !== SlotName.Hotbar) {
-			return addItemsInContainer(selector, container, item, item.amount);
-		} else {
-			let addToSlot: number | undefined = container.find(item);
-			if (addToSlot === undefined || addToSlot > 8) {
-				addToSlot = container.firstEmptySlot();
-				if (addToSlot === undefined) {
-					addToSlot;
-				}
-			}
-			let firstEmptySlot: number | undefined = container.firstEmptySlot();
-			if (firstEmptySlot === undefined || firstEmptySlot > 8) {
-				firstEmptySlot = 8;
-			}
-			slotId = firstEmptySlot;
-			return inContainer(selector, container, item, slot, slotId, replaceMode);
+	let oldItem: ItemStack | undefined;
+	if (replaceMode !== "destroy") {
+		oldItem = container.getItem(slotId);
+		if (replaceMode === "keep" && oldItem !== undefined) {
+			return {
+				message: `Could not replace ${slot} slot 0 with ${item.amount} * ${prettyTypeId(item.typeId)}`,
+				status: CustomCommandStatus.Failure,
+			};
 		}
 	}
-	if (slotId < 0 || slotId >= container.size) {
-		return {
-			message: `slotId "${slotId}" is invalid for ${getSelectorName(selector)}. Must be between 0 and ${container.size - 1}`,
-			status: CustomCommandStatus.Failure,
-		};
-	}
-	let oldItem: ItemStack | undefined;
-	if (replaceMode === "keep") {
-		oldItem = container.getItem(slotId);
-	}
 	container.setItem(slotId, item);
-	let oldItemGiveResult: CustomCommandResult | undefined;
 	if (oldItem) {
-		oldItemGiveResult = addItemsInContainer(selector, container, oldItem, oldItem.amount);
-	}
-	let message: string = `Replaced item in slot ${slotId}`;
-	if (
-		oldItemGiveResult !== undefined &&
-		oldItemGiveResult.status === CustomCommandStatus.Failure
-	) {
-		message += `\nHowever, ${oldItemGiveResult.message}`;
+		addItems(selector, container, oldItem, oldItem.amount);
 	}
 	return {
-		message: message,
+		message: `Replaced ${slot} slot ${slotId} with ${item.amount} * ${prettyTypeId(item.typeId)}`,
 		status: CustomCommandStatus.Success,
 	};
 }
 
-function inInventory(
+function handleInventory(
 	selector: Entity,
 	item: ItemStack,
-	slot: string,
+	amount: number,
 	slotId: number | null,
 	replaceMode: string,
 ): CustomCommandResult {
@@ -141,29 +120,49 @@ function inInventory(
 			status: CustomCommandStatus.Failure,
 		};
 	}
-	return inContainer(selector, inventory.container, item, slot, slotId, replaceMode);
+	if (slotId === null) {
+		return addItems(selector, inventory.container, item, amount);
+	} else {
+		return setItem(
+			selector,
+			inventory.container,
+			item,
+			SlotName.Inventory,
+			slotId,
+			replaceMode,
+		);
+	}
 }
 
-function inHotbar(
+function handleHotbar(
 	selector: Entity,
 	item: ItemStack,
-	slot: string,
+	amount: number,
 	slotId: number | null,
 	replaceMode: string,
 ): CustomCommandResult {
-	if (!(selector instanceof Player)) {
+	if (selector instanceof Player === false) {
 		return {
-			message: `Cannot access hotbar of ${getSelectorName(selector)}. Only players have a hotbar.`,
+			message: `Could not access hotbar of ${getSelectorName(selector)}. Only players have a hotbar.`,
 			status: CustomCommandStatus.Failure,
 		};
 	}
-	if (slotId !== null && (slotId < 0 || slotId > 8)) {
+	if (slotId === null) {
 		return {
-			message: `Invalid hotbar slot id "${slotId}". Must be between 0 and 8.`,
+			message: `Unable to replace ${SlotName.Hotbar} with ${amount} * ${prettyTypeId(item.typeId)}. Slot id must be specified.`,
 			status: CustomCommandStatus.Failure,
 		};
 	}
-	return inInventory(selector, item, slot, slotId, replaceMode);
+	const inventory: EntityInventoryComponent | undefined = selector.getComponent(
+		EntityComponentTypes.Inventory,
+	);
+	if (inventory === undefined) {
+		return {
+			message: `Unable to get inventory of ${getSelectorName(selector)}`,
+			status: CustomCommandStatus.Failure,
+		};
+	}
+	return setItem(selector, inventory.container, item, SlotName.Hotbar, slotId, replaceMode);
 }
 
 // Don't want to include custom tameable mobs here. My implementation was forced to be too oddly specific.
@@ -174,10 +173,10 @@ const MobChestEntityTypes: string[] = [
 ];
 
 // Includes SlotName.Saddle, SlotName.Armor, and SlotName.MobChest
-function inTameable(
+function handleTameable(
 	selector: Entity,
 	item: ItemStack,
-	slot: string,
+	slot: SlotName.Saddle | SlotName.Armor | SlotName.MobChest,
 	slotId: number | null,
 	replaceMode: string,
 ): CustomCommandResult {
@@ -201,19 +200,19 @@ function inTameable(
 			};
 		}
 		if (slotId !== null) {
-			// Account for saddle/carpet slot (slot 0);
-			slotId++;
+			slotId++; // Account for saddle/carpet slot (slot 0)
+			return setItem(selector, inventory.container, item, slot, slotId, replaceMode);
+		} else {
+			return addItems(selector, inventory.container, item, item.amount);
 		}
-		return inContainer(selector, inventory.container, item, slot, slotId, replaceMode);
-	}
-	if (slot === SlotName.Saddle) {
+	} else if (slot === SlotName.Saddle) {
 		// Saddle is inventory slot 0 on tameable mobs.
 		slotId = 0;
-	} else if (slot === SlotName.Armor) {
+	} else {
 		// Horse Armor is inventory slot 1 on tameable mobs.
 		slotId = 1;
 	}
-	const result: CustomCommandResult = inContainer(
+	const result: CustomCommandResult = setItem(
 		selector,
 		inventory.container,
 		item,
@@ -224,7 +223,7 @@ function inTameable(
 	return {
 		message:
 			result.status === CustomCommandStatus.Success
-				? `Gave ${getSelectorName(selector)} ${item.typeId} in ${slot}`
+				? `Replaced ${slot} with ${item.amount} * ${prettyTypeId(item.typeId)}`
 				: (result.message ?? ""),
 		status: result.status,
 	};
@@ -249,10 +248,10 @@ function slotNameToEquipmentSlot(name: string): EquipmentSlot | null {
 	}
 }
 
-function inEquippable(
+function handleEquippable(
 	selector: Entity,
 	item: ItemStack,
-	slot: string,
+	slot: SlotName,
 	replaceMode: string,
 ): CustomCommandResult {
 	const equippable: EntityEquippableComponent | undefined = selector.getComponent(
@@ -272,59 +271,47 @@ function inEquippable(
 		};
 	}
 	let oldItem: ItemStack | undefined;
-	if (replaceMode === "keep") {
+	if (replaceMode !== "destroy") {
 		oldItem = equippable.getEquipment(equipmentSlot);
+		if (replaceMode === "keep" && oldItem !== undefined) {
+			return {
+				message: `Could not replace ${slot} slot 0 with ${item.amount} * ${prettyTypeId(item.typeId)}`,
+				status: CustomCommandStatus.Failure,
+			};
+		}
 	}
 	const equippableResult: boolean = equippable.setEquipment(equipmentSlot, item);
 	if (!equippableResult) {
 		return {
-			message: `Unable to equip ${prettyTypeId(item.typeId)} in ${slot}`,
+			message: `Unable to replace ${slot} with ${item.amount} * ${prettyTypeId(item.typeId)}`,
 			status: CustomCommandStatus.Failure,
 		};
 	}
-	let oldItemGiveResult: CustomCommandResult | undefined;
 	if (oldItem) {
 		const inventory: EntityInventoryComponent | undefined = selector.getComponent(
 			EntityComponentTypes.Inventory,
 		);
 		let addItemsResult: CustomCommandResult | undefined;
 		if (inventory !== undefined) {
-			addItemsResult = addItemsInContainer(selector, inventory.container, item, item.amount);
+			addItemsResult = addItems(selector, inventory.container, item, item.amount);
 		}
 		if (
 			inventory === undefined ||
 			(addItemsResult !== undefined && addItemsResult.status === CustomCommandStatus.Failure)
 		) {
-			oldItemGiveResult = {
-				message: "Spawned old item as entity",
-				status: CustomCommandStatus.Success,
-			};
-			if (!selector.dimension.isChunkLoaded(selector.location)) {
-				return {
-					message: "Unable to spawn old item as entity",
-					status: CustomCommandStatus.Failure,
-				};
-			}
-			selector.dimension.spawnItem(item, selector.location);
+			spawnx(selector.dimension, selector.location, oldItem, oldItem.amount);
 		}
 	}
-	let message: string = `Equipped ${item.typeId} in slot ${slot}`;
-	if (
-		oldItemGiveResult !== undefined &&
-		oldItemGiveResult.status === CustomCommandStatus.Failure
-	) {
-		message += `\nHowever, ${oldItemGiveResult.message}`;
-	}
 	return {
-		message: message,
+		message: `Replaced ${slot} with ${item.amount} * ${prettyTypeId(item.typeId)} in slot ${slot}`,
 		status: CustomCommandStatus.Success,
 	};
 }
 
-function inEndChest(
+function handleEndChest(
 	selector: Entity,
 	item: ItemStack,
-	slot: string,
+	slot: SlotName,
 	slotId: number | null,
 	replaceMode: string,
 ): CustomCommandResult {
@@ -337,48 +324,39 @@ function inEndChest(
 			status: CustomCommandStatus.Failure,
 		};
 	}
-	return inContainer(selector, enderInventory.container, item, slot, slotId, replaceMode);
+	if (slotId !== null) {
+		return setItem(selector, enderInventory.container, item, slot, slotId, replaceMode);
+	} else {
+		return addItems(selector, enderInventory.container, item, item.amount);
+	}
 }
 
 export function givex(
 	selector: Entity,
 	item: ItemStack,
 	amount: number,
-	slot: string | null,
+	slot: SlotName = SlotName.Inventory,
 	slotId: number | null = null,
 	replaceMode: string = "destroy",
 ): CustomCommandResult {
-	if (slot === null) {
-		// Just add item to free slots in inventory
-		const inventory: EntityInventoryComponent | undefined = selector.getComponent(
-			EntityComponentTypes.Inventory,
-		);
-		if (inventory === undefined) {
-			return {
-				message: `Unable to get ${selector.typeId} inventory`,
-				status: CustomCommandStatus.Failure,
-			};
-		}
-		return addItemsInContainer(selector, inventory.container, item, amount);
-	}
 	switch (slot) {
 		case SlotName.Inventory:
-			return inInventory(selector, item, slot, slotId, replaceMode);
+			return handleInventory(selector, item, amount, slotId, replaceMode);
 		case SlotName.Hotbar:
-			return inHotbar(selector, item, slot, slotId, replaceMode);
+			return handleHotbar(selector, item, amount, slotId, replaceMode);
 		case SlotName.Saddle:
 		case SlotName.Armor:
 		case SlotName.MobChest:
-			return inTameable(selector, item, slot, slotId, replaceMode);
+			return handleTameable(selector, item, slot, slotId, replaceMode);
 		case SlotName.Head:
 		case SlotName.Chest:
 		case SlotName.Legs:
 		case SlotName.Feet:
 		case SlotName.Mainhand:
 		case SlotName.Offhand:
-			return inEquippable(selector, item, slot, replaceMode);
+			return handleEquippable(selector, item, slot, replaceMode);
 		case SlotName.EndChest:
-			return inEndChest(selector, item, slot, slotId, replaceMode);
+			return handleEndChest(selector, item, slot, slotId, replaceMode);
 		default:
 			return {
 				message: `Invalid slot "${slot}"`,
@@ -408,16 +386,9 @@ export function blockx(
 		};
 	}
 	if (slotId !== null) {
-		return inContainer(
-			block,
-			inventory.container,
-			item,
-			SlotName.Inventory,
-			slotId,
-			replaceMode,
-		);
+		return setItem(block, inventory.container, item, SlotName.Inventory, slotId, replaceMode);
 	} else {
-		return addItemsInContainer(block, inventory.container, item, amount);
+		return addItems(block, inventory.container, item, amount);
 	}
 }
 
@@ -427,6 +398,14 @@ export function spawnx(
 	itemStack: ItemStack,
 	itemAmount: number,
 ): void {
+	if (!dimension.isChunkLoaded(pos)) {
+		return;
+	}
+	const spawnPos: Vector3 = {
+		x: pos.x,
+		y: dimension.heightRange.min,
+		z: pos.z,
+	};
 	while (itemAmount > 0) {
 		if (itemAmount >= itemStack.maxAmount) {
 			itemStack.amount = itemStack.maxAmount;
@@ -435,6 +414,7 @@ export function spawnx(
 			itemStack.amount = itemAmount;
 			itemAmount = 0;
 		}
-		dimension.spawnItem(itemStack, pos);
+		// Teleport to avoid LocationOutOfWorldBoundariesError
+		dimension.spawnItem(itemStack, spawnPos).teleport(pos);
 	}
 }

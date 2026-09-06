@@ -6,6 +6,7 @@ import {
 	type CustomCommandResult,
 	CustomCommandStatus,
 	type Dimension,
+	type Enchantment,
 	type Entity,
 	ItemStack,
 	type ItemType,
@@ -15,6 +16,7 @@ import {
 import { PACK_NAMESPACE } from "../constants";
 import { givex } from "../items/container";
 import { type GetItemFromJsonResult, getItemFromJson } from "../items/json";
+import { getSelectorName, prettyTypeId } from "./utils/beautification";
 import {
 	type GivexJson,
 	type GivexJsonParseResult,
@@ -48,7 +50,7 @@ export function registerCommandGivex(registry: CustomCommandRegistry): void {
 		): CustomCommandResult => {
 			if (target.length === 0) {
 				return {
-					message: "No valid target.",
+					message: "No targets matched selector.",
 					status: CustomCommandStatus.Failure,
 				};
 			}
@@ -66,55 +68,59 @@ export function registerCommandGivex(registry: CustomCommandRegistry): void {
 					status: CustomCommandStatus.Failure,
 				};
 			}
-			if (jsonStr === undefined) {
-				system.run(() => {
-					const itemStack = new ItemStack(item);
-					for (const entity of target) {
-						givex(entity, itemStack, 1, null);
-					}
-				});
-				return {
-					status: CustomCommandStatus.Success,
-				};
-			}
-			const parseResult: GivexJsonParseResult = parseGivexJson(jsonStr, item.id);
-			if (parseResult.json === null) {
-				return {
-					message: parseResult.message,
-					status: CustomCommandStatus.Failure,
-				};
-			}
-			const json: GivexJson = parseResult.json;
-			const validation: GivexValidationResult = validateGivex(json);
-			if (validation.commandResult.status === CustomCommandStatus.Failure) {
-				return validation.commandResult;
+			let json: GivexJson | null = null;
+			let enchants: Enchantment[] | null = null;
+			if (jsonStr !== undefined) {
+				const parseResult: GivexJsonParseResult = parseGivexJson(jsonStr, item.id);
+				if (parseResult.json === null) {
+					return {
+						message: parseResult.message,
+						status: CustomCommandStatus.Failure,
+					};
+				}
+				json = parseResult.json;
+				const validation: GivexValidationResult = validateGivex(json);
+				if (validation.commandResult.status === CustomCommandStatus.Failure) {
+					return validation.commandResult;
+				}
+				enchants = validation.enchants;
 			}
 			system.run(() => {
-				const itemResult: GetItemFromJsonResult = getItemFromJson(
-					dimension,
-					location,
-					json,
-					validation.enchants ?? undefined,
-				);
-				if (itemResult.item !== null) {
-					for (const entity of target) {
-						givex(
-							entity,
-							itemResult.item,
-							json.amount,
-							json.slot,
-							json.slotId,
-							json.replaceMode ?? undefined,
-						);
-					}
-				}
-				if (itemResult.commandResult.status === CustomCommandStatus.Failure) {
-					sendCommandFeedbackToOrigin(origin, itemResult.commandResult);
+				let itemStack: ItemStack | null = null;
+				if (json === null) {
+					itemStack = new ItemStack(item);
 				} else {
-					sendCommandFeedbackToOrigin(origin, {
-						message: `Gave ${item.id} * ${json.amount} to target(s)`,
-						status: CustomCommandStatus.Success,
-					});
+					const itemResult: GetItemFromJsonResult = getItemFromJson(
+						dimension,
+						location,
+						json,
+						enchants ?? undefined,
+					);
+					if (itemResult.item === null) {
+						sendCommandFeedbackToOrigin(origin, itemResult.commandResult);
+						return;
+					}
+					itemStack = itemResult.item;
+				}
+				sendCommandFeedbackToOrigin(origin, {
+					message: `Gave ${prettyTypeId(item.id)} * ${json?.amount ?? 1} to ${target.reduce((accumulator, current) => `${accumulator}§r, ${getSelectorName(current)}`, "").slice(4)}`,
+					status: CustomCommandStatus.Success,
+				});
+				for (const entity of target) {
+					if (!entity.isValid) {
+						continue;
+					}
+					const currentResult: CustomCommandResult = givex(
+						entity,
+						itemStack,
+						json?.amount ?? 1,
+						json?.slot ?? undefined,
+						json?.slotId,
+						json?.replaceMode ?? undefined,
+					);
+					if (currentResult.status === CustomCommandStatus.Failure) {
+						sendCommandFeedbackToOrigin(origin, currentResult);
+					}
 				}
 			});
 			return {

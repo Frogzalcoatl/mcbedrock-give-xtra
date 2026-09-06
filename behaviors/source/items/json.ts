@@ -10,6 +10,7 @@ import type { GivexJson } from "../commands/utils/json";
 import { getDataValueItem } from "./dataValues";
 import { setDurability } from "./durability";
 import { applyEnchants } from "./enchants";
+import { containerSlots } from "./slot";
 
 export interface GetItemFromJsonResult {
 	commandResult: CustomCommandResult;
@@ -41,6 +42,29 @@ export function getItemFromJson(
 			};
 		}
 		item = result;
+	}
+	if (json.slot !== null) {
+		if (json.amount > item.maxAmount && !containerSlots.includes(json.slot)) {
+			return {
+				commandResult: {
+					message: `Amount cannot exceed max stack size (${item.maxAmount}) when slot ${json.slot} is selected.`,
+					status: CustomCommandStatus.Failure,
+				},
+				item: null,
+			};
+		}
+	}
+	if (json.slotId !== null) {
+		if (json.amount > item.maxAmount) {
+			return {
+				commandResult: {
+					message: `Amount cannot exceed max stack size (${item.maxAmount}) when a slot id is specified.`,
+					status: CustomCommandStatus.Failure,
+				},
+				item: null,
+			};
+		}
+		item.amount = json.amount;
 	}
 	if (json.nameTag !== null) {
 		item.nameTag = json.nameTag;

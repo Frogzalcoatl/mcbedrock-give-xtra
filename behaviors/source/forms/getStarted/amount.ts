@@ -1,21 +1,15 @@
 import { ItemStack, system } from "@minecraft/server";
 import { ModalFormData, type ModalFormResponse } from "@minecraft/server-ui";
 import { MAX_AMOUNT } from "../../constants";
-import { SlotName } from "../../items/slot";
+import { containerSlots } from "../../items/slot";
 import { stringToFiniteNumber } from "./commandVector3";
 import { formatLabel, type GetStartedContext, getStartedTitle } from "./getStarted";
 import { getStartedProperties } from "./properties";
 
 function getMaxAmount(context: GetStartedContext): number {
-	const multiStackSlots: string[] = [
-		SlotName.Hotbar,
-		SlotName.Inventory,
-		SlotName.MobChest,
-		SlotName.EndChest,
-	];
 	if (
 		context.json.slotId !== null ||
-		(context.json.slot !== null && !multiStackSlots.includes(context.json.slot))
+		(context.json.slot !== null && !containerSlots.includes(context.json.slot))
 	) {
 		const itemStack = new ItemStack(context.json.typeId);
 		return itemStack.maxAmount;

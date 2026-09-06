@@ -12,3 +12,6 @@ export enum SlotName {
 	Saddle = "slot.saddle", // Horses, llamas (carpet), donkeys, etc.
 	EndChest = "slot.endchest",
 }
+
+// These slots will behave the same as /give if slotId is not defined
+export const containerSlots: string[] = [SlotName.Inventory, SlotName.MobChest, SlotName.EndChest];
