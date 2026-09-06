@@ -3,6 +3,3 @@
 * Write wiki in readme, then copy to wiki ui
 
 * Add lore to givex json
-
-* Remove periods from command results to match vanilla
-	* Remove all instances of "Unable to" with "Could not"

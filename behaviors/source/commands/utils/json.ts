@@ -67,7 +67,7 @@ function isStringIntegerArray(arr: any): arr is (string | number)[] {
 
 function validatePropertyTypes(obj: any): obj is GivexJson {
 	if (typeof obj !== "object" || obj === null) {
-		throw new Error("Json must be an Object.");
+		throw new Error("Json must be an Object");
 	}
 	for (const key of Object.keys(obj)) {
 		if (!validJsonKeys.includes(key)) {
@@ -75,15 +75,15 @@ function validatePropertyTypes(obj: any): obj is GivexJson {
 		}
 	}
 	if (typeof obj.typeId !== "string") {
-		throw new Error("typeId must be a string.");
+		throw new Error("typeId must be a string");
 	}
 	if (typeof obj.amount !== "number") {
-		throw new Error("amount must be a number.");
+		throw new Error("amount must be a number");
 	}
 	if (obj.nameTag === undefined) {
 		obj.nameTag = null;
 	} else if (typeof obj.nameTag !== "string") {
-		throw new Error("nameTag must be a string.");
+		throw new Error("nameTag must be a string");
 	}
 	if (obj.lockMode === undefined) {
 		obj.lockMode = null;
@@ -95,32 +95,32 @@ function validatePropertyTypes(obj: any): obj is GivexJson {
 	if (obj.data === undefined) {
 		obj.data = null;
 	} else if (typeof obj.data !== "number") {
-		throw new Error("data must be a number.");
+		throw new Error("data must be a number");
 	}
 	if (obj.keepOnDeath === undefined) {
 		obj.keepOnDeath = null;
 	} else if (typeof obj.keepOnDeath !== "boolean") {
-		throw new Error("keepOnDeath must be a boolean.");
+		throw new Error("keepOnDeath must be a boolean");
 	}
 	if (obj.canPlaceOn === undefined) {
 		obj.canPlaceOn = null;
 	} else if (!isStringArray(obj.canPlaceOn)) {
-		throw new Error("canPlaceOn must be an array of strings.");
+		throw new Error("canPlaceOn must be an array of strings");
 	}
 	if (obj.canDestroy === undefined) {
 		obj.canDestroy = null;
 	} else if (!isStringArray(obj.canDestroy)) {
-		throw new Error("canDestroy must be an array of strings.");
+		throw new Error("canDestroy must be an array of strings");
 	}
 	if (obj.durability === undefined) {
 		obj.durability = null;
 	} else if (typeof obj.durability !== "string" && typeof obj.durability !== "number") {
-		throw new Error("durability must be a string or number.");
+		throw new Error("durability must be a string or number");
 	}
 	if (obj.enchants === undefined) {
 		obj.enchants = null;
 	} else if (!isStringIntegerArray(obj.enchants)) {
-		throw new Error("enchants must be an array of strings/integers.");
+		throw new Error("enchants must be an array of strings/integers");
 	}
 	if (obj.slot === undefined) {
 		obj.slot = null;
@@ -132,12 +132,12 @@ function validatePropertyTypes(obj: any): obj is GivexJson {
 	if (obj.slotId === undefined) {
 		obj.slotId = null;
 	} else if (typeof obj.slotId !== "number") {
-		throw new Error("slotId must be a number.");
+		throw new Error("slotId must be a number");
 	}
 	if (obj.replaceMode === undefined) {
 		obj.replaceMode = null;
 	} else if (typeof obj.replaceMode !== "string") {
-		throw new Error("replaceMode must be a string.");
+		throw new Error("replaceMode must be a string");
 	}
 	return true;
 }
@@ -161,13 +161,13 @@ export function parseGivexJson(str: string, typeId: string): GivexJsonParseResul
 		} else {
 			return {
 				json: null,
-				message: "Invalid type in json.",
+				message: "Invalid type in json",
 			};
 		}
 	} catch (error) {
 		const result: GivexJsonParseResult = {
 			json: null,
-			message: "Invalid type in json.",
+			message: "Invalid type in json",
 		};
 		if (error instanceof Error) {
 			result.message = error.message;

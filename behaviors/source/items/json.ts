@@ -35,7 +35,7 @@ export function getItemFromJson(
 		if (result === null) {
 			return {
 				commandResult: {
-					message: "Unable to get data value item.",
+					message: "Could not get data value item",
 					status: CustomCommandStatus.Failure,
 				},
 				item: null,
@@ -89,7 +89,7 @@ export function getItemFromJson(
 		if (invalidIndex !== null) {
 			return {
 				commandResult: {
-					message: `Unable to apply enchant "${enchants[invalidIndex]?.type.id}"`,
+					message: `Could not apply enchant "${enchants[invalidIndex]?.type.id}"`,
 					status: CustomCommandStatus.Failure,
 				},
 				item: item,

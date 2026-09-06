@@ -50,21 +50,21 @@ export function registerCommandGivex(registry: CustomCommandRegistry): void {
 		): CustomCommandResult => {
 			if (target.length === 0) {
 				return {
-					message: "No targets matched selector.",
+					message: "No targets matched selector",
 					status: CustomCommandStatus.Failure,
 				};
 			}
 			const dimension: Dimension | null = getDimensionFromOrigin(origin);
 			if (dimension === null) {
 				return {
-					message: "Unable to get dimension from origin.",
+					message: "Could not get dimension from origin",
 					status: CustomCommandStatus.Failure,
 				};
 			}
 			const location: Vector3 | null = getLocationFromOrigin(origin);
 			if (location === null) {
 				return {
-					message: "Unable to get location from origin.",
+					message: "Could not get location from origin",
 					status: CustomCommandStatus.Failure,
 				};
 			}

@@ -115,7 +115,7 @@ export async function getStartedEnchants(
 			getStartedEnchants(
 				context,
 				selected,
-				`§cUnable to apply ${selectedEnchants[invalidIndex]?.type.id}`,
+				`§cCould not apply ${selectedEnchants[invalidIndex]?.type.id}`,
 			),
 		);
 		return;

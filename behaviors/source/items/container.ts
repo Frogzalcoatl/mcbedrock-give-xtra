@@ -64,7 +64,7 @@ function addItems(
 		item.amount = Math.min(item.maxAmount, remaining);
 		if (!giveItem(item, container, selector.location, selector.dimension, true)) {
 			return {
-				message: `Unable to add ${prettyTypeId(item.typeId)} to container of ${getSelectorName(selector)}`,
+				message: `Could not add ${prettyTypeId(item.typeId)} to container of ${getSelectorName(selector)}`,
 				status: CustomCommandStatus.Failure,
 			};
 		}
@@ -116,7 +116,7 @@ function handleInventory(
 	);
 	if (inventory === undefined) {
 		return {
-			message: `Unable to get inventory of ${getSelectorName(selector)}`,
+			message: `Could not get inventory of ${getSelectorName(selector)}`,
 			status: CustomCommandStatus.Failure,
 		};
 	}
@@ -149,7 +149,7 @@ function handleHotbar(
 	}
 	if (slotId === null) {
 		return {
-			message: `Unable to replace ${SlotName.Hotbar} with ${amount} * ${prettyTypeId(item.typeId)}. Slot id must be specified.`,
+			message: `Could not replace ${SlotName.Hotbar} with ${amount} * ${prettyTypeId(item.typeId)}. Slot id must be specified.`,
 			status: CustomCommandStatus.Failure,
 		};
 	}
@@ -158,7 +158,7 @@ function handleHotbar(
 	);
 	if (inventory === undefined) {
 		return {
-			message: `Unable to get inventory of ${getSelectorName(selector)}`,
+			message: `Could not get inventory of ${getSelectorName(selector)}`,
 			status: CustomCommandStatus.Failure,
 		};
 	}
@@ -188,14 +188,14 @@ function handleTameable(
 	);
 	if (inventory === undefined || isTamed === undefined) {
 		return {
-			message: `Unable to get ${slot} from ${getSelectorName(selector)}. Only accessible on vanilla tamed entities.`,
+			message: `Could not get ${slot} from ${getSelectorName(selector)}. Only accessible on vanilla tamed entities.`,
 			status: CustomCommandStatus.Failure,
 		};
 	}
 	if (slot === SlotName.MobChest) {
 		if (!MobChestEntityTypes.includes(selector.typeId)) {
 			return {
-				message: `Unable to get ${slot} from ${getSelectorName(selector)}. Only accessible on vanilla tamed entities.`,
+				message: `Could not get ${slot} from ${getSelectorName(selector)}. Only accessible on vanilla tamed entities.`,
 				status: CustomCommandStatus.Failure,
 			};
 		}
@@ -259,14 +259,14 @@ function handleEquippable(
 	);
 	if (equippable === undefined) {
 		return {
-			message: `Unable to get equippable component of ${getSelectorName(selector)}\n(Equippable component doesn't work on vanilla mobs. Blame Mojang)`,
+			message: `Could not get equippable component of ${getSelectorName(selector)}\n(Equippable component doesn't work on vanilla mobs. Blame Mojang)`,
 			status: CustomCommandStatus.Failure,
 		};
 	}
 	const equipmentSlot: EquipmentSlot | null = slotNameToEquipmentSlot(slot);
 	if (equipmentSlot === null) {
 		return {
-			message: `Unable to convert ${slot} to EquipmentSlot for ${getSelectorName(selector)}`,
+			message: `Could not convert ${slot} to EquipmentSlot for ${getSelectorName(selector)}`,
 			status: CustomCommandStatus.Failure,
 		};
 	}
@@ -283,7 +283,7 @@ function handleEquippable(
 	const equippableResult: boolean = equippable.setEquipment(equipmentSlot, item);
 	if (!equippableResult) {
 		return {
-			message: `Unable to replace ${slot} with ${item.amount} * ${prettyTypeId(item.typeId)}`,
+			message: `Could not replace ${slot} with ${item.amount} * ${prettyTypeId(item.typeId)}`,
 			status: CustomCommandStatus.Failure,
 		};
 	}
@@ -320,7 +320,7 @@ function handleEndChest(
 	);
 	if (enderInventory === undefined) {
 		return {
-			message: `Unable to get valid ender inventory from ${getSelectorName(selector)}`,
+			message: `Could not get valid ender inventory from ${getSelectorName(selector)}`,
 			status: CustomCommandStatus.Failure,
 		};
 	}

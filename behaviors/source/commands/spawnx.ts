@@ -45,13 +45,13 @@ export function registerCommandSpawnx(registry: CustomCommandRegistry): void {
 			const dimension: Dimension | null = getDimensionFromOrigin(origin);
 			if (dimension === null) {
 				return {
-					message: "Unable to get dimension from origin.",
+					message: "Could not get dimension from origin",
 					status: CustomCommandStatus.Failure,
 				};
 			}
 			if (!dimension.isChunkLoaded(at)) {
 				return {
-					message: "Cannot access block outside of world.",
+					message: "Cannot access block outside of world",
 					status: CustomCommandStatus.Failure,
 				};
 			}

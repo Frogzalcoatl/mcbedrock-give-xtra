@@ -22,12 +22,10 @@ export function applyEnchants(enchants: Enchantment[], item: ItemStack): number 
 			return i;
 		}
 		try {
-			if (current.level > current.type.maxLevel || !enchantable.canAddEnchantment(current)) {
-				return i;
-			}
 			enchantable.addEnchantment(current);
 		} catch (_error) {
-			// canAddEnchantment does not consider enchant conflicts (ex: sharpness and smite)
+			// forced to use try catch since enchantable.canAddEnchantment does not consider conflicts
+			// (ex: sharpness and smite cannot be applied to same item)
 			return i;
 		}
 	}

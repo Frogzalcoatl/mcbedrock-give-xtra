@@ -43,7 +43,7 @@ export async function getStartedDurability(context: GetStartedContext): Promise<
 	const maxDurability: number | null = getMaxDurability(context);
 	if (maxDurability === null) {
 		system.run(() =>
-			getStartedProperties(context, "§cUnable to determine max durability for item"),
+			getStartedProperties(context, "§cCould not determine max durability for item"),
 		);
 		return;
 	}
