@@ -20,7 +20,7 @@ export async function getStartedCommandType(context: GetStartedContext): Promise
 		{ defaultValueIndex: defaultValueIndex },
 	);
 	form.divider();
-	form.label("§r");
+	form.label("");
 	form.submitButton("Submit");
 	const resp: ModalFormResponse = await safeModalFormShow(form, context.player);
 	if (!context.player.isValid) {

@@ -33,9 +33,9 @@ function getForm(
 		defaultValue: infiniteDurability,
 		tooltip: "If true, durability number above is ignored",
 	});
-	form.label("§r");
+	form.label("");
 	form.divider();
-	form.label("§r");
+	form.label("");
 	form.submitButton("Submit");
 	return form;
 }

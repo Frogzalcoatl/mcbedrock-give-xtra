@@ -7,10 +7,10 @@ import { getStartedProperties } from "./properties";
 export async function getStartedKeepOnDeath(context: GetStartedContext): Promise<void> {
 	const form = new ModalFormData();
 	form.title(getStartedTitle);
-	form.label("§r");
+	form.label("");
 	form.toggle("Keep item on death?", { defaultValue: context.json.keepOnDeath ?? false });
 	form.divider();
-	form.label("§r");
+	form.label("");
 	form.submitButton("Submit");
 	const resp: ModalFormResponse = await safeModalFormShow(form, context.player);
 	if (!context.player.isValid) {

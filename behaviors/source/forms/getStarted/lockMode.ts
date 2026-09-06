@@ -22,7 +22,7 @@ export async function getStartedLockMode(context: GetStartedContext): Promise<vo
 		{ defaultValueIndex: index },
 	);
 	form.divider();
-	form.label("§r");
+	form.label("");
 	form.submitButton("Submit");
 	const resp: ModalFormResponse = await safeModalFormShow(form, context.player);
 	if (!context.player.isValid) {

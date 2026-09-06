@@ -13,7 +13,7 @@ function getForm(input: number, error?: string): ModalFormData {
 	form.title(getStartedTitle);
 	form.textField(formatLabel(top, bottom, error), "", { defaultValue: `${input}` });
 	form.divider();
-	form.label("§r");
+	form.label("");
 	form.submitButton("Submit");
 	return form;
 }

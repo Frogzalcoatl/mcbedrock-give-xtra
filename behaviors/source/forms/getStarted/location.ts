@@ -20,7 +20,7 @@ function getForm(context: GetStartedContext, input: string, error?: string): Mod
 	const bottom: string = "Enter Coordinates:";
 	form.textField(formatLabel(top, bottom, error), "", { defaultValue: input });
 	form.divider();
-	form.label("§r");
+	form.label("");
 	form.submitButton("Submit");
 	return form;
 }

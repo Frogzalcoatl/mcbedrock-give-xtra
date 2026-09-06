@@ -49,7 +49,7 @@ function getFormTypes(
 		form.toggle(type.id, { defaultValue: enabled });
 	}
 	form.divider();
-	form.label("§r");
+	form.label("");
 	form.submitButton("Submit");
 	return form;
 }
@@ -67,7 +67,7 @@ function getFormLevels(
 		form.slider(type.id, 1, type.maxLevel, { defaultValue: existingLevel });
 	}
 	form.divider();
-	form.label("§r");
+	form.label("");
 	form.submitButton("Submit");
 	return form;
 }
