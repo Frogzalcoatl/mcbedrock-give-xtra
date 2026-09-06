@@ -71,7 +71,7 @@ function validatePropertyTypes(obj: any): obj is GivexJson {
 	}
 	for (const key of Object.keys(obj)) {
 		if (!validJsonKeys.includes(key)) {
-			throw new Error(`Invalid key "${key}".`);
+			throw new Error(`Invalid key "${key}"`);
 		}
 	}
 	if (typeof obj.typeId !== "string") {
@@ -252,11 +252,11 @@ export function validateGivex(json: GivexJson): GivexValidationResult {
 	}
 	json.typeId = itemType.id;
 	if (json.amount <= 0 || json.amount > MAX_AMOUNT || !Number.isInteger(json.amount)) {
-		result.commandResult.message = `Amount must be an integer within range 0-${MAX_AMOUNT}.`;
+		result.commandResult.message = `Amount must be an integer within range 0-${MAX_AMOUNT}`;
 		return result;
 	}
 	if (json.nameTag !== null && json.nameTag.length > MAX_NAMETAG_LENGTH) {
-		result.commandResult.message = `Nametag cannot exceed ${MAX_NAMETAG_LENGTH} characters.`;
+		result.commandResult.message = `Nametag cannot exceed ${MAX_NAMETAG_LENGTH} characters`;
 		return result;
 	}
 	if (

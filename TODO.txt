@@ -1,7 +1,7 @@
 * Finish get started ui
 
-* Write wiki in readme, then copy to wiki ui
-
 * Add lore to givex json
 
 * Figure out how to use localization key for item names
+
+* Write wiki in readme, then copy to wiki ui

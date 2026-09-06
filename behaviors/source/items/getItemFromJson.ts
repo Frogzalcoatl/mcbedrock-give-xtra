@@ -47,7 +47,7 @@ export function getItemFromJson(
 		if (json.amount > item.maxAmount && !containerSlots.includes(json.slot)) {
 			return {
 				commandResult: {
-					message: `Amount cannot exceed max stack size (${item.maxAmount}) when slot ${json.slot} is selected.`,
+					message: `Amount cannot exceed max stack size (${item.maxAmount}) when slot ${json.slot} is selected`,
 					status: CustomCommandStatus.Failure,
 				},
 				item: null,
@@ -58,7 +58,7 @@ export function getItemFromJson(
 		if (json.amount > item.maxAmount) {
 			return {
 				commandResult: {
-					message: `Amount cannot exceed max stack size (${item.maxAmount}) when a slot id is specified.`,
+					message: `Amount cannot exceed max stack size (${item.maxAmount}) when a slot id is specified`,
 					status: CustomCommandStatus.Failure,
 				},
 				item: null,

@@ -59,7 +59,7 @@ export function registerCommandBlockx(registry: CustomCommandRegistry): void {
 			const block: Block | undefined = dimension.getBlock(at);
 			if (block === undefined) {
 				return {
-					message: `No valid block at ${vector3ToString(at)}.`,
+					message: `No valid block at ${vector3ToString(at)}`,
 					status: CustomCommandStatus.Failure,
 				};
 			}

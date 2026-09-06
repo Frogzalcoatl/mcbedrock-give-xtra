@@ -143,13 +143,13 @@ function handleHotbar(
 ): CustomCommandResult {
 	if (selector instanceof Player === false) {
 		return {
-			message: `Could not access hotbar of ${getSelectorName(selector)}. Only players have a hotbar.`,
+			message: `Could not access hotbar of ${getSelectorName(selector)}. Only players have a hotbar`,
 			status: CustomCommandStatus.Failure,
 		};
 	}
 	if (slotId === null) {
 		return {
-			message: `Could not replace ${SlotName.Hotbar} with ${amount} * ${prettyTypeId(item.typeId)}. Slot id must be specified.`,
+			message: `Could not replace ${SlotName.Hotbar} with ${amount} * ${prettyTypeId(item.typeId)}. Slot id must be specified`,
 			status: CustomCommandStatus.Failure,
 		};
 	}
@@ -188,14 +188,14 @@ function handleTameable(
 	);
 	if (inventory === undefined || isTamed === undefined) {
 		return {
-			message: `Could not get ${slot} from ${getSelectorName(selector)}. Only accessible on vanilla tamed entities.`,
+			message: `Could not get ${slot} from ${getSelectorName(selector)}. Only accessible on vanilla tamed entities`,
 			status: CustomCommandStatus.Failure,
 		};
 	}
 	if (slot === SlotName.MobChest) {
 		if (!MobChestEntityTypes.includes(selector.typeId)) {
 			return {
-				message: `Could not get ${slot} from ${getSelectorName(selector)}. Only accessible on vanilla tamed entities.`,
+				message: `Could not get ${slot} from ${getSelectorName(selector)}. Only accessible on vanilla tamed entities`,
 				status: CustomCommandStatus.Failure,
 			};
 		}
