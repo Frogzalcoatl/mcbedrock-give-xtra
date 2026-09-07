@@ -58,7 +58,6 @@ export function registerCommandSpawnx(registry: CustomCommandRegistry): void {
 			if (jsonStr === undefined) {
 				system.run(() => {
 					const itemStack: ItemStack = getDataValueItem(item.id, data, dimension, at);
-					dimension.spawnItem(itemStack, at);
 					sendCommandFeedbackToOrigin(origin, spawnx(dimension, at, itemStack, amount));
 				});
 				return {
