@@ -157,12 +157,14 @@ Ex: `{\"lockMode\":\"inventory\"}`
 ### keepOnDeath
 Whether the item is kept on death.
 
+Default = false
+
 Ex: `{\"keepOnDeath\":true}`
 
 ### canPlaceOn
 The item can be placed on the blocks listed. Strangely can be applied to any item, even if its not actually placeable.
 
-Default = false
+Default = null
 
 Ex: `{\"canPlaceOn\":[\"diamond_block\",\"gold_block\"]}`
 
@@ -189,6 +191,8 @@ Ex: `{\"enchants\":[\"sharpness\",2,\"mending\",\"unbreaking\",3}`
 
 ### lore
 Up to 20 lines of lore which shows as a description beneath the item in the player's inventory. Each line can be at most 50 characters long.
+
+Default = null
 
 Ex: `{\"lore\":[\"This is line 1!\", \"This is line 2!\"]}`
 
