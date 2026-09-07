@@ -9,18 +9,16 @@ export async function getStartedSlot(context: GetStartedContext): Promise<void> 
 	const form = new ModalFormData();
 	form.title(getStartedTitle);
 	const slotNames: SlotName[] = Object.values(SlotName);
-	let inventoryIndex: number = slotNames.indexOf(SlotName.Inventory);
-	if (inventoryIndex === -1) {
-		inventoryIndex = 0;
-	}
-	let index: number = inventoryIndex;
+	let index: number = 0;
 	if (context.json.slot !== null) {
 		index = slotNames.indexOf(context.json.slot);
 		if (index === -1) {
-			index = inventoryIndex;
+			index = 0;
+		} else {
+			index++; // account for "defualt"
 		}
 	}
-	form.dropdown("Select a Slot:", slotNames, { defaultValueIndex: index });
+	form.dropdown("Select a Slot:", ["default"].concat(slotNames), { defaultValueIndex: index });
 	form.divider();
 	form.label("");
 	form.submitButton("Submit");
@@ -32,11 +30,16 @@ export async function getStartedSlot(context: GetStartedContext): Promise<void> 
 		system.run(() => getStartedProperties(context, "§cSlot unchanged"));
 		return;
 	}
-	const slot: SlotName | undefined = slotNames[resp.formValues[0]];
+	if (resp.formValues[0] === 0) {
+		context.json.slot = null;
+		system.run(() => getStartedProperties(context, `Slot set to: §edefault`));
+		return;
+	}
+	const slot: SlotName | undefined = slotNames[resp.formValues[0] - 1];
 	if (slot === undefined) {
 		system.run(() => getStartedProperties(context, "§cSlot undefined so it was unchanged"));
 	} else {
 		context.json.slot = slot;
-		system.run(() => getStartedProperties(context, `Lock Mode set to: §e${slot}§r`));
+		system.run(() => getStartedProperties(context, `Slot set to: §e${slot}§r`));
 	}
 }

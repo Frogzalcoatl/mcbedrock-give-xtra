@@ -19,7 +19,7 @@ function getForm(input: number, error?: string): ModalFormData {
 }
 
 export async function getStartedData(context: GetStartedContext): Promise<void> {
-	let form: ModalFormData = getForm(context.json.data ?? 0);
+	let form: ModalFormData = getForm(context.data ?? 0);
 	let input: number | null = null;
 	while (input === null || input < 0 || input > MAX_DATA || !Number.isInteger(input)) {
 		if (input !== null) {
@@ -37,10 +37,10 @@ export async function getStartedData(context: GetStartedContext): Promise<void> 
 	}
 	system.run(() => {
 		if (input === 0) {
-			context.json.data = null;
+			context.data = 0;
 			getStartedProperties(context, `Data set to: §eDefault (${input})`);
 		} else {
-			context.json.data = input;
+			context.data = input;
 			getStartedProperties(context, `Data set to: §e${input}`);
 		}
 	});

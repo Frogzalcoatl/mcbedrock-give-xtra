@@ -10,16 +10,13 @@ import {
 	EnchantmentTypes,
 	ItemLockMode,
 	type ItemType,
-	ItemTypes,
 } from "@minecraft/server";
+import { MinecraftBlockTypes } from "@minecraft/vanilla-data";
 import { MAX_AMOUNT, MAX_DATA, MAX_NAMETAG_LENGTH } from "../../constants";
 import { SlotName } from "../../items/slot";
 
 export interface GivexJson {
-	typeId: string;
-	amount: number;
 	nameTag: string | null;
-	data: number | null;
 	lockMode: ItemLockMode | null;
 	keepOnDeath: boolean | null;
 	canPlaceOn: string[] | null;
@@ -31,11 +28,8 @@ export interface GivexJson {
 	replaceMode: string | null;
 }
 export const validJsonKeys: string[] = [
-	"typeId",
-	"amount",
 	"nameTag",
 	"lockMode",
-	"data",
 	"keepOnDeath",
 	"canPlaceOn",
 	"canDestroy",
@@ -74,69 +68,47 @@ function validatePropertyTypes(obj: any): obj is GivexJson {
 			throw new Error(`Invalid key "${key}"`);
 		}
 	}
-	if (typeof obj.typeId !== "string") {
-		throw new Error("typeId must be a string");
+	for (const key of validJsonKeys) {
+		if (!Object.hasOwn(obj, key)) {
+			obj[key] = null;
+		}
 	}
-	if (typeof obj.amount !== "number") {
-		throw new Error("amount must be a number");
+	if (obj.nameTag !== null && typeof obj.nameTag !== "string") {
+		throw new Error(`nameTag must be a string`);
 	}
-	if (obj.nameTag === undefined) {
-		obj.nameTag = null;
-	} else if (typeof obj.nameTag !== "string") {
-		throw new Error("nameTag must be a string");
-	}
-	if (obj.lockMode === undefined) {
-		obj.lockMode = null;
-	} else if (!Object.values(ItemLockMode).includes(obj.lockMode)) {
+	if (obj.lockMode !== null && !Object.values(ItemLockMode).includes(obj.lockMode)) {
 		throw new Error(
 			`invalid lockMode "${obj.lockMode}"\nValid values:\n${Object.values(ItemLockMode).join("\n")}`,
 		);
 	}
-	if (obj.data === undefined) {
-		obj.data = null;
-	} else if (typeof obj.data !== "number") {
-		throw new Error("data must be a number");
-	}
-	if (obj.keepOnDeath === undefined) {
-		obj.keepOnDeath = null;
-	} else if (typeof obj.keepOnDeath !== "boolean") {
+	if (obj.keepOnDeath !== null && typeof obj.keepOnDeath !== "boolean") {
 		throw new Error("keepOnDeath must be a boolean");
 	}
-	if (obj.canPlaceOn === undefined) {
-		obj.canPlaceOn = null;
-	} else if (!isStringArray(obj.canPlaceOn)) {
+	if (obj.canPlaceOn !== null && !isStringArray(obj.canPlaceOn)) {
 		throw new Error("canPlaceOn must be an array of strings");
 	}
-	if (obj.canDestroy === undefined) {
-		obj.canDestroy = null;
-	} else if (!isStringArray(obj.canDestroy)) {
+	if (obj.canDestroy !== null && !isStringArray(obj.canDestroy)) {
 		throw new Error("canDestroy must be an array of strings");
 	}
-	if (obj.durability === undefined) {
-		obj.durability = null;
-	} else if (typeof obj.durability !== "string" && typeof obj.durability !== "number") {
-		throw new Error("durability must be a string or number");
+	if (
+		obj.durability !== null &&
+		obj.durability !== "unbreakable" &&
+		typeof obj.durability !== "number"
+	) {
+		throw new Error('durability must be a number or the string "unbreakable"');
 	}
-	if (obj.enchants === undefined) {
-		obj.enchants = null;
-	} else if (!isStringIntegerArray(obj.enchants)) {
+	if (obj.enchants !== null && !isStringIntegerArray(obj.enchants)) {
 		throw new Error("enchants must be an array of strings/integers");
 	}
-	if (obj.slot === undefined) {
-		obj.slot = null;
-	} else if (!Object.values(SlotName).includes(obj.slot)) {
+	if (obj.slot !== null && !Object.values(SlotName).includes(obj.slot)) {
 		throw new Error(
 			`invalid slot "${obj.slot}"\nValid values:\n${Object.values(SlotName).join("\n")}`,
 		);
 	}
-	if (obj.slotId === undefined) {
-		obj.slotId = null;
-	} else if (typeof obj.slotId !== "number") {
+	if (obj.slotId !== null && typeof obj.slotId !== "number") {
 		throw new Error("slotId must be a number");
 	}
-	if (obj.replaceMode === undefined) {
-		obj.replaceMode = null;
-	} else if (typeof obj.replaceMode !== "string") {
+	if (obj.replaceMode !== null && typeof obj.replaceMode !== "string") {
 		throw new Error("replaceMode must be a string");
 	}
 	return true;
@@ -146,13 +118,9 @@ export interface GivexJsonParseResult {
 	json: GivexJson | null;
 	message: string;
 }
-export function parseGivexJson(str: string, typeId: string): GivexJsonParseResult {
+export function parseGivexJson(str: string): GivexJsonParseResult {
 	try {
 		const obj = JSON.parse(str);
-		obj.typeId = typeId;
-		if (obj.amount === undefined) {
-			obj.amount = 1;
-		}
 		if (validatePropertyTypes(obj)) {
 			return {
 				json: obj,
@@ -191,7 +159,7 @@ function validBlockTypes(blockTypes: string[]): number | null {
 	return null;
 }
 
-// Ex valid enchant list: ["protection", 4, "mending", "feather_falling"]
+// Ex valid enchant list: ["protection", 4, "mending", "feather_falling", 2] -> Protection IV, Mending I, and Feather Falling II
 // If level is not included, assume level 1
 // Returns enchantments or invalid index
 function getEnchantsFromList(list: (string | number)[]): Enchantment[] | number {
@@ -238,20 +206,23 @@ export interface GivexValidationResult {
 	commandResult: CustomCommandResult;
 	enchants: Enchantment[] | null;
 }
-export function validateGivex(json: GivexJson): GivexValidationResult {
+export function validateGivex(
+	json: GivexJson,
+	item: ItemType,
+	amount: number,
+	data: number,
+): GivexValidationResult {
 	const result: GivexValidationResult = {
 		commandResult: {
 			status: CustomCommandStatus.Failure,
 		},
 		enchants: null,
 	};
-	const itemType: ItemType | undefined = ItemTypes.get(json.typeId);
-	if (itemType === undefined) {
-		result.commandResult.message = `Invalid typeId "${json.typeId}"`;
+	if (item.id === MinecraftBlockTypes.Air) {
+		result.commandResult.message = `Invalid typeId "${item.id}"`;
 		return result;
 	}
-	json.typeId = itemType.id;
-	if (json.amount <= 0 || json.amount > MAX_AMOUNT || !Number.isInteger(json.amount)) {
+	if (amount <= 0 || amount > MAX_AMOUNT || !Number.isInteger(amount)) {
 		result.commandResult.message = `Amount must be an integer within range 0-${MAX_AMOUNT}`;
 		return result;
 	}
@@ -259,11 +230,8 @@ export function validateGivex(json: GivexJson): GivexValidationResult {
 		result.commandResult.message = `Nametag cannot exceed ${MAX_NAMETAG_LENGTH} characters`;
 		return result;
 	}
-	if (
-		json.data !== null &&
-		(json.data < 0 || json.data > MAX_DATA || !Number.isInteger(json.amount))
-	) {
-		result.commandResult.message = `Invalid data value "${json.data}"`;
+	if (data < 0 || data > MAX_DATA || !Number.isInteger(data)) {
+		result.commandResult.message = `Invalid data value "${data}"`;
 		return result;
 	}
 	if (json.canPlaceOn !== null) {
@@ -282,9 +250,8 @@ export function validateGivex(json: GivexJson): GivexValidationResult {
 	}
 	if (
 		json.durability !== null &&
-		(json.durability !== "unbreakable" ||
-			(typeof json.durability === "number" &&
-				(json.durability < 0 || !Number.isInteger(json.durability))))
+		typeof json.durability === "number" &&
+		(json.durability < 0 || !Number.isInteger(json.durability))
 	) {
 		result.commandResult.message = `Durability must be a non negative integer or "unbreakable"`;
 		return result;

@@ -19,7 +19,11 @@ export function registerCommandInfo(registry: CustomCommandRegistry): void {
 		{
 			description: "Givex info.",
 			name: `${PACK_NAMESPACE}:info`,
-			optionalParameters: [{ name: "itemName", type: CustomCommandParamType.ItemType }],
+			optionalParameters: [
+				{ name: "amount", type: CustomCommandParamType.Integer },
+				{ name: "data", type: CustomCommandParamType.Integer },
+				{ name: "json", type: CustomCommandParamType.String },
+			],
 			permissionLevel: CommandPermissionLevel.Admin,
 		},
 		(origin: CustomCommandOrigin, item?: ItemType): CustomCommandResult => {

@@ -70,19 +70,18 @@ function enchantsToString(enchants: Enchantment[], maxLength: number): string {
 }
 
 function contextToString(context: GetStartedContext): string {
+	const c: GetStartedContext = context;
 	const j: GivexJson = context.json;
 	let str: string = `
-§rItem Type: §e${j.typeId}
-§rAmount: §e${j.amount}
-§rCommand Type: §e/${context.commandType}`;
+§rCommand Type: §e/${context.commandType}
+§rItem Type: §e${c.typeId}
+§rAmount: §e${c.amount}
+§rData: §e${c.data}`;
 	if (context.commandType !== "givex") {
 		str += `\n§rLocation: §e${commandVector3ToString(context.location)}`;
 	}
 	if (j.nameTag !== null) {
 		str += `\n§rName Tag: "§o${j.nameTag}§r"`;
-	}
-	if (j.data !== null) {
-		str += `\n§rData: §e${j.data}`;
 	}
 	if (j.lockMode !== null) {
 		str += `\n§rLock Mode: §e${camelToTitleCase(j.lockMode)}`;
@@ -107,7 +106,7 @@ function contextToString(context: GetStartedContext): string {
 		str += `\n§rSlot: §e${j.slot}`;
 	}
 	if (j.slotId !== null) {
-		str += `\n§rSlot ID: §e${j.slotId}`;
+		str += `\n§rSlot Id: §e${j.slotId}`;
 	}
 	if (j.replaceMode !== null) {
 		str += `\n§rReplace Mode: §e${j.replaceMode}`;
@@ -127,7 +126,7 @@ async function backConfirmation(context: GetStartedContext): Promise<void> {
 	if (resp.selection === 1) {
 		system.run(() => getStartedProperties(context));
 	} else {
-		system.run(() => formGetStarted(context.player, context.json.typeId));
+		system.run(() => formGetStarted(context.player, context.typeId));
 	}
 }
 
@@ -140,7 +139,7 @@ function getExcludedProperties(context: GetStartedContext): string[] {
 		arr.push("slotId");
 		arr.push("replaceMode");
 	}
-	const item = new ItemStack(context.json.typeId);
+	const item = new ItemStack(context.typeId);
 	const durability: ItemDurabilityComponent | undefined = item.getComponent(
 		ItemComponentTypes.Durability,
 	);
@@ -160,7 +159,7 @@ export async function getStartedProperties(
 	context: GetStartedContext,
 	optionalMessage?: string,
 ): Promise<void> {
-	const jsonKeys: string[] = [];
+	const jsonKeys: string[] = ["amount", "data"];
 	if (context.commandType !== "givex") {
 		jsonKeys.push("location");
 	}
@@ -174,7 +173,7 @@ export async function getStartedProperties(
 	const submitButtonIndex: number = jsonKeys.length + 1;
 	const form = new ActionFormData();
 	form.title(getStartedTitle);
-	let body: string = `Select property to edit for:\n§e${prettyTypeId(context.json.typeId)}`;
+	let body: string = `Select property to edit for:\n§e${prettyTypeId(context.typeId)}`;
 	if (optionalMessage) {
 		body = `${optionalMessage}§r\n\n${body}`;
 	}
@@ -203,6 +202,9 @@ export async function getStartedProperties(
 			case "amount":
 				getStartedAmount(context);
 				break;
+			case "data":
+				getStartedData(context);
+				break;
 			case "location":
 				getStartedLocation(context);
 				break;
@@ -211,9 +213,6 @@ export async function getStartedProperties(
 				break;
 			case "lockMode":
 				getStartedLockMode(context);
-				break;
-			case "data":
-				getStartedData(context);
 				break;
 			case "keepOnDeath":
 				getStartedKeepOnDeath(context);

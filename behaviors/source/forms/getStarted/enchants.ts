@@ -77,7 +77,7 @@ export async function getStartedEnchants(
 	selectedTypes?: EnchantmentType[],
 	error?: string,
 ): Promise<void> {
-	const testItem = new ItemStack(context.json.typeId);
+	const testItem = new ItemStack(context.typeId);
 	const allowed: EnchantmentType[] | null = getAllowedEnchantTypes(testItem);
 	if (allowed === null) {
 		system.run(() => getStartedProperties(context, `§cNo valid enchants to apply to item.`));

@@ -12,7 +12,7 @@ function getMaxAmount(context: GetStartedContext): number {
 		context.json.slotId !== null ||
 		(context.json.slot !== null && !containerSlots.includes(context.json.slot))
 	) {
-		const itemStack = new ItemStack(context.json.typeId);
+		const itemStack = new ItemStack(context.typeId);
 		return itemStack.maxAmount;
 	} else {
 		return MAX_AMOUNT;
@@ -38,7 +38,7 @@ function getForm(
 
 export async function getStartedAmount(context: GetStartedContext): Promise<void> {
 	const maxAmount: number = getMaxAmount(context);
-	let form: ModalFormData = getForm(context, context.json.amount, maxAmount);
+	let form: ModalFormData = getForm(context, context.amount, maxAmount);
 	let input: number | null = null;
 	while (input === null || input < 1 || input > maxAmount || !Number.isInteger(input)) {
 		if (input !== null) {
@@ -54,6 +54,6 @@ export async function getStartedAmount(context: GetStartedContext): Promise<void
 		}
 		input = stringToFiniteNumber(resp.formValues[0]);
 	}
-	context.json.amount = input;
+	context.amount = input;
 	system.run(() => getStartedProperties(context, `Amount set to: §e${input}`));
 }

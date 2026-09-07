@@ -395,26 +395,33 @@ export function blockx(
 export function spawnx(
 	dimension: Dimension,
 	pos: Vector3,
-	itemStack: ItemStack,
-	itemAmount: number,
-): void {
-	if (!dimension.isChunkLoaded(pos)) {
-		return;
-	}
+	item: ItemStack,
+	amount: number,
+): CustomCommandResult {
 	const spawnPos: Vector3 = {
 		x: pos.x,
 		y: dimension.heightRange.min,
 		z: pos.z,
 	};
-	while (itemAmount > 0) {
-		if (itemAmount >= itemStack.maxAmount) {
-			itemStack.amount = itemStack.maxAmount;
-			itemAmount -= itemStack.maxAmount;
+	if (!dimension.isChunkLoaded(spawnPos)) {
+		return {
+			message: "Cannot access blocks outside of world",
+			status: CustomCommandStatus.Failure,
+		};
+	}
+	while (amount > 0) {
+		if (amount >= item.maxAmount) {
+			item.amount = item.maxAmount;
+			amount -= item.maxAmount;
 		} else {
-			itemStack.amount = itemAmount;
-			itemAmount = 0;
+			item.amount = amount;
+			amount = 0;
 		}
 		// Teleport to avoid LocationOutOfWorldBoundariesError
-		dimension.spawnItem(itemStack, spawnPos).teleport(pos);
+		dimension.spawnItem(item, spawnPos).teleport(pos);
 	}
+	return {
+		message: `Spawned ${prettyTypeId(item.typeId)} * ${amount} at ${vector3ToString(pos)}`,
+		status: CustomCommandStatus.Success,
+	};
 }

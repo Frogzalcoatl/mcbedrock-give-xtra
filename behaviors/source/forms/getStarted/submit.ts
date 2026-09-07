@@ -18,18 +18,19 @@ function enchantsToList(enchants: Enchantment[]): string {
 }
 
 function contextToCommand(context: GetStartedContext): string {
+	const c: GetStartedContext = context;
 	const j: GivexJson = context.json;
 	let str: string = "";
+	if (context.typeId.startsWith("minecraft:")) {
+		context.typeId = context.typeId.slice(10);
+	}
 	if (context.commandType === "givex") {
-		str = `/givex @p ${j.typeId} "{\\"amount\\":${j.amount},`;
+		str = `/givex @p ${c.typeId} ${c.amount} ${c.data} "{`;
 	} else {
-		str = `/${context.commandType} ${commandVector3ToString(context.location)} ${j.typeId} "{\\"amount\\":${j.amount},`;
+		str = `/${context.commandType} ${commandVector3ToString(context.location)} ${c.typeId} ${c.amount} ${c.data} "{`;
 	}
 	if (j.nameTag !== null) {
 		str += `\\"nameTag\\":\\"${j.nameTag}\\",`;
-	}
-	if (j.data !== null) {
-		str += `\\"data\\":${j.data},`;
 	}
 	if (j.lockMode !== null) {
 		str += `\\"lockMode\\":\\"${j.lockMode}\\",`;
@@ -63,7 +64,12 @@ function contextToCommand(context: GetStartedContext): string {
 		// destroy is default
 		str += `\\"replaceMode\\":\\"${j.replaceMode}\\",`;
 	}
-	str = `${str.slice(0, str.length - 1)}}"`;
+	if (str.endsWith(`"{`)) {
+		str = str.slice(0, str.length - 2);
+	} else {
+		// remove trailing comma then close the brackets
+		str = `${str.slice(0, str.length - 1)}}"`;
+	}
 	return str;
 }
 

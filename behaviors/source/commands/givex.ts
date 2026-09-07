@@ -8,13 +8,14 @@ import {
 	type Dimension,
 	type Enchantment,
 	type Entity,
-	ItemStack,
+	type ItemStack,
 	type ItemType,
 	system,
 	type Vector3,
 } from "@minecraft/server";
 import { PACK_NAMESPACE } from "../constants";
 import { givex } from "../items/container";
+import { getDataValueItem } from "../items/dataValues";
 import { type GetItemFromJsonResult, getItemFromJson } from "../items/getItemFromJson";
 import { getSelectorName, prettyTypeId } from "./utils/beautification";
 import {
@@ -39,13 +40,19 @@ export function registerCommandGivex(registry: CustomCommandRegistry): void {
 				{ name: "itemName", type: CustomCommandParamType.ItemType },
 			],
 			name: `${PACK_NAMESPACE}:givex`,
-			optionalParameters: [{ name: "json", type: CustomCommandParamType.String }],
+			optionalParameters: [
+				{ name: "amount", type: CustomCommandParamType.Integer },
+				{ name: "data", type: CustomCommandParamType.Integer },
+				{ name: "json", type: CustomCommandParamType.String },
+			],
 			permissionLevel: CommandPermissionLevel.GameDirectors,
 		},
 		(
 			origin: CustomCommandOrigin,
 			target: Entity[],
 			item: ItemType,
+			amount: number = 1,
+			data: number = 0,
 			jsonStr?: string,
 		): CustomCommandResult => {
 			if (target.length === 0) {
@@ -71,7 +78,7 @@ export function registerCommandGivex(registry: CustomCommandRegistry): void {
 			let json: GivexJson | null = null;
 			let enchants: Enchantment[] | null = null;
 			if (jsonStr !== undefined) {
-				const parseResult: GivexJsonParseResult = parseGivexJson(jsonStr, item.id);
+				const parseResult: GivexJsonParseResult = parseGivexJson(jsonStr);
 				if (parseResult.json === null) {
 					return {
 						message: parseResult.message,
@@ -79,7 +86,7 @@ export function registerCommandGivex(registry: CustomCommandRegistry): void {
 					};
 				}
 				json = parseResult.json;
-				const validation: GivexValidationResult = validateGivex(json);
+				const validation: GivexValidationResult = validateGivex(json, item, amount, data);
 				if (validation.commandResult.status === CustomCommandStatus.Failure) {
 					return validation.commandResult;
 				}
@@ -88,12 +95,15 @@ export function registerCommandGivex(registry: CustomCommandRegistry): void {
 			system.run(() => {
 				let itemStack: ItemStack | null = null;
 				if (json === null) {
-					itemStack = new ItemStack(item);
+					itemStack = getDataValueItem(item.id, data, dimension, location);
 				} else {
 					const itemResult: GetItemFromJsonResult = getItemFromJson(
 						dimension,
 						location,
 						json,
+						item,
+						amount,
+						data,
 						enchants ?? undefined,
 					);
 					if (itemResult.item === null) {
@@ -103,7 +113,7 @@ export function registerCommandGivex(registry: CustomCommandRegistry): void {
 					itemStack = itemResult.item;
 				}
 				sendCommandFeedbackToOrigin(origin, {
-					message: `Gave ${prettyTypeId(item.id)} * ${json?.amount ?? 1} to ${target.reduce((accumulator, current) => `${accumulator}§r, ${getSelectorName(current)}`, "").slice(4)}`,
+					message: `Gave ${prettyTypeId(item.id)} * ${amount} to ${target.reduce((accumulator, current) => `${accumulator}§r, ${getSelectorName(current)}`, "").slice(4)}`,
 					status: CustomCommandStatus.Success,
 				});
 				for (const entity of target) {
@@ -113,7 +123,7 @@ export function registerCommandGivex(registry: CustomCommandRegistry): void {
 					const currentResult: CustomCommandResult = givex(
 						entity,
 						itemStack,
-						json?.amount ?? 1,
+						amount,
 						json?.slot ?? undefined,
 						json?.slotId,
 						json?.replaceMode ?? undefined,

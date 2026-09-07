@@ -7,13 +7,13 @@ import {
 	type CustomCommandResult,
 	CustomCommandStatus,
 	type Dimension,
-	ItemStack,
 	type ItemType,
 	system,
 	type Vector3,
 } from "@minecraft/server";
 import { PACK_NAMESPACE } from "../constants";
 import { blockx } from "../items/container";
+import { getDataValueItem } from "../items/dataValues";
 import { type GetItemFromJsonResult, getItemFromJson } from "../items/getItemFromJson";
 import { vector3ToString } from "./utils/beautification";
 import {
@@ -34,13 +34,19 @@ export function registerCommandBlockx(registry: CustomCommandRegistry): void {
 				{ name: "itemName", type: CustomCommandParamType.ItemType },
 			],
 			name: `${PACK_NAMESPACE}:blockx`,
-			optionalParameters: [{ name: "json", type: CustomCommandParamType.String }],
+			optionalParameters: [
+				{ name: "amount", type: CustomCommandParamType.Integer },
+				{ name: "data", type: CustomCommandParamType.Integer },
+				{ name: "json", type: CustomCommandParamType.String },
+			],
 			permissionLevel: CommandPermissionLevel.GameDirectors,
 		},
 		(
 			origin: CustomCommandOrigin,
 			at: Vector3,
 			item: ItemType,
+			amount: number = 1,
+			data: number = 0,
 			jsonStr?: string,
 		): CustomCommandResult => {
 			const dimension: Dimension | null = getDimensionFromOrigin(origin);
@@ -65,14 +71,19 @@ export function registerCommandBlockx(registry: CustomCommandRegistry): void {
 			}
 			if (jsonStr === undefined) {
 				system.run(() => {
-					const result: CustomCommandResult = blockx(block, new ItemStack(item), 1, null);
+					const result: CustomCommandResult = blockx(
+						block,
+						getDataValueItem(item.id, data, dimension, at),
+						amount,
+						null,
+					);
 					sendCommandFeedbackToOrigin(origin, result);
 				});
 				return {
 					status: CustomCommandStatus.Success,
 				};
 			}
-			const parseResult: GivexJsonParseResult = parseGivexJson(jsonStr, item.id);
+			const parseResult: GivexJsonParseResult = parseGivexJson(jsonStr);
 			if (parseResult.json === null) {
 				return {
 					message: parseResult.message,
@@ -80,7 +91,7 @@ export function registerCommandBlockx(registry: CustomCommandRegistry): void {
 				};
 			}
 			const json: GivexJson = parseResult.json;
-			const validation: GivexValidationResult = validateGivex(json);
+			const validation: GivexValidationResult = validateGivex(json, item, amount, data);
 			if (validation.commandResult.status === CustomCommandStatus.Failure) {
 				return validation.commandResult;
 			}
@@ -89,19 +100,22 @@ export function registerCommandBlockx(registry: CustomCommandRegistry): void {
 					dimension,
 					at,
 					json,
+					item,
+					amount,
+					data,
 					validation.enchants ?? undefined,
 				);
-				let blockxResult: CustomCommandResult = itemResult.commandResult;
+				let result: CustomCommandResult = itemResult.commandResult;
 				if (itemResult.item !== null) {
-					blockxResult = blockx(
+					result = blockx(
 						block,
 						itemResult.item,
-						json.amount,
+						amount,
 						json.slotId,
 						json.replaceMode ?? undefined,
 					);
 				}
-				sendCommandFeedbackToOrigin(origin, blockxResult);
+				sendCommandFeedbackToOrigin(origin, result);
 			});
 			return {
 				status: CustomCommandStatus.Success,

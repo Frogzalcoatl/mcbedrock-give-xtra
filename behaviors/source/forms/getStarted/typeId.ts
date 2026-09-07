@@ -20,7 +20,7 @@ function getForm(input: string, error?: string): ModalFormData {
 }
 
 export async function getStartedTypeId(context: GetStartedContext): Promise<void> {
-	let form: ModalFormData = getForm(context.json.typeId);
+	let form: ModalFormData = getForm(context.typeId);
 	let input: string = "";
 	let formattedId: string | null = null;
 	while (formattedId === null) {
@@ -40,6 +40,6 @@ export async function getStartedTypeId(context: GetStartedContext): Promise<void
 		input = resp.formValues[0];
 		formattedId = ItemTypes.get(input)?.id ?? null;
 	}
-	context.json.typeId = formattedId;
+	context.typeId = formattedId;
 	system.run(() => getStartedCommandType(context));
 }

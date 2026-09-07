@@ -3,7 +3,7 @@ import {
 	type Entity,
 	EntityComponentTypes,
 	type EntityInventoryComponent,
-	type ItemStack,
+	ItemStack,
 	type Vector3,
 } from "@minecraft/server";
 
@@ -15,9 +15,12 @@ export function getDataValueItem(
 	dataValue: number,
 	originDimension: Dimension,
 	originLocation: Vector3,
-): ItemStack | null {
+): ItemStack {
+	if (dataValue === 0) {
+		return new ItemStack(typeId);
+	}
 	if (!originDimension.isChunkLoaded(originLocation)) {
-		return null;
+		return new ItemStack(typeId);
 	}
 	const containerEntity: Entity = originDimension.spawnEntity(CONTAINER_TYPE_ID, originLocation);
 	const inventory: EntityInventoryComponent | undefined = containerEntity.getComponent(
@@ -25,13 +28,13 @@ export function getDataValueItem(
 	);
 	if (inventory === undefined) {
 		containerEntity.remove();
-		return null;
+		return new ItemStack(typeId);
 	}
 	containerEntity.runCommand(`/replaceitem entity @s slot.inventory 0 ${typeId} 1 ${dataValue}`);
 	const dataValueItem: ItemStack | undefined = inventory.container.getItem(0);
 	containerEntity.remove();
 	if (dataValueItem === undefined) {
-		return null;
+		return new ItemStack(typeId);
 	}
 	return dataValueItem;
 }

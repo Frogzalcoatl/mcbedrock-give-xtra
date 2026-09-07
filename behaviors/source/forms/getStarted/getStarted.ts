@@ -6,23 +6,26 @@ import { getStartedTypeId } from "./typeId";
 export const getStartedTitle: string = "§0Get Started";
 
 export interface GetStartedContext {
+	amount: number;
 	commandType: "givex" | "blockx" | "spawnx";
+	data: number;
 	enchants: Enchantment[];
 	json: GivexJson;
 	location: CommandVector3;
 	openedFromInfo: boolean;
 	player: Player;
+	typeId: string;
 }
 
 function getDefaultContext(player: Player, item?: string): GetStartedContext {
 	return {
+		amount: 1,
 		commandType: "givex",
+		data: 0,
 		enchants: [],
 		json: {
-			amount: 1,
 			canDestroy: null,
 			canPlaceOn: null,
-			data: null,
 			durability: null,
 			enchants: null,
 			keepOnDeath: null,
@@ -31,7 +34,6 @@ function getDefaultContext(player: Player, item?: string): GetStartedContext {
 			replaceMode: null,
 			slot: null,
 			slotId: null,
-			typeId: item ?? "",
 		},
 		location: {
 			x: {
@@ -49,6 +51,7 @@ function getDefaultContext(player: Player, item?: string): GetStartedContext {
 		},
 		openedFromInfo: item === undefined,
 		player: player,
+		typeId: item ?? "",
 	};
 }
 

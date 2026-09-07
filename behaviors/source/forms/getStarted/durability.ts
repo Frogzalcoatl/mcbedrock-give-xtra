@@ -11,7 +11,7 @@ import { formatLabel, type GetStartedContext, getStartedTitle } from "./getStart
 import { getStartedProperties } from "./properties";
 
 function getMaxDurability(context: GetStartedContext): number | null {
-	const item = new ItemStack(context.json.typeId);
+	const item = new ItemStack(context.typeId);
 	const durability: ItemDurabilityComponent | undefined = item.getComponent(
 		ItemComponentTypes.Durability,
 	);
