@@ -4,6 +4,7 @@ import {
 	type ActionFormResponse,
 	FormCancelationReason,
 	FormRejectError,
+	type MessageFormData,
 	type MessageFormResponse,
 	type ModalFormData,
 	type ModalFormResponse,
@@ -50,7 +51,7 @@ export async function safeModalFormShow(
 }
 
 export async function safeMessageFormShow(
-	form: ModalFormData,
+	form: MessageFormData,
 	player: Player,
 ): Promise<MessageFormResponse> {
 	try {

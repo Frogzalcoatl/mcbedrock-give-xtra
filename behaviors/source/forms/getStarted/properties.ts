@@ -14,7 +14,7 @@ import {
 } from "@minecraft/server-ui";
 import { camelToTitleCase, prettyTypeId } from "../../commands/utils/beautification";
 import { type GivexJson, validJsonKeys } from "../../commands/utils/json";
-import { safeActionFormShow } from "../safeShow";
+import { safeActionFormShow, safeMessageFormShow } from "../safeShow";
 import { getStartedAmount } from "./amount";
 import { getStartedCanDestroy, getStartedCanPlaceOn } from "./blockList";
 import { commandVector3ToString } from "./commandVector3";
@@ -126,7 +126,10 @@ async function backConfirmation(context: GetStartedContext): Promise<void> {
 	);
 	form.button1("I'm Sure!");
 	form.button2("Cancel");
-	const resp: MessageFormResponse = await form.show(context.player);
+	const resp: MessageFormResponse = await safeMessageFormShow(form, context.player);
+	if (!context.player.isValid) {
+		return;
+	}
 	if (resp.selection === 1) {
 		system.run(() => getStartedProperties(context));
 	} else {
