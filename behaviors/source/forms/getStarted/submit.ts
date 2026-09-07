@@ -64,6 +64,9 @@ function contextToCommand(context: GetStartedContext): string {
 		// destroy is default
 		str += `\\"replaceMode\\":\\"${j.replaceMode}\\",`;
 	}
+	if (j.lore !== null) {
+		str += `\\"lore\\":\\[\\"${j.lore.join('\\",\\"')}\\"],`;
+	}
 	if (str.endsWith(`"{`)) {
 		str = str.slice(0, str.length - 2);
 	} else {

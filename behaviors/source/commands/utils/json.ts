@@ -12,7 +12,13 @@ import {
 	type ItemType,
 } from "@minecraft/server";
 import { MinecraftBlockTypes } from "@minecraft/vanilla-data";
-import { MAX_AMOUNT, MAX_DATA, MAX_NAMETAG_LENGTH } from "../../constants";
+import {
+	MAX_AMOUNT,
+	MAX_DATA,
+	MAX_LORE_LINE_CHAR_COUNT,
+	MAX_LORE_LINE_COUNT,
+	MAX_NAMETAG_LENGTH,
+} from "../../constants";
 import { SlotName } from "../../items/slot";
 
 export interface GivexJson {
@@ -23,6 +29,7 @@ export interface GivexJson {
 	canDestroy: string[] | null;
 	durability: "unbreakable" | number | null;
 	enchants: (string | number)[] | null;
+	lore: string[] | null;
 	slot: SlotName | null;
 	slotId: number | null;
 	replaceMode: string | null;
@@ -35,6 +42,7 @@ export const validJsonKeys: string[] = [
 	"canDestroy",
 	"durability",
 	"enchants",
+	"lore",
 	"slot",
 	"slotId",
 	"replaceMode",
@@ -99,6 +107,9 @@ function validatePropertyTypes(obj: any): obj is GivexJson {
 	}
 	if (obj.enchants !== null && !isStringIntegerArray(obj.enchants)) {
 		throw new Error("enchants must be an array of strings/integers");
+	}
+	if (obj.lore !== null && !isStringArray(obj.lore)) {
+		throw new Error("lore must be an array of strings");
 	}
 	if (obj.slot !== null && !Object.values(SlotName).includes(obj.slot)) {
 		throw new Error(
@@ -286,6 +297,18 @@ export function validateGivex(
 			return result;
 		} else {
 			result.enchants = enchantResult;
+		}
+	}
+	if (json.lore !== null) {
+		if (json.lore.length > MAX_LORE_LINE_COUNT) {
+			result.commandResult.message = `Cannot exceed 20 lines of lore`;
+			return result;
+		}
+		for (let i = 0; i < json.lore.length; i++) {
+			if ((json.lore[i]?.length ?? 0) > MAX_LORE_LINE_COUNT) {
+				result.commandResult.message = `Lore exceeds max length of ${MAX_LORE_LINE_CHAR_COUNT} at line ${i + 1}: "${json.lore[i]}"`;
+				return result;
+			}
 		}
 	}
 	result.commandResult.status = CustomCommandStatus.Success;

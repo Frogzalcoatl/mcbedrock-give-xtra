@@ -26,6 +26,7 @@ import { getIconPath } from "./iconPaths";
 import { getStartedKeepOnDeath } from "./keepOnDeath";
 import { getStartedLocation } from "./location";
 import { getStartedLockMode } from "./lockMode";
+import { getStartedLore } from "./lore";
 import { getStartedNameTag } from "./nameTag";
 import { getStartedReplaceMode } from "./replaceMode";
 import { getStartedSlot } from "./slot";
@@ -101,7 +102,6 @@ function contextToString(context: GetStartedContext): string {
 	}
 	if (context.enchants.length > 0) {
 		str += `\n§rEnchants:§e${enchantsToString(context.enchants, 16)}`;
-		for (let i: number = 0; i < context.enchants.length; i++) {}
 	}
 	if (j.slot !== null) {
 		str += `\n§rSlot: §e${j.slot}`;
@@ -111,6 +111,9 @@ function contextToString(context: GetStartedContext): string {
 	}
 	if (j.replaceMode !== null) {
 		str += `\n§rReplace Mode: §e${j.replaceMode}`;
+	}
+	if (j.lore !== null) {
+		str += `\n§rLore:§e\n${j.lore.join("\n")}`;
 	}
 	return str;
 }
@@ -238,6 +241,9 @@ export async function getStartedProperties(
 				break;
 			case "canDestroy":
 				getStartedCanDestroy(context);
+				break;
+			case "lore":
+				getStartedLore(context);
 				break;
 			default:
 				getStartedProperties(context, "§cNot Finished");

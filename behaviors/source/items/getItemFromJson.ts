@@ -73,6 +73,9 @@ export function getItemFromJson(
 	if (json.durability !== null) {
 		setDurability(item, json.durability);
 	}
+	if (json.lore) {
+		item.setLore(json.lore);
+	}
 	if (enchants !== undefined) {
 		const invalidIndex: number | null = applyEnchants(enchants, item);
 		if (invalidIndex !== null) {

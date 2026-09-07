@@ -30,6 +30,7 @@ function getDefaultContext(player: Player, item?: string): GetStartedContext {
 			enchants: null,
 			keepOnDeath: null,
 			lockMode: null,
+			lore: null,
 			nameTag: null,
 			replaceMode: null,
 			slot: null,
