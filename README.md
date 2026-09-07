@@ -61,7 +61,7 @@ Gives the nearest player 64 arrows of poison with the nametag "Scary Arrows".
 
 **Usage:**
 ```
-/givex:blockx <position> <itemName> <amount(optional, default = 1)> <json (optional)>
+/givex:blockx <position> <itemName> <amount(optional, default = 1)> <data: (optional, default = 0)> <json (optional)>
 ```
 
 **Description:**
