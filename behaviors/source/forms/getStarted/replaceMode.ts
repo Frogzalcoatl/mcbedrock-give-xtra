@@ -1,8 +1,8 @@
 import { system } from "@minecraft/server";
 import { ModalFormData, type ModalFormResponse } from "@minecraft/server-ui";
-import { type GetStartedContext, getStartedTitle } from "./getStarted/getStarted";
-import { getStartedProperties } from "./getStarted/properties";
-import { safeModalFormShow } from "./safeShow";
+import { safeModalFormShow } from "../safeShow";
+import { type GetStartedContext, getStartedTitle } from "./getStarted";
+import { getStartedProperties } from "./properties";
 
 export async function getStartedReplaceMode(context: GetStartedContext): Promise<void> {
 	const form = new ModalFormData();

@@ -14,7 +14,6 @@ import {
 } from "@minecraft/server-ui";
 import { camelToTitleCase, prettyTypeId } from "../../commands/utils/beautification";
 import { type GivexJson, validJsonKeys } from "../../commands/utils/json";
-import { getStartedReplaceMode } from "../replaceMode";
 import { safeActionFormShow } from "../safeShow";
 import { getStartedAmount } from "./amount";
 import { getStartedCanDestroy, getStartedCanPlaceOn } from "./blockList";
@@ -28,6 +27,7 @@ import { getStartedKeepOnDeath } from "./keepOnDeath";
 import { getStartedLocation } from "./location";
 import { getStartedLockMode } from "./lockMode";
 import { getStartedNameTag } from "./nameTag";
+import { getStartedReplaceMode } from "./replaceMode";
 import { getStartedSlot } from "./slot";
 import { getStartedSlotId } from "./slotId";
 import { getStartedSubmit } from "./submit";
