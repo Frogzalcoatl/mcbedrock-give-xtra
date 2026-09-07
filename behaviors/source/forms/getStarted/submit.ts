@@ -38,10 +38,10 @@ function contextToCommand(context: GetStartedContext): string {
 	if (j.keepOnDeath !== null) {
 		str += `\\"keepOnDeath\\":${j.keepOnDeath},`;
 	}
-	if (j.canPlaceOn !== null) {
+	if (j.canPlaceOn !== null && j.canPlaceOn.length > 0) {
 		str += `\\"canPlaceOn\\":[\\"${j.canPlaceOn.join('\\",\\"')}\\"],`;
 	}
-	if (j.canDestroy !== null) {
+	if (j.canDestroy !== null && j.canDestroy.length > 0) {
 		str += `\\"canDestroy\\":[\\"${j.canDestroy.join('\\",\\"')}\\"],`;
 	}
 	if (j.durability !== null) {

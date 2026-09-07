@@ -17,6 +17,7 @@ import { type GivexJson, validJsonKeys } from "../../commands/utils/json";
 import { getStartedReplaceMode } from "../replaceMode";
 import { safeActionFormShow } from "../safeShow";
 import { getStartedAmount } from "./amount";
+import { getStartedCanDestroy, getStartedCanPlaceOn } from "./blockList";
 import { commandVector3ToString } from "./commandVector3";
 import { getStartedData } from "./data";
 import { getStartedDurability } from "./durability";
@@ -231,6 +232,12 @@ export async function getStartedProperties(
 				break;
 			case "replaceMode":
 				getStartedReplaceMode(context);
+				break;
+			case "canPlaceOn":
+				getStartedCanPlaceOn(context);
+				break;
+			case "canDestroy":
+				getStartedCanDestroy(context);
 				break;
 			default:
 				getStartedProperties(context, "§cNot Finished");

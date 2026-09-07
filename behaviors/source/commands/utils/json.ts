@@ -145,7 +145,7 @@ export function parseGivexJson(str: string): GivexJsonParseResult {
 }
 
 // Returns invalid index (if it exists)
-function validBlockTypes(blockTypes: string[]): number | null {
+export function validBlockTypes(blockTypes: string[]): number | null {
 	for (let i: number = 0; i < blockTypes.length; i++) {
 		const current: string | undefined = blockTypes[i];
 		if (!current) {

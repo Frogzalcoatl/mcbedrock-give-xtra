@@ -1,5 +1,3 @@
-* Finish get started ui
-
 * Add lore to givex json
 
 * Figure out how to use localization key for item names
