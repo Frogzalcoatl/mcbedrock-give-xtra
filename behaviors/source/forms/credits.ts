@@ -15,7 +15,7 @@ export async function formCredits(viewer: Player): Promise<void> {
 mcbedrock-give-xtra
 
 §rVersion:
-§7Pre-Release v1.0.0 June 2026
+§7Release v1.0.0 September 2026
 §r
 `);
 	form.divider();
