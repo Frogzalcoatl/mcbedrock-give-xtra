@@ -61,7 +61,7 @@ Gives the nearest player 64 arrows of poison with the nametag "Scary Arrows".
 
 **Usage:**
 ```
-/givex:blockx <position> <itemName> <amount(optional, default = 1)> <data: (optional, default = 0)> <json (optional)>
+/givex:blockx <at> <itemName> <amount(optional, default = 1)> <data: (optional, default = 0)> <json (optional)>
 ```
 
 **Description:**
@@ -70,7 +70,7 @@ Give items with special properties to blocks.
 
 **Parameters:**
 
-`position:` Coordinates of a block with an inventory (such as a chest).
+`at:` Coordinates of a block with an inventory (such as a chest).
 
 `itemName:` Item type ID.
 
@@ -90,7 +90,7 @@ Gives an iron piackaxe with infinite durability to a block with an inventory.
 
 **Usage:**
 ```
-/givex:spawnx <position> <itemName> <amount (optional, default = 1)> <json (optional)>
+/givex:spawnx <at> <itemName> <amount (optional, default = 1)> <json (optional)>
 ```
 
 **Description:**
@@ -99,7 +99,7 @@ Spawn items with special properties.
 
 **Parameters:**
 
-`position:` Coordinates at which to spawn an item.
+`at:` Coordinates at which to spawn an item.
 
 `itemName:` Item type ID.
 
