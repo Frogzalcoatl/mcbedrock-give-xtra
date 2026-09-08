@@ -3,7 +3,7 @@ import { ActionFormData, type ActionFormResponse } from "@minecraft/server-ui";
 import { formCredits } from "./credits";
 import { formGetStarted } from "./getStarted/getStarted";
 import { safeActionFormShow } from "./safeShow";
-import { formWiki } from "./wiki";
+import { formWiki } from "./wiki/wiki";
 
 export async function formInfo(viewer: Player): Promise<void> {
 	const form = new ActionFormData();
