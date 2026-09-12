@@ -10,7 +10,7 @@
 		},
 		{
 			"uuid": "02ae392b-2b73-4de4-a884-e5d64367b027",
-			"version": [1, 0, 0]
+			"version": [1, 0, 1]
 		}
 	],
 	"format_version": 2,
@@ -19,14 +19,14 @@
 		"min_engine_version": [1, 26, 30],
 		"name": "Give Xtra",
 		"uuid": "2abb69c6-99ed-40b9-b442-126c32b8a9b1",
-		"version": [1, 0, 0]
+		"version": [1, 0, 1]
 	},
 	"modules": [
 		{
 			"description": "Addon Module",
 			"type": "data",
 			"uuid": "8d5cb72c-bac2-497f-a7ef-8dbe631b5151",
-			"version": [1, 0, 0]
+			"version": [1, 0, 1]
 		},
 		{
 			"description": "Scripting Module",
@@ -34,7 +34,7 @@
 			"language": "javascript",
 			"type": "script",
 			"uuid": "0c146aee-d927-4898-b7d6-5a11ad556df8",
-			"version": [1, 0, 0]
+			"version": [1, 0, 1]
 		}
 	]
 }
