@@ -21,8 +21,6 @@ Select item properties to generate and copy givex commands. Additionally contain
 `itemName?:` Open item properties UI with an item type ID filled in. Useful for tab autocompletion.
 
 **Example:**
-
-**Usage:**
 ```
 /givex:info diamond_sword
 ```
