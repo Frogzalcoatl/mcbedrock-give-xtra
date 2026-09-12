@@ -15,7 +15,7 @@ import { MinecraftBlockTypes } from "@minecraft/vanilla-data";
 import {
 	MAX_AMOUNT,
 	MAX_DATA,
-	MAX_LORE_LINE_CHAR_COUNT,
+	MAX_LORE_CHAR_COUNT,
 	MAX_LORE_LINE_COUNT,
 	MAX_NAMETAG_LENGTH,
 } from "../../constants";
@@ -305,8 +305,8 @@ export function validateGivex(
 			return result;
 		}
 		for (let i = 0; i < json.lore.length; i++) {
-			if ((json.lore[i]?.length ?? 0) > MAX_LORE_LINE_COUNT) {
-				result.commandResult.message = `Lore exceeds max length of ${MAX_LORE_LINE_CHAR_COUNT} at line ${i + 1}: "${json.lore[i]}"`;
+			if ((json.lore[i]?.length ?? 0) > MAX_LORE_CHAR_COUNT) {
+				result.commandResult.message = `Lore exceeds max length of ${MAX_LORE_CHAR_COUNT} at line ${i + 1}: "${json.lore[i]}"`;
 				return result;
 			}
 		}

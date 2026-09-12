@@ -5,7 +5,7 @@ import {
 	ModalFormData,
 	type ModalFormResponse,
 } from "@minecraft/server-ui";
-import { MAX_LORE_LINE_CHAR_COUNT, MAX_LORE_LINE_COUNT } from "../../constants";
+import { MAX_LORE_CHAR_COUNT, MAX_LORE_LINE_COUNT } from "../../constants";
 import { safeActionFormShow, safeModalFormShow } from "../safeShow";
 import { formatLabel, type GetStartedContext, getStartedTitle } from "./getStarted";
 import { getStartedProperties } from "./properties";
@@ -20,7 +20,7 @@ async function promptNewLore(
 	form.textField(
 		formatLabel(
 			"What would you like this line of lore to say?",
-			`Max Char Count is ${MAX_LORE_LINE_CHAR_COUNT}:`,
+			`Max Char Count is ${MAX_LORE_CHAR_COUNT}:`,
 			error,
 		),
 		"",
@@ -37,13 +37,13 @@ async function promptNewLore(
 		system.run(() => getStartedLore(context, "§cLore unchanged"));
 		return;
 	}
-	if (resp.formValues[0].length > MAX_LORE_LINE_CHAR_COUNT) {
+	if (resp.formValues[0].length > MAX_LORE_CHAR_COUNT) {
 		const input: string = resp.formValues[0];
 		system.run(() =>
 			promptNewLore(
 				context,
 				input,
-				`Lore length cannot exceed ${MAX_LORE_LINE_CHAR_COUNT} characters (currently ${input.length} characters long`,
+				`Lore length cannot exceed ${MAX_LORE_CHAR_COUNT} characters (currently ${input.length} characters long`,
 			),
 		);
 		return;
